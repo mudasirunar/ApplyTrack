@@ -8,6 +8,8 @@ val BrandPrimary = Color(0xFF2F3A4A)
 val AccentGreen = Color(0xFF4CAF50)
 val WarningAmber = Color(0xFFFFB300)
 val ErrorRed = Color(0xFFE53935)
+val LinkBlue = Color(0xFF1E88E5)
+
 
 // M3 Light/Dark Support Mapping Values
 val BrandOnPrimary = Color(0xFFFFFFFF)

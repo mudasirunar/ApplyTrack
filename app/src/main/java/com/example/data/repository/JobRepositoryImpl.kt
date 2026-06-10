@@ -3,6 +3,7 @@ package com.example.data.repository
 import com.example.data.local.JobApplicationDao
 import com.example.model.DeletedJob
 import com.example.model.JobApplication
+import com.example.model.StatusHistoryEntry
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
@@ -109,6 +110,14 @@ class JobRepositoryImpl(
                         "status" to job.status,
                         "jobDescription" to job.jobDescription,
                         "notes" to job.notes,
+                        "url" to job.url,
+                        "email" to job.email,
+                        "statusHistory" to job.statusHistory?.map { entry ->
+                            hashMapOf(
+                                "status" to entry.status,
+                                "timestamp" to entry.timestamp
+                            )
+                        },
                         "createdAt" to job.createdAt,
                         "updatedAt" to job.updatedAt
                     )
@@ -148,6 +157,34 @@ class JobRepositoryImpl(
             val status = doc.getString("status") ?: "Applied"
             val jobDescription = doc.getString("jobDescription")
             val notes = doc.getString("notes")
+            val url = doc.getString("url")
+            val email = doc.getString("email")
+            val rawHistory = doc.get("statusHistory")
+            val statusHistory = when (rawHistory) {
+                is List<*> -> {
+                    rawHistory.mapNotNull { item ->
+                        val map = item as? Map<*, *>
+                        val status = map?.get("status") as? String
+                        val timestamp = map?.get("timestamp") as? Long
+                        if (status != null && timestamp != null) {
+                            StatusHistoryEntry(status, timestamp)
+                        } else null
+                    }
+                }
+                is String -> {
+                    rawHistory.split(",").mapNotNull { item ->
+                        val parts = item.split("|")
+                        if (parts.size == 2) {
+                            val status = parts[0]
+                            val timestamp = parts[1].toLongOrNull()
+                            if (timestamp != null) {
+                                StatusHistoryEntry(status, timestamp)
+                            } else null
+                        } else null
+                    }
+                }
+                else -> null
+            }
             val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
             val updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
 
@@ -163,6 +200,9 @@ class JobRepositoryImpl(
                     status = status,
                     jobDescription = jobDescription,
                     notes = notes,
+                    url = url,
+                    email = email,
+                    statusHistory = statusHistory,
                     createdAt = createdAt,
                     updatedAt = updatedAt
                 )
@@ -177,6 +217,9 @@ class JobRepositoryImpl(
                         status = status,
                         jobDescription = jobDescription,
                         notes = notes,
+                        url = url,
+                        email = email,
+                        statusHistory = statusHistory,
                         createdAt = createdAt,
                         updatedAt = updatedAt
                     )

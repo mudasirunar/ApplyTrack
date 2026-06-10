@@ -14,6 +14,9 @@ data class JobApplication(
     val status: String = "Applied",
     val jobDescription: String? = null,
     val notes: String? = null,
+    val url: String? = null,
+    val email: String? = null,
+    val statusHistory: List<StatusHistoryEntry>? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

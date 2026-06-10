@@ -26,12 +26,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.JobApplication
+import com.example.model.StatusHistoryEntry
 import com.example.ui.JobViewModel
 import com.example.ui.theme.AccentGreen
 import com.example.ui.theme.ErrorRed
 import com.example.ui.theme.WarningAmber
+import com.example.ui.theme.LinkBlue
 import java.text.SimpleDateFormat
 import java.util.*
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,11 +53,12 @@ fun DetailScreen(
     var isDescriptionExpanded by remember { mutableStateOf(true) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    val sdf = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
+    val sdf = remember { SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault()) }
     val sdfApplied = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     // Load state
     LaunchedEffect(jobId) {
+        viewModel.clearSelectedApplication()
         viewModel.loadApplicationById(jobId)
     }
 
@@ -58,9 +67,11 @@ fun DetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Job Detail",
+                        text = selectedApp?.role ?: "Job Detail",
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 navigationIcon = {
@@ -150,8 +161,8 @@ fun DetailScreen(
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Platform Indicator Avatar",
+                                        imageVector = Icons.Default.Work,
+                                        contentDescription = "Work Icon Indicator",
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(28.dp)
                                     )
@@ -244,15 +255,40 @@ fun DetailScreen(
                                         .fillMaxWidth()
                                         .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                                 ) {
-                                    Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                                     Spacer(modifier = Modifier.height(12.dp))
-                                    Text(
-                                        text = job.jobDescription?.takeIf { it.isNotBlank() }
-                                            ?: "No description recorded for this application. Paste screenshots, links or core skills here to remember.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        lineHeight = 22.sp
-                                    )
+                                    val isDescUrl = remember(job.jobDescription) {
+                                        val desc = job.jobDescription?.trim() ?: ""
+                                        desc.startsWith("http://", ignoreCase = true) || 
+                                        desc.startsWith("https://", ignoreCase = true)
+                                    }
+                                    if (isDescUrl) {
+                                        val context = LocalContext.current
+                                        Text(
+                                            text = job.jobDescription ?: "",
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = LinkBlue,
+                                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                            ),
+                                            lineHeight = 22.sp,
+                                            modifier = Modifier.clickable {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(job.jobDescription?.trim()))
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    // no-op
+                                                }
+                                            }
+                                        )
+                                    } else {
+                                        Text(
+                                            text = job.jobDescription?.takeIf { it.isNotBlank() }
+                                                ?: "No description recorded for this application. Paste screenshots, links or core skills here to remember.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            lineHeight = 22.sp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -283,7 +319,7 @@ fun DetailScreen(
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
-                            Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                             Spacer(modifier = Modifier.height(12.dp))
 
                             Text(
@@ -312,16 +348,115 @@ fun DetailScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
                             InfoRow(label = "Platform", value = job.platform ?: "Unrecorded (Direct)")
+                            
+                            val context = LocalContext.current
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "URL",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                val hasUrl = !job.url.isNullOrBlank()
+                                Text(
+                                    text = if (hasUrl) job.url!! else "Not specified",
+                                    style = if (hasUrl) {
+                                        MaterialTheme.typography.bodyMedium.copy(
+                                            color = LinkBlue,
+                                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                        )
+                                    } else {
+                                        MaterialTheme.typography.bodyMedium.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                    },
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .padding(start = 16.dp)
+                                        .then(
+                                            if (hasUrl) {
+                                                Modifier.clickable {
+                                                    try {
+                                                        val rawUrl = job.url!!
+                                                        val intentUrl = if (!rawUrl.startsWith("http://", ignoreCase = true) && 
+                                                                           !rawUrl.startsWith("https://", ignoreCase = true)) {
+                                                            "https://$rawUrl"
+                                                        } else {
+                                                            rawUrl
+                                                        }
+                                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(intentUrl))
+                                                        context.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        // no-op
+                                                    }
+                                                }
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
+                                )
+                            }
+
+                            val hasEmail = !job.email.isNullOrBlank()
+                            if (hasEmail) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Contact Email",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = job.email!!,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            color = LinkBlue,
+                                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                        ),
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier
+                                            .weight(1f, fill = false)
+                                            .padding(start = 16.dp)
+                                            .clickable {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                                        data = Uri.parse("mailto:${job.email!!}")
+                                                    }
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    // no-op
+                                                }
+                                            }
+                                    )
+                                }
+                            }
+
                             InfoRow(label = "Applied Date", value = sdfApplied.format(Date(job.createdAt)))
                             InfoRow(label = "Created Time", value = sdf.format(Date(job.createdAt)))
                             InfoRow(label = "Last Updated", value = sdf.format(Date(job.updatedAt)))
                         }
                     }
 
-                    // Section 4: Timeline Visualization (Mimicking stripe timeline mockup)
+                    // Section 4: Timeline Visualization (Mimicking delivery status tracker)
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         shape = RoundedCornerShape(16.dp),
@@ -330,29 +465,50 @@ fun DetailScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Timeline History",
+                                text = "Timeline",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                             Spacer(modifier = Modifier.height(16.dp))
 
                             // Custom interactive vertical timeline
-                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                // Node 1
-                                TimelineNode(
-                                    stage = "Moved to ${job.status}",
-                                    date = sdfApplied.format(Date(job.updatedAt)),
-                                    isCurrent = true
-                                )
-                                // Node 2
-                                TimelineNode(
-                                    stage = "Application Created / Filed",
-                                    date = sdfApplied.format(Date(job.createdAt)),
-                                    isCurrent = false
-                                )
+                            Column {
+                                val historyEntries = remember(job.statusHistory, job.createdAt, job.updatedAt, job.status) {
+                                    val parsed = job.statusHistory
+                                    if (!parsed.isNullOrEmpty()) {
+                                        parsed
+                                    } else {
+                                        if (job.updatedAt > job.createdAt + 1000L) {
+                                            listOf(
+                                                StatusHistoryEntry("Saved", job.createdAt),
+                                                StatusHistoryEntry(job.status, job.updatedAt)
+                                            )
+                                        } else {
+                                            listOf(
+                                                StatusHistoryEntry(job.status, job.createdAt)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                historyEntries.asReversed().forEachIndexed { index, entry ->
+                                    val isCurrent = index == 0
+                                    val isFirst = index == 0
+                                    val isLast = index == historyEntries.size - 1
+                                    
+                                    val stageLabel = entry.status.replaceFirstChar { it.uppercase() }
+                                    
+                                    TimelineNode(
+                                        stage = stageLabel,
+                                        date = sdfApplied.format(Date(entry.timestamp)),
+                                        isCurrent = isCurrent,
+                                        isFirst = isFirst,
+                                        isLast = isLast
+                                    )
+                                }
                             }
                         }
                     }
@@ -395,18 +551,18 @@ fun DetailScreen(
 @Composable
 fun StatusPill(status: String) {
     val chipBgColor = when (status.lowercase()) {
-        "applied" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        "applied", "saved" -> WarningAmber.copy(alpha = 0.1f)
         "interview", "interviewing" -> AccentGreen.copy(alpha = 0.1f)
         "rejected" -> ErrorRed.copy(alpha = 0.1f)
-        "offer" -> WarningAmber.copy(alpha = 0.1f)
+        "offer" -> LinkBlue.copy(alpha = 0.1f)
         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
     }
 
     val chipContentColor = when (status.lowercase()) {
-        "applied" -> MaterialTheme.colorScheme.primary
+        "applied", "saved" -> WarningAmber
         "interview", "interviewing" -> AccentGreen
         "rejected" -> ErrorRed
-        "offer" -> WarningAmber
+        "offer" -> LinkBlue
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
@@ -454,35 +610,73 @@ fun InfoRow(label: String, value: String) {
 fun TimelineNode(
     stage: String,
     date: String,
-    isCurrent: Boolean
+    isCurrent: Boolean,
+    isFirst: Boolean,
+    isLast: Boolean
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Dot marker indicator
+        val lineColor = MaterialTheme.colorScheme.surfaceVariant
         Box(
             modifier = Modifier
-                .size(16.dp)
-                .background(
-                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                    shape = CircleShape
-                )
-        )
-        Spacer(modifier = Modifier.width(16.dp))
+                .width(32.dp)
+                .fillMaxHeight()
+                .drawBehind {
+                    val centerX = size.width / 2f
+                    val centerY = size.height / 2f
+                    val strokeWidth = 2.dp.toPx()
+                    
+                    if (!isFirst) {
+                        drawLine(
+                            color = lineColor,
+                            start = Offset(centerX, 0f),
+                            end = Offset(centerX, centerY),
+                            strokeWidth = strokeWidth
+                        )
+                    }
+                    if (!isLast) {
+                        drawLine(
+                            color = lineColor,
+                            start = Offset(centerX, centerY),
+                            end = Offset(centerX, size.height),
+                            strokeWidth = strokeWidth
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(if (isCurrent) 16.dp else 12.dp)
+                    .background(
+                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        shape = CircleShape
+                    )
+            )
+        }
 
-        Column {
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 12.dp)
+        ) {
             Text(
                 text = stage,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isCurrent) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = date,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
         }
     }

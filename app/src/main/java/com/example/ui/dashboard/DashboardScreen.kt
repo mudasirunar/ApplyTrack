@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.ImeAction
@@ -41,6 +42,7 @@ import com.example.ui.SyncState
 import com.example.ui.theme.AccentGreen
 import com.example.ui.theme.ErrorRed
 import com.example.ui.theme.WarningAmber
+import com.example.ui.theme.LinkBlue
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -416,16 +418,22 @@ fun StatsGrid(stats: DashboardStats) {
             .fillMaxWidth()
             .padding(16.dp)
     ) {
+        // Total Applications - Full Width Row with Motivational Message
+        TotalApplicationsCard(totalCount = stats.total)
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Remaining 4 cards in 2x2 layout
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             StatCard(
-                title = "Total Applications",
-                count = stats.total.toString(),
-                textColor = MaterialTheme.colorScheme.primary,
+                title = "Applied (Saved)",
+                count = stats.saved.toString(),
+                textColor = WarningAmber,
                 modifier = Modifier.weight(1f),
-                tint = MaterialTheme.colorScheme.surfaceVariant
+                tint = WarningAmber.copy(alpha = 0.1f)
             )
             StatCard(
                 title = "Interviews",
@@ -435,17 +443,19 @@ fun StatsGrid(stats: DashboardStats) {
                 tint = AccentGreen.copy(alpha = 0.1f)
             )
         }
+        
         Spacer(modifier = Modifier.height(12.dp))
+        
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             StatCard(
-                title = "Pending (Saved)",
-                count = stats.saved.toString(),
-                textColor = WarningAmber,
+                title = "Offers",
+                count = stats.offers.toString(),
+                textColor = LinkBlue,
                 modifier = Modifier.weight(1f),
-                tint = WarningAmber.copy(alpha = 0.1f)
+                tint = LinkBlue.copy(alpha = 0.1f)
             )
             StatCard(
                 title = "Rejected",
@@ -496,31 +506,101 @@ fun StatCard(
 }
 
 @Composable
+fun TotalApplicationsCard(totalCount: Int) {
+    var message by remember(totalCount) {
+        mutableStateOf(getRandomMotivationalMessage(totalCount))
+    }
+    
+    LaunchedEffect(totalCount) {
+        while (true) {
+            kotlinx.coroutines.delay(10000L) // Switch message every 10 seconds for a dynamic feel
+            message = getRandomMotivationalMessage(totalCount)
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().height(100.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(12.dp),
+        border = CardDefaults.outlinedCardBorder()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                verticalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                Text(
+                    text = "Total Applications",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = totalCount.toString(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                        fontWeight = FontWeight.Bold,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                    textAlign = TextAlign.End,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun JobCard(
     job: JobApplication,
     onClick: () -> Unit
 ) {
     val leftBarColor = when (job.status.lowercase()) {
-        "applied" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        "applied", "saved" -> WarningAmber
         "interview", "interviewing" -> AccentGreen
         "rejected" -> ErrorRed
-        "offer" -> WarningAmber
+        "offer" -> LinkBlue
         else -> MaterialTheme.colorScheme.outline
     }
 
     val chipBgColor = when (job.status.lowercase()) {
-        "applied" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        "applied", "saved" -> WarningAmber.copy(alpha = 0.1f)
         "interview", "interviewing" -> AccentGreen.copy(alpha = 0.1f)
         "rejected" -> ErrorRed.copy(alpha = 0.1f)
-        "offer" -> WarningAmber.copy(alpha = 0.1f)
+        "offer" -> LinkBlue.copy(alpha = 0.1f)
         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
     }
 
     val chipContentColor = when (job.status.lowercase()) {
-        "applied" -> MaterialTheme.colorScheme.primary
+        "applied", "saved" -> WarningAmber
         "interview", "interviewing" -> AccentGreen
         "rejected" -> ErrorRed
-        "offer" -> WarningAmber
+        "offer" -> LinkBlue
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
@@ -562,7 +642,7 @@ fun JobCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = job.companyName ?: "Unknown Company",
+                            text = job.role ?: "Position unassigned",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -590,7 +670,7 @@ fun JobCard(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = job.role ?: "Position unassigned",
+                        text = job.companyName ?: "Unknown Company",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -610,7 +690,7 @@ fun JobCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Applied $formattedDate",
+                            text = formattedDate,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

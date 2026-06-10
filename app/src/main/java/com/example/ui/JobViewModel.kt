@@ -7,6 +7,8 @@ import com.example.data.repository.JobRepository
 import com.example.model.JobApplication
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import com.example.model.StatusHistoryEntry
 import java.util.Calendar
 
 enum class SyncState {
@@ -123,9 +125,12 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
 
     val isFirebaseConfigured = repository.isFirebaseConfigured()
 
+    private var loadJob: Job? = null
+
     // Fetch and observe direct updates for detail view
     fun loadApplicationById(id: Long) {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             repository.getApplicationById(id).collect {
                 _selectedApplication.value = it
             }
@@ -133,6 +138,8 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
     }
 
     fun clearSelectedApplication() {
+        loadJob?.cancel()
+        loadJob = null
         _selectedApplication.value = null
     }
 
@@ -144,11 +151,25 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
         status: String,
         jobDescription: String,
         notes: String,
+        url: String?,
+        email: String?,
         timeApplied: Long,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             val baseApp = _selectedApplication.value ?: JobApplication()
+            val oldHistory = baseApp.statusHistory ?: emptyList()
+            val newHistory = if (baseApp.id == 0L) {
+                listOf(StatusHistoryEntry(status, timeApplied))
+            } else {
+                if (baseApp.status != status) {
+                    oldHistory + StatusHistoryEntry(status, System.currentTimeMillis())
+                } else {
+                    oldHistory.ifEmpty {
+                        listOf(StatusHistoryEntry(status, baseApp.createdAt))
+                    }
+                }
+            }
             val finalApp = baseApp.copy(
                 companyName = companyName.trim().ifEmpty { null },
                 role = role.trim().ifEmpty { null },
@@ -156,6 +177,9 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
                 status = status,
                 jobDescription = jobDescription.trim().ifEmpty { null },
                 notes = notes.trim().ifEmpty { null },
+                url = url?.trim()?.ifEmpty { null },
+                email = email?.trim()?.ifEmpty { null },
+                statusHistory = newHistory,
                 createdAt = if (baseApp.id == 0L) timeApplied else baseApp.createdAt,
                 updatedAt = System.currentTimeMillis()
             )

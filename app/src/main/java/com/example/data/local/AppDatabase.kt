@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.example.model.DeletedJob
 import com.example.model.JobApplication
 
 @Database(entities = [JobApplication::class, DeletedJob::class], version = 1, exportSchema = false)
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun jobApplicationDao(): JobApplicationDao

@@ -22,6 +22,8 @@ import com.example.model.JobApplication
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +47,9 @@ fun AddEditScreen(
     var companyName by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("") }
     var platform by remember { mutableStateOf("LinkedIn") }
+    var customPlatformName by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("Applied") }
     var jobDescription by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
@@ -58,19 +63,46 @@ fun AddEditScreen(
     var showDatePicker by remember { mutableStateOf(false) }
 
     // Sync state when loading existing values
-    LaunchedEffect(selectedApp) {
-        selectedApp?.let { app ->
-            companyName = app.companyName ?: ""
-            role = app.role ?: ""
-            platform = app.platform ?: "LinkedIn"
-            status = app.status
-            jobDescription = app.jobDescription ?: ""
-            notes = app.notes ?: ""
-            appliedDateEpoch = app.createdAt
+    LaunchedEffect(selectedApp, jobId) {
+        if (jobId != null) {
+            selectedApp?.let { app ->
+                if (app.id == jobId) {
+                    companyName = app.companyName ?: ""
+                    role = app.role ?: ""
+                    val rawPlatform = app.platform ?: "LinkedIn"
+                    
+                    val standardPlatforms = listOf("LinkedIn", "Indeed", "Email", "Website", "Other")
+                    if (rawPlatform in standardPlatforms) {
+                        platform = rawPlatform
+                        customPlatformName = ""
+                    } else {
+                        platform = "Other"
+                        customPlatformName = rawPlatform
+                    }
+                    
+                    url = app.url ?: ""
+                    email = app.email ?: ""
+                    status = app.status
+                    jobDescription = app.jobDescription ?: ""
+                    notes = app.notes ?: ""
+                    appliedDateEpoch = app.createdAt
+                }
+            }
+        } else {
+            companyName = ""
+            role = ""
+            platform = "LinkedIn"
+            customPlatformName = ""
+            url = ""
+            email = ""
+            status = "Applied"
+            jobDescription = ""
+            notes = ""
+            appliedDateEpoch = System.currentTimeMillis()
         }
     }
 
-    val platformOptions = listOf("LinkedIn", "Email", "Website", "Other")
+    val platformOptions = listOf("LinkedIn", "Indeed", "Email", "Website", "Other")
     val statusOptions = listOf("Applied", "Interview", "Rejected", "Offer", "Saved")
 
     val sdf = remember { SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()) }
@@ -107,6 +139,7 @@ fun AddEditScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .imePadding()
                 .background(MaterialTheme.colorScheme.background)
         ) {
             // Scrollable central input fields column
@@ -135,19 +168,6 @@ fun AddEditScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
 
-                        // Company name input
-                        OutlinedTextField(
-                            value = companyName,
-                            onValueChange = { companyName = it },
-                            label = { Text("Company Name") },
-                            placeholder = { Text("e.g. Acme Corp") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("input_company_name"),
-                            singleLine = true,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-
                         // Role / Position input
                         OutlinedTextField(
                             value = role,
@@ -158,6 +178,25 @@ fun AddEditScreen(
                                 .fillMaxWidth()
                                 .testTag("input_role"),
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Next
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        // Company name input
+                        OutlinedTextField(
+                            value = companyName,
+                            onValueChange = { companyName = it },
+                            label = { Text("Company Name") },
+                            placeholder = { Text("e.g. Acme Corp") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_company_name"),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Next
+                            ),
                             shape = RoundedCornerShape(8.dp)
                         )
                     }
@@ -207,6 +246,55 @@ fun AddEditScreen(
                                 }
                             }
                         }
+
+                        // Conditional custom text input fields based on selected platform (only for Other)
+                        if (platform == "Other") {
+                            OutlinedTextField(
+                                value = customPlatformName,
+                                onValueChange = { customPlatformName = it },
+                                label = { Text("Platform Name") },
+                                placeholder = { Text("e.g. Glassdoor, CareerBuilder") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("input_custom_platform"),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Next
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+
+                        // Conditional email address input field (only for Email platform)
+                        if (platform == "Email") {
+                            OutlinedTextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = { Text("Email Address") },
+                                placeholder = { Text("e.g. recruiter@company.com") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("input_email"),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Next
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+
+                        // Permanent URL input field (always visible, not mandatory)
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = { url = it },
+                            label = { Text("URL") },
+                            placeholder = { Text("e.g. company.com/careers or posting link") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_url"),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp)
+                        )
 
                         // Status dropdown box selector
                         ExposedDropdownMenuBox(
@@ -324,13 +412,23 @@ fun AddEditScreen(
                 ) {
                     Button(
                         onClick = {
+                            val finalPlatform = when (platform) {
+                                "Other" -> customPlatformName.trim().ifEmpty { "Other" }
+                                else -> platform
+                            }
+                            
+                            val finalUrl = url.trim().ifEmpty { null }
+                            val finalEmail = if (platform == "Email") email.trim().ifEmpty { null } else null
+
                             viewModel.saveJobApplication(
                                 companyName = companyName,
                                 role = role,
-                                platform = platform,
+                                platform = finalPlatform,
                                 status = status,
                                 jobDescription = jobDescription,
                                 notes = notes,
+                                url = finalUrl,
+                                email = finalEmail,
                                 timeApplied = appliedDateEpoch,
                                 onSuccess = onNavigateBack
                             )
@@ -359,15 +457,34 @@ fun AddEditScreen(
     // Material 3 Native DatePickerDialog Overlay Handler State
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = appliedDateEpoch
+            initialSelectedDateMillis = remember(appliedDateEpoch) {
+                val localCal = Calendar.getInstance().apply { timeInMillis = appliedDateEpoch }
+                val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                    clear()
+                    set(localCal.get(Calendar.YEAR), localCal.get(Calendar.MONTH), localCal.get(Calendar.DAY_OF_MONTH))
+                }
+                utcCal.timeInMillis
+            }
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        datePickerState.selectedDateMillis?.let {
-                            appliedDateEpoch = it
+                        datePickerState.selectedDateMillis?.let { utcMillis ->
+                            val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                                timeInMillis = utcMillis
+                            }
+                            val localCal = Calendar.getInstance().apply {
+                                set(Calendar.YEAR, utcCal.get(Calendar.YEAR))
+                                set(Calendar.MONTH, utcCal.get(Calendar.MONTH))
+                                set(Calendar.DAY_OF_MONTH, utcCal.get(Calendar.DAY_OF_MONTH))
+                                set(Calendar.HOUR_OF_DAY, 12)
+                                set(Calendar.MINUTE, 0)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            appliedDateEpoch = localCal.timeInMillis
                         }
                         showDatePicker = false
                     },
