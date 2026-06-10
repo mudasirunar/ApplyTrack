@@ -1,18 +1,34 @@
+# Built outputs & artifacts
+/build/
+app/build/
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# IDE configurations
+.idea/
 *.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.gradle/
+.kotlin/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# Local environment & config files
 local.properties
 .env
-debug.keystore
+
+# Secrets & signing keystores
+*.keystore
+*.jks
+*.pepk
+google-services.json
+
+# OS & System specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+

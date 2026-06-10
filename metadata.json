@@ -1,6 +1,0 @@
-{
-  "name": "ApplyTrack",
-  "description": "A refined personal job application tracker with offline-first Room database storage and future Firestore sync support.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
