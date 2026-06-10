@@ -7,6 +7,7 @@ import com.example.data.repository.JobRepository
 import com.example.model.JobApplication
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 enum class SyncState {
     IDLE, SYNCING, SUCCESS, ERROR
@@ -16,8 +17,11 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
 
     // Current Search & Filter states
     val searchQuery = MutableStateFlow("")
-    val statusFilter = MutableStateFlow("All") // "All", "Applied", "Interview", "Offer", "Rejected", "Saved"
+    val statusFilter = MutableStateFlow("All") // "All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Month"
+    val selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH) + 1) // 1..12
+    val selectedYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
     val sortByLatest = MutableStateFlow(true) // true: latest first, false: oldest first
+    val isSearchFocused = MutableStateFlow(false)
 
     // Detailed application state (for detail/edit view)
     private val _selectedApplication = MutableStateFlow<JobApplication?>(null)
@@ -26,32 +30,60 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
     private val _isInitialLoading = MutableStateFlow(true)
     val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
 
-    // Reactive State: All UI Job Applications list combined with filters, searches & sorting
-    val filteredApplications: StateFlow<List<JobApplication>> = combine(
-        repository.getAllApplications(),
+    // Helper data class to bypass Kotlin's 5-flow combine limitation in a type-safe manner
+    private data class FilterParams(
+        val query: String,
+        val status: String,
+        val month: Int,
+        val year: String,
+        val sortByLatest: Boolean
+    )
+
+    private val filterParamsFlow: Flow<FilterParams> = combine(
         searchQuery,
         statusFilter,
+        selectedMonth,
+        selectedYear,
         sortByLatest
-    ) { apps, search, filter, latest ->
+    ) { query, status, month, year, latest ->
+        FilterParams(query, status, month, year, latest)
+    }
+
+    // Reactive State: All UI Job Applications list combined with filters, searches, months, years & sorting
+    val filteredApplications: StateFlow<List<JobApplication>> = combine(
+        repository.getAllApplications(),
+        filterParamsFlow
+    ) { apps, params ->
         var result = apps
 
         // Apply Search (Search by company or role)
-        if (search.isNotBlank()) {
+        if (params.query.isNotBlank()) {
             result = result.filter {
-                it.companyName?.contains(search, ignoreCase = true) == true ||
-                it.role?.contains(search, ignoreCase = true) == true
+                it.companyName?.contains(params.query, ignoreCase = true) == true ||
+                it.role?.contains(params.query, ignoreCase = true) == true
             }
         }
 
-        // Apply Status Filter
-        if (filter != "All") {
+        // Apply Status or Month/Year Filter
+        if (params.status == "Month") {
+            val targetYear = params.year.toIntOrNull()
+            if (targetYear != null) {
+                val cal = Calendar.getInstance()
+                result = result.filter { app ->
+                    cal.timeInMillis = app.createdAt
+                    val appMonth = cal.get(Calendar.MONTH) + 1 // 1..12
+                    val appYear = cal.get(Calendar.YEAR)
+                    appMonth == params.month && appYear == targetYear
+                }
+            }
+        } else if (params.status != "All") {
             result = result.filter {
-                it.status.equals(filter, ignoreCase = true)
+                it.status.equals(params.status, ignoreCase = true)
             }
         }
 
         // Apply Sort
-        result = if (latest) {
+        result = if (params.sortByLatest) {
             result.sortedByDescending { it.createdAt }
         } else {
             result.sortedBy { it.createdAt }

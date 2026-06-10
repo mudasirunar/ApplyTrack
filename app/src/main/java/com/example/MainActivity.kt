@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.settings.SettingsScreen
 
 class MainActivity : ComponentActivity() {
@@ -67,11 +68,12 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
+                    val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
 
                     Scaffold(
                         bottomBar = {
                             AnimatedVisibility(
-                                visible = currentRoute == "dashboard" || currentRoute == "settings",
+                                visible = (currentRoute == "dashboard" || currentRoute == "settings") && !isSearchFocused,
                                 enter = slideInVertically(
                                     initialOffsetY = { it },
                                     animationSpec = tween(120)

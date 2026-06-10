@@ -16,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -24,6 +26,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,12 +58,20 @@ fun DashboardScreen(
     val sortByLatest by viewModel.sortByLatest.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
+    val selectedMonth by viewModel.selectedMonth.collectAsStateWithLifecycle()
+    val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     
     val lazyListState = rememberLazyListState()
     var previousIndex by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemIndex) }
     var previousScrollOffset by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemScrollOffset) }
     var isFabVisible by rememberSaveable { mutableStateOf(true) }
+    val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
+    val focusManager = LocalFocusManager.current
+
+    BackHandler(enabled = isSearchFocused) {
+        focusManager.clearFocus()
+    }
 
     LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
         val currentIndex = lazyListState.firstVisibleItemIndex
@@ -80,7 +95,7 @@ fun DashboardScreen(
 
         floatingActionButton = {
             AnimatedVisibility(
-                visible = isFabVisible,
+                visible = isFabVisible && !isSearchFocused,
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                 exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
             ) {
@@ -115,7 +130,13 @@ fun DashboardScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             // Stats Grid Section
-            StatsGrid(stats = stats)
+            AnimatedVisibility(
+                visible = !isSearchFocused,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                StatsGrid(stats = stats)
+            }
 
             // Search Bar & Filter Rows
             Column(
@@ -129,10 +150,13 @@ fun DashboardScreen(
                     onValueChange = { viewModel.searchQuery.value = it },
                     placeholder = { Text("Search company or role...") },
                     leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search"
-                        )
+                        if (isSearchFocused) {
+                            IconButton(onClick = { focusManager.clearFocus() }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            }
+                        } else {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
                     },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
@@ -143,65 +167,170 @@ fun DashboardScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            viewModel.isSearchFocused.value = focusState.isFocused
+                        }
                         .testTag("search_bar"),
                     shape = RoundedCornerShape(8.dp),
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { focusManager.clearFocus() }
+                    ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surface,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surface
                     )
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Scrollable Filter Chips row
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                // Smoothly animate the collapse/expansion of chips and filters
+                AnimatedVisibility(
+                    visible = !isSearchFocused,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
                 ) {
-                    val statuses = listOf("All", "Applied", "Interview", "Offer", "Rejected", "Saved")
-                    items(statuses) { status ->
-                        val isSelected = statusFilter == status
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { viewModel.statusFilter.value = status },
-                            label = { Text(status) },
-                            modifier = Modifier.testTag("filter_chip_$status"),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    Column {
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Scrollable Filter Chips row
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val statuses = listOf("All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Month")
+                            items(statuses) { status ->
+                                val isSelected = statusFilter == status
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        viewModel.statusFilter.value = status
+                                        if (status == "All") {
+                                            viewModel.sortByLatest.value = true
+                                        }
+                                    },
+                                    label = { Text(status) },
+                                    modifier = Modifier.testTag("filter_chip_$status"),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                )
+                            }
+                        }
+
+                        // Month/Year Sub-filter controls
+                        AnimatedVisibility(
+                            visible = statusFilter == "Month",
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Month Dropdown Trigger Button
+                                Box(modifier = Modifier.weight(1f)) {
+                                    var isMonthDropdownExpanded by remember { mutableStateOf(false) }
+                                    val monthNames = listOf(
+                                        "January", "February", "March", "April", "May", "June",
+                                        "July", "August", "September", "October", "November", "December"
+                                    )
+
+                                    OutlinedTextField(
+                                        value = monthNames.getOrNull(selectedMonth - 1) ?: "",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Select Month") },
+                                        trailingIcon = {
+                                            IconButton(onClick = { isMonthDropdownExpanded = true }) {
+                                                Icon(Icons.Default.ArrowDropDown, contentDescription = "Open Month Dropdown")
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                        )
+                                    )
+
+                                    // Transparent clickable overlay to open the dropdown when clicking anywhere on the field
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .clickable { isMonthDropdownExpanded = true }
+                                    )
+
+                                    DropdownMenu(
+                                        expanded = isMonthDropdownExpanded,
+                                        onDismissRequest = { isMonthDropdownExpanded = false }
+                                    ) {
+                                        monthNames.forEachIndexed { index, name ->
+                                            DropdownMenuItem(
+                                                text = { Text(name) },
+                                                onClick = {
+                                                    viewModel.selectedMonth.value = index + 1
+                                                    isMonthDropdownExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Year Input Field
+                                OutlinedTextField(
+                                    value = selectedYear,
+                                    onValueChange = { newValue ->
+                                        if (newValue.all { it.isDigit() } && newValue.length <= 4) {
+                                            viewModel.selectedYear.value = newValue
+                                        }
+                                    },
+                                    label = { Text("Year") },
+                                    singleLine = true,
+                                    modifier = Modifier.width(120.dp),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                    )
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Sorting Info Toggle Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.sortByLatest.value = !sortByLatest }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Sort Icon",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .rotate(if (sortByLatest) 0f else 180f)
                             )
-                        )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (sortByLatest) "Sorted: Latest applied" else "Sorted: Oldest applied",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Sorting Info Toggle Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.sortByLatest.value = !sortByLatest }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Sort Icon",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .rotate(if (sortByLatest) 0f else 180f)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (sortByLatest) "Sorted: Latest applied" else "Sorted: Oldest applied",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
 
@@ -219,6 +348,7 @@ fun DashboardScreen(
                     )
                 }
             } else if (apps.isEmpty()) {
+                val isSearchOrFilterActive = stats.total > 0
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -226,24 +356,33 @@ fun DashboardScreen(
                         .padding(bottom = 80.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Information empty local database",
+                            imageVector = if (isSearchOrFilterActive) Icons.Default.Search else Icons.Default.Info,
+                            contentDescription = if (isSearchOrFilterActive) "No search results" else "Information empty local database",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                             modifier = Modifier.size(64.dp)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "No applications saved yet",
+                            text = if (isSearchOrFilterActive) "No results found" else "No applications saved yet",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Tap the '+' button in the bottom right corner to start!",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            text = if (isSearchOrFilterActive) {
+                                "No applications match your current search terms or active filters. Try adjusting them!"
+                            } else {
+                                "Tap the '+' button in the bottom right corner to start!"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
                 }
@@ -256,7 +395,7 @@ fun DashboardScreen(
                     contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(apps, key = { it.id }) { job ->
+                    items(apps) { job ->
                         JobCard(
                             job = job,
                             onClick = { onNavigateToDetail(job.id) }
