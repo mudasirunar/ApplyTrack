@@ -5,9 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.repository.JobRepository
 import com.example.model.JobApplication
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.Types
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -26,10 +23,8 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
     private val _selectedApplication = MutableStateFlow<JobApplication?>(null)
     val selectedApplication: StateFlow<JobApplication?> = _selectedApplication.asStateFlow()
 
-    // Moshi JSON Serialization setup for local backup/export features
-    private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-    private val listType = Types.newParameterizedType(List::class.java, JobApplication::class.java)
-    private val jsonAdapter = moshi.adapter<List<JobApplication>>(listType)
+    private val _isInitialLoading = MutableStateFlow(true)
+    val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
 
     // Reactive State: All UI Job Applications list combined with filters, searches & sorting
     val filteredApplications: StateFlow<List<JobApplication>> = combine(
@@ -63,6 +58,8 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
         }
 
         result
+    }.onEach {
+        _isInitialLoading.value = false
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -185,34 +182,7 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
         }
     }
 
-    // JSON Local backup feature implementations
-    fun exportBackupJson(): String {
-        return try {
-            val apps = filteredApplications.value
-            jsonAdapter.indent("  ").toJson(apps)
-        } catch (e: Exception) {
-            "[]"
-        }
-    }
 
-    fun restoreBackupJson(jsonString: String): Boolean {
-        return try {
-            val apps = jsonAdapter.fromJson(jsonString)
-            if (apps != null) {
-                viewModelScope.launch {
-                    for (app in apps) {
-                        repository.saveApplication(app)
-                    }
-                    triggerUploadSync()
-                }
-                true
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
 }
 
 // Stats Holder

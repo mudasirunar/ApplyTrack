@@ -24,13 +24,16 @@ import com.example.ui.JobViewModelFactory
 import com.example.ui.dashboard.DashboardScreen
 import com.example.ui.jobaddedit.AddEditScreen
 import com.example.ui.jobdetail.DetailScreen
-import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -78,7 +81,17 @@ class MainActivity : ComponentActivity() {
                                     animationSpec = tween(120)
                                 ) + fadeOut(animationSpec = tween(120))
                             ) {
-                                NavigationBar {
+                                val isDark = isSystemInDarkTheme()
+                                val navContainer = if (isDark) DarkNavContainer else LightNavContainer
+                                val navSelectedIcon = if (isDark) DarkNavSelectedIcon else LightNavSelectedIcon
+                                val navSelectedText = if (isDark) DarkNavSelectedText else LightNavSelectedText
+                                val navSelectedIndicator = if (isDark) DarkNavSelectedIndicator else LightNavSelectedIndicator
+                                val navUnselected = if (isDark) DarkNavUnselected else LightNavUnselected
+
+                                NavigationBar(
+                                    containerColor = navContainer,
+                                    tonalElevation = 0.dp
+                                ) {
                                     NavigationBarItem(
                                         icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
                                         label = { Text("Dashboard") },
@@ -94,6 +107,13 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                         },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = navSelectedIcon,
+                                            selectedTextColor = navSelectedText,
+                                            unselectedIconColor = navUnselected,
+                                            unselectedTextColor = navUnselected,
+                                            indicatorColor = navSelectedIndicator
+                                        ),
                                         modifier = Modifier.testTag("nav_home")
                                     )
                                     NavigationBarItem(
@@ -111,6 +131,13 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                         },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = navSelectedIcon,
+                                            selectedTextColor = navSelectedText,
+                                            unselectedIconColor = navUnselected,
+                                            unselectedTextColor = navUnselected,
+                                            indicatorColor = navSelectedIndicator
+                                        ),
                                         modifier = Modifier.testTag("nav_settings")
                                     )
                                 }

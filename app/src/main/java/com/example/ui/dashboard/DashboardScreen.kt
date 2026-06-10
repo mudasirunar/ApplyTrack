@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,89 +50,60 @@ fun DashboardScreen(
     val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
     val sortByLatest by viewModel.sortByLatest.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
-    val syncError by viewModel.syncErrorMessage.collectAsStateWithLifecycle()
-
-    var showBackupDialog by remember { mutableStateOf(false) }
+    val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    val lazyListState = rememberLazyListState()
+    var previousIndex by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemIndex) }
+    var previousScrollOffset by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemScrollOffset) }
+    var isFabVisible by rememberSaveable { mutableStateOf(true) }
 
-    // Trigger showing sync errors/success as toast notifications
-    LaunchedEffect(syncState) {
-        if (syncState == SyncState.SUCCESS) {
-            snackbarHostState.showSnackbar("Cloud Sync Success!")
-        } else if (syncState == SyncState.ERROR && syncError != null) {
-            snackbarHostState.showSnackbar(syncError ?: "Sync Failed")
+    LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
+        val currentIndex = lazyListState.firstVisibleItemIndex
+        val currentOffset = lazyListState.firstVisibleItemScrollOffset
+        
+        if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousScrollOffset)) {
+            // Scrolling down
+            isFabVisible = false
+        } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousScrollOffset)) {
+            // Scrolling up
+            isFabVisible = true
         }
+        
+        previousIndex = currentIndex
+        previousScrollOffset = currentOffset
     }
 
+
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.List,
-                            contentDescription = "ApplyTrack Logo",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "ApplyTrack",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                actions = {
-                    // Sync Button Indicator
-                    IconButton(
-                        onClick = { viewModel.runFullSync() },
-                        modifier = Modifier.testTag("sync_button")
-                    ) {
-                        when (syncState) {
-                            SyncState.SYNCING -> {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            else -> {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Sync",
-                                    tint = if (viewModel.isFirebaseConfigured) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                )
-                            }
-                        }
-                    }
-                    // Backup Manager Menu
-                    IconButton(
-                        onClick = { showBackupDialog = true },
-                        modifier = Modifier.testTag("backup_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Backup and restore"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
+
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onNavigateToAddEdit(null) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .testTag("add_job_fab"),
-                shape = RoundedCornerShape(16.dp)
+            AnimatedVisibility(
+                visible = isFabVisible,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add New Job Application")
+                val isSyncing = syncState == SyncState.SYNCING
+                val fabBgColor = if (isSyncing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
+                val fabContentColor = if (isSyncing) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onPrimary
+
+                FloatingActionButton(
+                    onClick = {
+                        if (!isSyncing) {
+                            onNavigateToAddEdit(null)
+                        }
+                    },
+                    containerColor = fabBgColor,
+                    contentColor = fabContentColor,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .padding(bottom = 80.dp)
+                        .testTag("add_job_fab"),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add New Job Application")
+                }
             }
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
@@ -232,12 +205,25 @@ fun DashboardScreen(
                 }
             }
 
-            // Job Applications List with Empty State Handler
-            if (apps.isEmpty()) {
+            // Job Applications List with Loader and Empty State Handler
+            if (isInitialLoading) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .padding(bottom = 80.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else if (apps.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(bottom = 80.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -263,10 +249,11 @@ fun DashboardScreen(
                 }
             } else {
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(apps, key = { it.id }) { job ->
@@ -280,12 +267,7 @@ fun DashboardScreen(
         }
     }
 
-    if (showBackupDialog) {
-        BackupDialog(
-            viewModel = viewModel,
-            onDismiss = { showBackupDialog = false }
-        )
-    }
+
 }
 
 @Composable
