@@ -1,11 +1,14 @@
 package com.example
 
 import android.os.Bundle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import android.annotation.SuppressLint
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -22,6 +25,20 @@ import com.example.ui.dashboard.DashboardScreen
 import com.example.ui.jobaddedit.AddEditScreen
 import com.example.ui.jobdetail.DetailScreen
 import com.example.ui.theme.MyApplicationTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.ui.platform.testTag
+import com.example.ui.settings.SettingsScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -33,7 +50,9 @@ class MainActivity : ComponentActivity() {
         JobViewModelFactory(repository)
     }
 
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -43,11 +62,69 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute = navBackStackEntry?.destination?.route
 
-                    NavHost(
-                        navController = navController,
-                        startDestination = "dashboard"
-                    ) {
+                    Scaffold(
+                        bottomBar = {
+                            AnimatedVisibility(
+                                visible = currentRoute == "dashboard" || currentRoute == "settings",
+                                enter = slideInVertically(
+                                    initialOffsetY = { it },
+                                    animationSpec = tween(120)
+                                ) + fadeIn(animationSpec = tween(120)),
+                                exit = slideOutVertically(
+                                    targetOffsetY = { it },
+                                    animationSpec = tween(120)
+                                ) + fadeOut(animationSpec = tween(120))
+                            ) {
+                                NavigationBar {
+                                    NavigationBarItem(
+                                        icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
+                                        label = { Text("Dashboard") },
+                                        selected = currentRoute == "dashboard",
+                                        onClick = {
+                                            if (currentRoute != "dashboard") {
+                                                navController.navigate("dashboard") {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.testTag("nav_home")
+                                    )
+                                    NavigationBarItem(
+                                        icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                                        label = { Text("Settings") },
+                                        selected = currentRoute == "settings",
+                                        onClick = {
+                                            if (currentRoute != "settings") {
+                                                navController.navigate("settings") {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.testTag("nav_settings")
+                                    )
+                                }
+                            }
+                        }
+                    ) { innerPadding ->
+                        NavHost(
+                            navController = navController,
+                            startDestination = "dashboard",
+                            enterTransition = { fadeIn(animationSpec = tween(100)) },
+                            exitTransition = { fadeOut(animationSpec = tween(100)) },
+                            popEnterTransition = { fadeIn(animationSpec = tween(100)) },
+                            popExitTransition = { fadeOut(animationSpec = tween(100)) }
+                        ) {
                         // 1. Dashboard Landing screen
                         composable("dashboard") {
                             DashboardScreen(
@@ -107,7 +184,13 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
+                        // 4. Settings Screen
+                        composable("settings") {
+                            SettingsScreen(viewModel = viewModel)
+                        }
                     }
+                }
                 }
             }
         }
