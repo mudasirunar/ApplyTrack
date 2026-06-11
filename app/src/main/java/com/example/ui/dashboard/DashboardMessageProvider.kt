@@ -2,9 +2,9 @@ package com.example.ui.dashboard
 
 import kotlin.random.Random
 
-object MotivationalMessages {
+object DashboardMessageProvider {
 
-    private val zeroAppsMessages = listOf(
+    private val emptyStateMessages = listOf(
         "No applications yet? Let's take the first step today! 🚀",
         "The screen is clean, but your dreams are big. Let's add one! ✨",
         "Blank canvas! Tap the '+' button to write your success story! ✍️",
@@ -27,7 +27,7 @@ object MotivationalMessages {
         "Let's make some waves! Create your first entry. 🌊"
     )
 
-    private val smallAppsMessages = listOf(
+    private val lowCountMessages = listOf(
         "First steps taken! You are officially in the game! 🌱",
         "Seed planted! Now let's water it with consistency! 💧",
         "Nice work starting out. Keep that momentum! 🚂",
@@ -50,7 +50,7 @@ object MotivationalMessages {
         "Solid foundation laid. Let's build the skyscraper! 🏢"
     )
 
-    private val midAppsMessages = listOf(
+    private val mediumCountMessages = listOf(
         "Getting comfortable! The momentum is building! 🔥",
         "Look at that progress! Consistency is key. 🔑",
         "Making steady moves. The right door will open! 🚪",
@@ -73,7 +73,7 @@ object MotivationalMessages {
         "You are outperforming your yesterday. Keep rising! ☀️"
     )
 
-    private val largeAppsMessages = listOf(
+    private val highCountMessages = listOf(
         "Double digits! You are seriously putting in the work! 🏆",
         "Ten or more! You're building a massive net of opportunities! 🕸️",
         "Success is a numbers game, and you're playing to win! 🎲",
@@ -96,8 +96,8 @@ object MotivationalMessages {
         "Over ten opportunities in progress! Let's get it! 💸"
     )
 
-    private val hugeAppsMessages = listOf(
-        "Absolutely unstoppable! 20+ apps is legendary! ⚡",
+    private val veryHighCountMessages = listOf(
+        "Absolutely unstoppable! 20+ apps is extraordinary! ⚡",
         "A massive pipeline! An offer is bound to land soon! 📥",
         "Outstanding hustle! Your future self is thanking you! 🌟",
         "Master of the job hunt! Incredible dedication! 👑",
@@ -111,7 +111,7 @@ object MotivationalMessages {
         "The hustle is real, and the results will be too! 💎",
         "Leaving no stone unturned. Brilliant strategy! 🪨",
         "You've put in the work. Now trust the process! 🤝",
-        "A true legend of the career search! 📜",
+        "A true leader of the career search! 📜",
         "Incredible endurance. You're in the final stretch! 🏁",
         "Mass scale action! You've built an empire of apps. 🏰",
         "Unwavering focus. You are an inspiration! 🌟",
@@ -119,19 +119,53 @@ object MotivationalMessages {
         "The grand prize is coming. Keep your head high! 🏆"
     )
 
-    fun getRandomMessage(totalCount: Int): String {
+    private val ultraHighCountMessages = listOf(
+        "50+ applications! You are showing incredible resilience! 🛡️",
+        "Halfway to a hundred! Your commitment is absolutely outstanding! 🌟",
+        "50+ targets in sight! You've built a stellar pipeline. 🌌",
+        "Outstanding perseverance! Success is closer than you think! 🏁",
+        "Your application list is a masterclass in determination! 👑",
+        "50+ apps saved! Keep refining and applying, the breakthrough is near! ⚡",
+        "An absolute powerhouse! 50+ applications is a massive milestone! 🏆",
+        "You're executing a highly strategic job hunt. Remarkable effort! 📈",
+        "Over 50 applications! You're planting seeds of success everywhere! 🌱",
+        "Incredible work ethic! You're leaving no stone unturned! 🪨",
+        "Fifty distinct opportunities! Your career search is in overdrive! ⚙️",
+        "Your resilience is unmatched. Keep pushing toward that big win! 🎖️",
+        "Half-century of apps! You are systematically creating your future. 🌅",
+        "A monumental achievement of 50+ applications. Stay focused! 🎯",
+        "Consistency on a massive scale. You are doing fantastic! ✨"
+    )
+
+    private val legendaryCountMessages = listOf(
+        "100+ applications! You've reached Legendary status! 👑",
+        "A triple-digit job hunt! Your dedication is absolutely elite! 🎖️",
+        "100+ apps saved! This is the signature of true greatness! ✍️",
+        "Unstoppable force! You've built a colossal pipeline of potential! 🏰",
+        "A hundred steps taken! An offer is bound to lock in soon! 🤝",
+        "Elite status unlocked! 100+ targets. You're playing to win! 🎮",
+        "Stellar determination! A triple-digit record of pure hustle! 💎",
+        "Absolutely legendary! You are paving your path to success! 🛣️",
+        "A hundred opportunities generated! Keep your chin up, champion! 🏆",
+        "You are a machine! 100+ applications is a historic accomplishment! 🚀",
+        "100+ applications in progress! Your drive is truly inspiring. 🌟",
+        "Centurion of the job search! Your effort speaks volumes. 🔊",
+        "Over 100 applications! The perfect opportunity is right around the corner! 🚪",
+        "Triple digits! This level of perseverance is extremely rare. ☄️",
+        "You've left no stone unturned. The breakthrough is inevitable! 🌈"
+    )
+
+    fun getDashboardMessage(totalCount: Int): String {
         val list = when {
-            totalCount <= 0 -> zeroAppsMessages
-            totalCount in 1..3 -> smallAppsMessages
-            totalCount in 4..9 -> midAppsMessages
-            totalCount in 10..19 -> largeAppsMessages
-            else -> hugeAppsMessages
+            totalCount <= 0 -> emptyStateMessages
+            totalCount in 1..3 -> lowCountMessages
+            totalCount in 4..9 -> mediumCountMessages
+            totalCount in 10..19 -> highCountMessages
+            totalCount in 20..49 -> veryHighCountMessages
+            totalCount in 50..99 -> ultraHighCountMessages
+            else -> legendaryCountMessages
         }
         val randomIndex = Random.nextInt(list.size)
         return list[randomIndex]
     }
-}
-
-fun getRandomMotivationalMessage(totalCount: Int): String {
-    return MotivationalMessages.getRandomMessage(totalCount)
 }

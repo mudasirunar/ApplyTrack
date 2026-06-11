@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -508,33 +509,44 @@ fun StatCard(
 @Composable
 fun TotalApplicationsCard(totalCount: Int) {
     var message by remember(totalCount) {
-        mutableStateOf(getRandomMotivationalMessage(totalCount))
+        mutableStateOf(DashboardMessageProvider.getDashboardMessage(totalCount))
     }
     
     LaunchedEffect(totalCount) {
         while (true) {
             kotlinx.coroutines.delay(10000L) // Switch message every 10 seconds for a dynamic feel
-            message = getRandomMotivationalMessage(totalCount)
+            message = DashboardMessageProvider.getDashboardMessage(totalCount)
         }
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().height(100.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .heightIn(min = 100.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp),
         border = CardDefaults.outlinedCardBorder()
     ) {
+        val gradientBrush = Brush.linearGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+            )
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .background(gradientBrush)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
-                verticalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxHeight()
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .fillMaxHeight()
             ) {
                 Text(
                     text = "Total Applications",
@@ -542,6 +554,7 @@ fun TotalApplicationsCard(totalCount: Int) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = totalCount.toString(),
                     style = MaterialTheme.typography.headlineLarge,
@@ -549,24 +562,35 @@ fun TotalApplicationsCard(totalCount: Int) {
                     fontWeight = FontWeight.Bold
                 )
             }
+            
             Spacer(modifier = Modifier.width(16.dp))
+            
+            // Subtle, premium vertical divider line
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .padding(vertical = 4.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
-                contentAlignment = Alignment.CenterEnd
+                contentAlignment = Alignment.CenterStart
             ) {
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
-                        fontWeight = FontWeight.Bold,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
                         lineHeight = 18.sp
                     ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                    textAlign = TextAlign.End,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+                    textAlign = TextAlign.Start,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
