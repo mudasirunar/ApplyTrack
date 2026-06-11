@@ -444,7 +444,7 @@ fun AddEditScreen(
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(
-                            text = "Save Application",
+                            text = if (jobId == null) "Save Application" else "Update Application",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyLarge
                         )

@@ -65,6 +65,9 @@ fun DashboardScreen(
     val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     
+    var jobToDelete by remember { mutableStateOf<JobApplication?>(null) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
     val lazyListState = rememberLazyListState()
     var previousIndex by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemIndex) }
     var previousScrollOffset by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemScrollOffset) }
@@ -398,10 +401,15 @@ fun DashboardScreen(
                     contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(apps) { job ->
+                    items(apps, key = { it.id }) { job ->
                         JobCard(
                             job = job,
-                            onClick = { onNavigateToDetail(job.id) }
+                            onClick = { onNavigateToDetail(job.id) },
+                            onEditClick = { onNavigateToAddEdit(job.id) },
+                            onDeleteClick = {
+                                jobToDelete = job
+                                showDeleteConfirmDialog = true
+                            }
                         )
                     }
                 }
@@ -409,7 +417,39 @@ fun DashboardScreen(
         }
     }
 
-
+    if (showDeleteConfirmDialog && jobToDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmDialog = false
+                jobToDelete = null
+            },
+            title = { Text(text = "Delete Application") },
+            text = { Text(text = "Are you sure you want to delete this job application? This action cannot be undone and will overwrite remote backups.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSelectedApplication(jobToDelete!!.id) {}
+                        showDeleteConfirmDialog = false
+                        jobToDelete = null
+                    },
+                    modifier = Modifier.testTag("delete_dialog_confirm")
+                ) {
+                    Text(text = "Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        jobToDelete = null
+                    },
+                    modifier = Modifier.testTag("delete_dialog_cancel")
+                ) {
+                    Text(text = "Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -602,7 +642,9 @@ fun TotalApplicationsCard(totalCount: Int) {
 @Composable
 fun JobCard(
     job: JobApplication,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     val leftBarColor = when (job.status.lowercase()) {
         "applied", "saved" -> WarningAmber
@@ -704,20 +746,54 @@ fun JobCard(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = "Applied date flag",
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = formattedDate,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Applied date flag",
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = formattedDate,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IconButton(
+                                onClick = onEditClick,
+                                modifier = Modifier.size(32.dp).testTag("edit_job_button_${job.id}")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Job",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = onDeleteClick,
+                                modifier = Modifier.size(32.dp).testTag("delete_job_button_${job.id}")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Job",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
