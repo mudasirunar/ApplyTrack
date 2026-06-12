@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -52,15 +53,17 @@ fun PdfViewerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(originalName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close PDF Viewer")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
+            key(MaterialTheme.colorScheme.surface) {
+                TopAppBar(
+                    title = { Text(originalName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close PDF Viewer")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                )
+            }
         }
     ) { paddingValues ->
         Box(

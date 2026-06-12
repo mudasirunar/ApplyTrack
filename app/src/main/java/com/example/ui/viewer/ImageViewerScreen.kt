@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -80,15 +81,17 @@ fun ImageViewerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Screenshot ${pagerState.currentPage + 1} of ${screenshots.size}") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close Viewer")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
+            key(MaterialTheme.colorScheme.surface) {
+                TopAppBar(
+                    title = { Text("Screenshot ${pagerState.currentPage + 1} of ${screenshots.size}") },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close Viewer")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                )
+            }
         }
     ) { paddingValues ->
         Box(

@@ -279,4 +279,51 @@ class JobRepositoryImpl(
             }
         }
     }
+
+    override suspend fun deleteAllApplications() {
+        // Collect all existing local application records first
+        val allApps = dao.getAllApplicationsList()
+        // Record their deletions in the deleted_jobs table so we propagate this wipe to Firestore on next sync
+        for (app in allApps) {
+            dao.insertDeletedJob(DeletedJob(uuid = app.uuid))
+        }
+        // Wipes local databases
+        dao.deleteAllApplications()
+    }
+
+    override suspend fun importBackup(
+        applications: List<JobApplication>,
+        overwriteConflicts: Boolean
+    ): ImportResult {
+        val existingApps = dao.getAllApplicationsList()
+        var importedCount = 0
+        var updatedCount = 0
+        var ignoredCount = 0
+        for (importedApp in applications) {
+            val match = existingApps.find { it.uuid == importedApp.uuid }
+            if (match == null) {
+                // New record -> insert
+                dao.insertApplication(importedApp.copy(id = 0L))
+                importedCount++
+            } else {
+                // Duplicate UUID exists -> check if it has changes
+                val importedWithLocalId = importedApp.copy(id = match.id)
+                if (match == importedWithLocalId) {
+                    // Identical content -> ignore
+                    ignoredCount++
+                } else {
+                    // Conflict detected (changes found)
+                    if (overwriteConflicts) {
+                        // Overwrite with backup version
+                        dao.updateApplication(importedWithLocalId)
+                        updatedCount++
+                    } else {
+                        // Ignore the changes
+                        ignoredCount++
+                    }
+                }
+            }
+        }
+        return ImportResult(importedCount, updatedCount, ignoredCount)
+    }
 }

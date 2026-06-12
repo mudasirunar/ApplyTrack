@@ -96,4 +96,14 @@ object AttachmentHelper {
     fun fileExists(context: Context, fileName: String): Boolean {
         return File(File(context.filesDir, "attachments"), fileName).exists()
     }
+
+    /**
+     * Clears all files in the attachments directory.
+     */
+    fun clearAllAttachments(context: Context) {
+        val attachmentsDir = File(context.filesDir, "attachments")
+        if (attachmentsDir.exists()) {
+            attachmentsDir.deleteRecursively()
+        }
+    }
 }

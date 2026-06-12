@@ -25,11 +25,15 @@ import com.example.ui.dashboard.DashboardScreen
 import com.example.ui.jobaddedit.AddEditScreen
 import com.example.ui.jobdetail.DetailScreen
 import com.example.ui.theme.*
+import com.example.utils.PreferencesHelper
+import com.example.utils.AppTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
@@ -49,9 +53,10 @@ class MainActivity : ComponentActivity() {
     // Manual clean dependency injection container setup following recommended guidelines
     private val database by lazy { AppDatabase.getDatabase(this) }
     private val repository by lazy { JobRepositoryImpl(database.jobApplicationDao()) }
+    private val preferencesHelper by lazy { PreferencesHelper(applicationContext) }
     
     private val viewModel: JobViewModel by viewModels {
-        JobViewModelFactory(repository)
+        JobViewModelFactory(repository, preferencesHelper)
     }
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -60,7 +65,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
+            val isDarkTheme = when (appTheme) {
+                AppTheme.LIGHT -> false
+                AppTheme.DARK -> true
+                AppTheme.SYSTEM -> isSystemInDarkTheme()
+            }
+            MyApplicationTheme(darkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -83,7 +94,7 @@ class MainActivity : ComponentActivity() {
                                     animationSpec = tween(120)
                                 ) + fadeOut(animationSpec = tween(120))
                             ) {
-                                val isDark = isSystemInDarkTheme()
+                                val isDark = isDarkTheme
                                 val navContainer = if (isDark) DarkNavContainer else LightNavContainer
                                 val navSelectedIcon = if (isDark) DarkNavSelectedIcon else LightNavSelectedIcon
                                 val navSelectedText = if (isDark) DarkNavSelectedText else LightNavSelectedText

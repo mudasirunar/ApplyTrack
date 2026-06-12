@@ -10,13 +10,36 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import com.example.model.StatusHistoryEntry
 import com.example.model.Attachment
+import com.example.utils.PreferencesHelper
+import com.example.utils.AppTheme
+import com.example.utils.BackupHelper
+import com.example.utils.AttachmentHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.net.Uri
+import android.content.Context
 import java.util.Calendar
 
 enum class SyncState {
     IDLE, SYNCING, SUCCESS, ERROR
 }
 
-class JobViewModel(private val repository: JobRepository) : ViewModel() {
+class JobViewModel(
+    private val repository: JobRepository,
+    private val preferencesHelper: PreferencesHelper
+) : ViewModel() {
+
+    // Theme & Preferences State
+    val appTheme = preferencesHelper.themeFlow
+    val autoSyncEnabled = preferencesHelper.autoSyncFlow
+
+    fun setAppTheme(theme: AppTheme) {
+        preferencesHelper.setTheme(theme)
+    }
+
+    fun setAutoSyncEnabled(enabled: Boolean) {
+        preferencesHelper.setAutoSyncEnabled(enabled)
+    }
 
     // Current Search & Filter states
     val searchQuery = MutableStateFlow("")
@@ -242,14 +265,100 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
     }
 
     private fun triggerUploadSync() {
-        if (isFirebaseConfigured) {
+        if (isFirebaseConfigured && preferencesHelper.isAutoSyncEnabled()) {
             viewModelScope.launch {
                 repository.uploadLocalChanges()
             }
         }
     }
 
+    fun clearAllLocalData(context: Context, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.deleteAllApplications()
+                AttachmentHelper.clearAllAttachments(context)
+            }
+            // Trigger upload sync immediately to propagate the delete remotely if online
+            triggerUploadSync()
+            onSuccess()
+        }
+    }
 
+    fun exportBackup(context: Context, uri: Uri, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val apps = repository.getAllApplications().first()
+                    BackupHelper.exportBackupToZip(context, apps, uri)
+                }
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "Unknown error")
+            }
+        }
+    }
+
+    fun checkBackupConflicts(
+        context: Context,
+        uri: Uri,
+        onResult: (Int) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val conflicts = withContext(Dispatchers.IO) {
+                    val apps = BackupHelper.readBackupApplicationsOnly(context, uri)
+                    val existing = repository.getAllApplications().first()
+                    var conflictCount = 0
+                    for (imported in apps) {
+                        val match = existing.find { it.uuid == imported.uuid }
+                        if (match != null) {
+                            val importedWithLocalId = imported.copy(id = match.id)
+                            if (match != importedWithLocalId) {
+                                conflictCount++
+                            }
+                        }
+                    }
+                    conflictCount
+                }
+                onResult(conflicts)
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "Unknown error")
+            }
+        }
+    }
+
+    fun importBackup(
+        context: Context,
+        uri: Uri,
+        overwrite: Boolean,
+        onProgress: (String) -> Unit,
+        onSuccess: (Int, Int, Int) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                var importedCount = 0
+                var updatedCount = 0
+                var ignoredCount = 0
+                withContext(Dispatchers.IO) {
+                    withContext(Dispatchers.Main) { onProgress("Reading backup file...") }
+                    val apps = BackupHelper.importBackupFromZip(context, uri)
+                    
+                    withContext(Dispatchers.Main) { onProgress("Restoring records...") }
+                    val result = repository.importBackup(apps, overwrite)
+                    importedCount = result.importedCount
+                    updatedCount = result.updatedCount
+                    ignoredCount = result.ignoredCount
+                }
+                // Sync additions
+                triggerUploadSync()
+                onSuccess(importedCount, updatedCount, ignoredCount)
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "Unknown error")
+            }
+        }
+    }
 }
 
 // Stats Holder
@@ -263,12 +372,13 @@ data class DashboardStats(
 
 // ViewModel Factory Creator
 class JobViewModelFactory(
-    private val repository: JobRepository
+    private val repository: JobRepository,
+    private val preferencesHelper: PreferencesHelper
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(JobViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return JobViewModel(repository) as T
+            return JobViewModel(repository, preferencesHelper) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class representation")
     }

@@ -47,4 +47,7 @@ interface JobApplicationDao {
 
     @Query("DELETE FROM deleted_jobs")
     suspend fun clearDeletedJobs()
+
+    @Query("DELETE FROM job_applications")
+    suspend fun deleteAllApplications()
 }
