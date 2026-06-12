@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -321,7 +322,7 @@ fun DetailScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.Edit,
+                                    imageVector = Icons.AutoMirrored.Filled.Notes,
                                     contentDescription = "Notes icon",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
@@ -360,7 +361,7 @@ fun DetailScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                text = "Application Info",
+                                text = "Platform Details",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -423,7 +424,7 @@ fun DetailScreen(
                                                 Modifier
                                             }
                                         )
-                                )
+                                 )
                             }
 
                             val hasEmail = !job.email.isNullOrBlank()
@@ -466,10 +467,6 @@ fun DetailScreen(
                                     )
                                 }
                             }
-
-                            InfoRow(label = "Applied Date", value = sdfApplied.format(Date(job.createdAt)))
-                            InfoRow(label = "Created Time", value = sdf.format(Date(job.createdAt)))
-                            InfoRow(label = "Last Updated", value = sdf.format(Date(job.updatedAt)))
                         }
                     }
 
@@ -659,6 +656,30 @@ fun DetailScreen(
                                     )
                                 }
                             }
+                        }
+                    }
+
+                    // Section 5: System Metadata Card (Created and Last Updated Timestamps)
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(16.dp),
+                        border = CardDefaults.outlinedCardBorder(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Metadata",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                            InfoRow(label = "Created Time", value = sdf.format(Date(job.createdAt)))
+                            InfoRow(label = "Last Updated", value = sdf.format(Date(job.updatedAt)))
                         }
                     }
                 }

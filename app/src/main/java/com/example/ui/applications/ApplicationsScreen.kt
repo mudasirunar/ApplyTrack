@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +44,7 @@ import com.example.ui.components.JobCard
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.launch
+import com.example.ui.SortOption
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +57,7 @@ fun ApplicationsScreen(
     val stats by viewModel.dashboardStats.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
-    val sortByLatest by viewModel.sortByLatest.collectAsStateWithLifecycle()
+    val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val spacing = 8.dp
@@ -66,6 +68,7 @@ fun ApplicationsScreen(
     
     var jobToDelete by remember { mutableStateOf<JobApplication?>(null) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showSortBottomSheet by remember { mutableStateOf(false) }
 
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -118,7 +121,7 @@ fun ApplicationsScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.searchQuery.value = it },
-                    placeholder = { Text("Search company or role...") },
+                    placeholder = { Text("Search...") },
                     leadingIcon = {
                         if (isSearchFocused) {
                             IconButton(onClick = { focusManager.clearFocus() }) {
@@ -173,7 +176,7 @@ fun ApplicationsScreen(
                                 onClick = {
                                     viewModel.statusFilter.value = status
                                     if (status == "All") {
-                                        viewModel.sortByLatest.value = true
+                                        viewModel.sortOption.value = SortOption.STATUS_LATEST
                                     }
                                 },
                                 label = { Text(status) },
@@ -270,38 +273,30 @@ fun ApplicationsScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Sorting Info Toggle Row
+                    // Sorting Info Row
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                // Save current scroll index and offset before changing data
-                                val currentIndex = lazyListState.firstVisibleItemIndex
-                                val currentOffset = lazyListState.firstVisibleItemScrollOffset
-                                viewModel.sortByLatest.value = !sortByLatest
-                                
-                                // Launch a coroutine to restore scroll position explicitly after sorting
-                                coroutineScope.launch {
-                                    // small delay to let recomposition start
-                                    kotlinx.coroutines.delay(10)
-                                    lazyListState.scrollToItem(currentIndex, currentOffset)
-                                }
-                            }
+                            .clickable { showSortBottomSheet = true }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End
                     ) {
                         Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
                             contentDescription = "Sort Icon",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .size(16.dp)
-                                .rotate(if (sortByLatest) 0f else 180f)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
+                        val sortLabel = when (sortOption) {
+                            SortOption.STATUS_LATEST -> "Sorted: Latest status update"
+                            SortOption.STATUS_OLDEST -> "Sorted: Oldest status update"
+                            SortOption.CREATION_LATEST -> "Sorted: Latest created"
+                            SortOption.CREATION_OLDEST -> "Sorted: Oldest created"
+                        }
                         Text(
-                            text = if (sortByLatest) "Sorted: Latest applied" else "Sorted: Oldest applied",
+                            text = sortLabel,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
@@ -448,5 +443,77 @@ fun ApplicationsScreen(
                 }
             }
         )
+    }
+
+    if (showSortBottomSheet) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(
+            onDismissRequest = { showSortBottomSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Sort Applications By",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                val options = listOf(
+                    SortOption.STATUS_LATEST to "Status Date: Latest first",
+                    SortOption.STATUS_OLDEST to "Status Date: Oldest first",
+                    SortOption.CREATION_LATEST to "Creation Date: Latest first",
+                    SortOption.CREATION_OLDEST to "Creation Date: Oldest first"
+                )
+                
+                options.forEach { (option, label) ->
+                    val isSelected = sortOption == option
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                val currentIndex = lazyListState.firstVisibleItemIndex
+                                val currentOffset = lazyListState.firstVisibleItemScrollOffset
+                                
+                                viewModel.sortOption.value = option
+                                showSortBottomSheet = false
+                                
+                                coroutineScope.launch {
+                                    kotlinx.coroutines.delay(10)
+                                    lazyListState.scrollToItem(currentIndex, currentOffset)
+                                }
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

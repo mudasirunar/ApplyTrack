@@ -58,9 +58,11 @@ fun JobCard(
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    val formattedDate = remember(job.createdAt) {
+    val formattedDate = remember(job.statusHistory, job.createdAt, job.status) {
+        val statusTimestamp = job.statusHistory?.lastOrNull()?.timestamp ?: job.createdAt
         val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-        sdf.format(Date(job.createdAt))
+        val formatted = sdf.format(Date(statusTimestamp))
+        "${job.status} on $formatted"
     }
 
     Card(

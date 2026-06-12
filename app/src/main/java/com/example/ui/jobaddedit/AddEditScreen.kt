@@ -51,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -84,6 +85,8 @@ import com.example.model.Attachment
 import com.example.ui.JobViewModel
 import com.example.utils.AttachmentHelper
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.onFocusChanged
 import com.example.ui.components.AttachmentRow
 import com.example.ui.components.ScreenAttachment
 import kotlinx.coroutines.Dispatchers
@@ -127,6 +130,7 @@ fun AddEditScreen(
     var appliedDateEpoch by remember { mutableStateOf(System.currentTimeMillis()) }
 
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
 
     var resumeState by remember { mutableStateOf<ScreenAttachment?>(null) }
@@ -169,7 +173,7 @@ fun AddEditScreen(
                     status = app.status
                     jobDescription = app.jobDescription ?: ""
                     notes = app.notes ?: ""
-                    appliedDateEpoch = app.createdAt
+                    appliedDateEpoch = app.statusHistory?.lastOrNull()?.timestamp ?: app.createdAt
 
                     resumeState = app.resume?.let { ScreenAttachment(attachment = it) }
                     coverLetterState = app.coverLetter?.let { ScreenAttachment(attachment = it) }
@@ -468,18 +472,21 @@ fun AddEditScreen(
                             value = formattedDateString,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Date Applied") },
+                            label = { Text("Status Date") },
                             trailingIcon = {
-                                IconButton(onClick = { showDatePicker = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.DateRange,
-                                        contentDescription = "Trigger Calendar Picker"
-                                    )
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "Trigger Calendar Picker",
+                                    tint = if (showDatePicker) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { showDatePicker = true }
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) {
+                                        showDatePicker = true
+                                    }
+                                }
                                 .testTag("input_date_applied"),
                             shape = RoundedCornerShape(8.dp)
                         )
@@ -878,7 +885,10 @@ fun AddEditScreen(
             }
         )
         DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
+            onDismissRequest = {
+                showDatePicker = false
+                focusManager.clearFocus()
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -898,6 +908,7 @@ fun AddEditScreen(
                             appliedDateEpoch = localCal.timeInMillis
                         }
                         showDatePicker = false
+                        focusManager.clearFocus()
                     },
                     modifier = Modifier.testTag("datepicker_confirm")
                 ) {
@@ -906,7 +917,10 @@ fun AddEditScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showDatePicker = false },
+                    onClick = {
+                        showDatePicker = false
+                        focusManager.clearFocus()
+                    },
                     modifier = Modifier.testTag("datepicker_dismiss")
                 ) {
                     Text("Cancel")

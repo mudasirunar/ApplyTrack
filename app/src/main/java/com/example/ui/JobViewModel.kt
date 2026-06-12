@@ -20,6 +20,13 @@ import android.net.Uri
 import android.content.Context
 import java.util.Calendar
 
+enum class SortOption {
+    STATUS_LATEST,
+    STATUS_OLDEST,
+    CREATION_LATEST,
+    CREATION_OLDEST
+}
+
 enum class SyncState {
     IDLE, SYNCING, SUCCESS, ERROR
 }
@@ -46,7 +53,7 @@ class JobViewModel(
     val statusFilter = MutableStateFlow("All") // "All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Month"
     val selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH) + 1) // 1..12
     val selectedYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
-    val sortByLatest = MutableStateFlow(true) // true: latest first, false: oldest first
+    val sortOption = MutableStateFlow(SortOption.STATUS_LATEST)
     val isSearchFocused = MutableStateFlow(false)
     val isFabVisible = MutableStateFlow(true)
 
@@ -68,7 +75,7 @@ class JobViewModel(
         val status: String,
         val month: Int,
         val year: String,
-        val sortByLatest: Boolean
+        val sortOption: SortOption
     )
 
     private val filterParamsFlow: Flow<FilterParams> = combine(
@@ -76,9 +83,9 @@ class JobViewModel(
         statusFilter,
         selectedMonth,
         selectedYear,
-        sortByLatest
-    ) { query, status, month, year, latest ->
-        FilterParams(query, status, month, year, latest)
+        sortOption
+    ) { query, status, month, year, sort ->
+        FilterParams(query, status, month, year, sort)
     }
 
     // Reactive State: All UI Job Applications list combined with filters, searches, months, years & sorting
@@ -113,7 +120,8 @@ class JobViewModel(
             if (targetYear != null) {
                 val cal = Calendar.getInstance()
                 result = result.filter { app ->
-                    cal.timeInMillis = app.createdAt
+                    val statusTimestamp = app.statusHistory?.lastOrNull()?.timestamp ?: app.createdAt
+                    cal.timeInMillis = statusTimestamp
                     val appMonth = cal.get(Calendar.MONTH) + 1 // 1..12
                     val appYear = cal.get(Calendar.YEAR)
                     appMonth == params.month && appYear == targetYear
@@ -126,10 +134,11 @@ class JobViewModel(
         }
 
         // Apply Sort
-        result = if (params.sortByLatest) {
-            result.sortedByDescending { it.createdAt }
-        } else {
-            result.sortedBy { it.createdAt }
+        result = when (params.sortOption) {
+            SortOption.STATUS_LATEST -> result.sortedByDescending { it.statusHistory?.lastOrNull()?.timestamp ?: it.createdAt }
+            SortOption.STATUS_OLDEST -> result.sortedBy { it.statusHistory?.lastOrNull()?.timestamp ?: it.createdAt }
+            SortOption.CREATION_LATEST -> result.sortedByDescending { it.createdAt }
+            SortOption.CREATION_OLDEST -> result.sortedBy { it.createdAt }
         }
 
         result
@@ -212,10 +221,12 @@ class JobViewModel(
                 listOf(StatusHistoryEntry(status, timeApplied))
             } else {
                 if (baseApp.status != status) {
-                    oldHistory + StatusHistoryEntry(status, System.currentTimeMillis())
+                    oldHistory + StatusHistoryEntry(status, timeApplied)
                 } else {
-                    oldHistory.ifEmpty {
-                        listOf(StatusHistoryEntry(status, baseApp.createdAt))
+                    if (oldHistory.isNotEmpty()) {
+                        oldHistory.dropLast(1) + oldHistory.last().copy(timestamp = timeApplied)
+                    } else {
+                        listOf(StatusHistoryEntry(status, timeApplied))
                     }
                 }
             }
@@ -233,7 +244,7 @@ class JobViewModel(
                 coverLetter = coverLetter,
                 additionalDocument = additionalDocument,
                 screenshots = screenshots,
-                createdAt = if (baseApp.id == 0L) timeApplied else baseApp.createdAt,
+                createdAt = if (baseApp.id == 0L) System.currentTimeMillis() else baseApp.createdAt,
                 updatedAt = System.currentTimeMillis()
             )
             repository.saveApplication(finalApp)
