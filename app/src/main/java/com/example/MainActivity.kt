@@ -208,13 +208,66 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToEdit = { id ->
                                     navController.navigate("add_edit?jobId=$id")
                                 },
+                                onNavigateToPdfViewer = { fileName, originalName ->
+                                    navController.navigate("pdf_viewer?fileName=$fileName&originalName=$originalName")
+                                },
+                                onNavigateToImageViewer = { id, index ->
+                                    navController.navigate("image_viewer?jobId=$id&initialIndex=$index")
+                                },
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 }
                             )
                         }
 
-                        // 4. Settings Screen
+                        // 4. PDF Viewer fullscreen screen
+                        composable(
+                            route = "pdf_viewer?fileName={fileName}&originalName={originalName}",
+                            arguments = listOf(
+                                navArgument("fileName") {
+                                    type = NavType.StringType
+                                },
+                                navArgument("originalName") {
+                                    type = NavType.StringType
+                                }
+                            )
+                        ) { backStackEntry ->
+                            val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
+                            val originalName = backStackEntry.arguments?.getString("originalName") ?: ""
+                            com.example.ui.viewer.PdfViewerScreen(
+                                fileName = fileName,
+                                originalName = originalName,
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+                        // 5. Image Viewer fullscreen pager screen
+                        composable(
+                            route = "image_viewer?jobId={jobId}&initialIndex={initialIndex}",
+                            arguments = listOf(
+                                navArgument("jobId") {
+                                    type = NavType.LongType
+                                },
+                                navArgument("initialIndex") {
+                                    type = NavType.IntType
+                                }
+                            )
+                        ) { backStackEntry ->
+                            val jobId = backStackEntry.arguments?.getLong("jobId") ?: 0L
+                            val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
+                            com.example.ui.viewer.ImageViewerScreen(
+                                viewModel = viewModel,
+                                jobId = jobId,
+                                initialIndex = initialIndex,
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+                        // 6. Settings Screen
                         composable("settings") {
                             SettingsScreen(viewModel = viewModel)
                         }

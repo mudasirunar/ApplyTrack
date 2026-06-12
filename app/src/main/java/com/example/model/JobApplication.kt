@@ -17,6 +17,10 @@ data class JobApplication(
     val url: String? = null,
     val email: String? = null,
     val statusHistory: List<StatusHistoryEntry>? = null,
+    val resume: Attachment? = null,
+    val coverLetter: Attachment? = null,
+    val additionalDocument: Attachment? = null,
+    val screenshots: List<Attachment>? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

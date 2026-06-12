@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import com.example.model.StatusHistoryEntry
+import com.example.model.Attachment
 import java.util.Calendar
 
 enum class SyncState {
@@ -154,6 +155,10 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
         url: String?,
         email: String?,
         timeApplied: Long,
+        resume: Attachment?,
+        coverLetter: Attachment?,
+        additionalDocument: Attachment?,
+        screenshots: List<Attachment>?,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
@@ -180,6 +185,10 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
                 url = url?.trim()?.ifEmpty { null },
                 email = email?.trim()?.ifEmpty { null },
                 statusHistory = newHistory,
+                resume = resume,
+                coverLetter = coverLetter,
+                additionalDocument = additionalDocument,
+                screenshots = screenshots,
                 createdAt = if (baseApp.id == 0L) timeApplied else baseApp.createdAt,
                 updatedAt = System.currentTimeMillis()
             )

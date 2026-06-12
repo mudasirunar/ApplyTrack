@@ -40,6 +40,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.border
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.example.model.Attachment
+import com.example.utils.AttachmentHelper
+import java.io.File
+import com.example.ui.components.StatusPill
+import com.example.ui.components.InfoRow
+import com.example.ui.components.TimelineNode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,18 +56,24 @@ fun DetailScreen(
     viewModel: JobViewModel,
     jobId: Long,
     onNavigateToEdit: (Long) -> Unit,
+    onNavigateToPdfViewer: (String, String) -> Unit,
+    onNavigateToImageViewer: (Long, Int) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     val selectedApp by viewModel.selectedApplication.collectAsStateWithLifecycle()
     var isDescriptionExpanded by remember { mutableStateOf(true) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
     val sdf = remember { SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault()) }
     val sdfApplied = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     // Load state
     LaunchedEffect(jobId) {
-        viewModel.clearSelectedApplication()
+        if (viewModel.selectedApplication.value?.id != jobId) {
+            viewModel.clearSelectedApplication()
+        }
         viewModel.loadApplicationById(jobId)
     }
 
@@ -456,6 +471,138 @@ fun DetailScreen(
                         }
                     }
 
+                    // Section 3.5: Attachments Card
+                    val hasAttachments = job.resume != null || job.coverLetter != null || job.additionalDocument != null || !job.screenshots.isNullOrEmpty()
+                    if (hasAttachments) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            shape = RoundedCornerShape(16.dp),
+                            border = CardDefaults.outlinedCardBorder(),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text(
+                                    text = "Documents & Attachments",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                                // Documents
+                                listOf(
+                                    "Resume / CV" to job.resume,
+                                    "Cover Letter" to job.coverLetter,
+                                    "Additional Document" to job.additionalDocument
+                                ).forEach { (label, docAttachment) ->
+                                    if (docAttachment != null) {
+                                        val exists = AttachmentHelper.fileExists(context, docAttachment.fileName)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = label,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = docAttachment.originalName,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (exists) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            if (exists) {
+                                                Button(
+                                                    onClick = { onNavigateToPdfViewer(docAttachment.fileName, docAttachment.originalName) },
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                                    ),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                                ) {
+                                                    Text("View", style = MaterialTheme.typography.bodySmall)
+                                                }
+                                            } else {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                                    Text("Syncing...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                                }
+                                            }
+                                        }
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                    }
+                                }
+
+                                // Screenshots
+                                if (!job.screenshots.isNullOrEmpty()) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            text = "Screenshots / Additional Images",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            job.screenshots.forEachIndexed { index, screenshot ->
+                                                val file = AttachmentHelper.getAttachmentFile(context, screenshot.fileName)
+                                                val exists = file.exists()
+                                                
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(80.dp)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                                        .then(
+                                                            if (exists) {
+                                                                Modifier.clickable { onNavigateToImageViewer(jobId, index) }
+                                                            } else Modifier
+                                                        )
+                                                ) {
+                                                    if (exists) {
+                                                        AsyncImage(
+                                                            model = file,
+                                                            contentDescription = "Screenshot",
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+                                                    } else {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Section 4: Timeline Visualization (Mimicking delivery status tracker)
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -545,139 +692,5 @@ fun DetailScreen(
                 }
             }
         )
-    }
-}
-
-@Composable
-fun StatusPill(status: String) {
-    val chipBgColor = when (status.lowercase()) {
-        "applied", "saved" -> WarningAmber.copy(alpha = 0.1f)
-        "interview", "interviewing" -> AccentGreen.copy(alpha = 0.1f)
-        "rejected" -> ErrorRed.copy(alpha = 0.1f)
-        "offer" -> LinkBlue.copy(alpha = 0.1f)
-        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
-    }
-
-    val chipContentColor = when (status.lowercase()) {
-        "applied", "saved" -> WarningAmber
-        "interview", "interviewing" -> AccentGreen
-        "rejected" -> ErrorRed
-        "offer" -> LinkBlue
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = chipBgColor,
-        border = CardDefaults.outlinedCardBorder()
-    ) {
-        Text(
-            text = status.uppercase(),
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = chipContentColor,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
-        )
-    }
-}
-
-@Composable
-fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-fun TimelineNode(
-    stage: String,
-    date: String,
-    isCurrent: Boolean,
-    isFirst: Boolean,
-    isLast: Boolean
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val lineColor = MaterialTheme.colorScheme.surfaceVariant
-        Box(
-            modifier = Modifier
-                .width(32.dp)
-                .fillMaxHeight()
-                .drawBehind {
-                    val centerX = size.width / 2f
-                    val centerY = size.height / 2f
-                    val strokeWidth = 2.dp.toPx()
-                    
-                    if (!isFirst) {
-                        drawLine(
-                            color = lineColor,
-                            start = Offset(centerX, 0f),
-                            end = Offset(centerX, centerY),
-                            strokeWidth = strokeWidth
-                        )
-                    }
-                    if (!isLast) {
-                        drawLine(
-                            color = lineColor,
-                            start = Offset(centerX, centerY),
-                            end = Offset(centerX, size.height),
-                            strokeWidth = strokeWidth
-                        )
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(if (isCurrent) 16.dp else 12.dp)
-                    .background(
-                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                        shape = CircleShape
-                    )
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 12.dp)
-        ) {
-            Text(
-                text = stage,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (isCurrent) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = date,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-            )
-        }
     }
 }

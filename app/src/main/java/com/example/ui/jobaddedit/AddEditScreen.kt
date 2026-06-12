@@ -1,29 +1,99 @@
 package com.example.ui.jobaddedit
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.example.ui.JobViewModel
-import com.example.model.JobApplication
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.text.SimpleDateFormat
-import java.util.*
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.example.model.Attachment
+import com.example.ui.JobViewModel
+import com.example.utils.AttachmentHelper
+import androidx.activity.compose.BackHandler
+import com.example.ui.components.AttachmentRow
+import com.example.ui.components.ScreenAttachment
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +124,19 @@ fun AddEditScreen(
     var jobDescription by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var appliedDateEpoch by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var resumeState by remember { mutableStateOf<ScreenAttachment?>(null) }
+    var coverLetterState by remember { mutableStateOf<ScreenAttachment?>(null) }
+    var additionalDocumentState by remember { mutableStateOf<ScreenAttachment?>(null) }
+    var screenshotsList by remember { mutableStateOf<List<ScreenAttachment>>(emptyList()) }
+    var isSaving by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = isSaving) {
+        // Prevent system/gesture back navigation while saving
+    }
 
     // Dropdown expanded states
     var platformExpanded by remember { mutableStateOf(false) }
@@ -86,6 +169,11 @@ fun AddEditScreen(
                     jobDescription = app.jobDescription ?: ""
                     notes = app.notes ?: ""
                     appliedDateEpoch = app.createdAt
+
+                    resumeState = app.resume?.let { ScreenAttachment(attachment = it) }
+                    coverLetterState = app.coverLetter?.let { ScreenAttachment(attachment = it) }
+                    additionalDocumentState = app.additionalDocument?.let { ScreenAttachment(attachment = it) }
+                    screenshotsList = app.screenshots?.map { ScreenAttachment(attachment = it) } ?: emptyList()
                 }
             }
         } else {
@@ -99,6 +187,11 @@ fun AddEditScreen(
             jobDescription = ""
             notes = ""
             appliedDateEpoch = System.currentTimeMillis()
+
+            resumeState = null
+            coverLetterState = null
+            additionalDocumentState = null
+            screenshotsList = emptyList()
         }
     }
 
@@ -107,6 +200,36 @@ fun AddEditScreen(
 
     val sdf = remember { SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()) }
     val formattedDateString = remember(appliedDateEpoch) { sdf.format(Date(appliedDateEpoch)) }
+
+    val resumeLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { resumeState = ScreenAttachment(uri = it) }
+    }
+
+    val coverLetterLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { coverLetterState = ScreenAttachment(uri = it) }
+    }
+
+    val additionalDocLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { additionalDocumentState = ScreenAttachment(uri = it) }
+    }
+
+    val screenshotsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            if (screenshotsList.size < 3) {
+                screenshotsList = screenshotsList + ScreenAttachment(uri = it)
+            } else {
+                Toast.makeText(context, "Maximum 3 screenshots allowed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -121,11 +244,17 @@ fun AddEditScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBack,
+                        enabled = !isSaving,
                         modifier = Modifier.testTag("back_button")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate Back"
+                            contentDescription = "Navigate Back",
+                            tint = if (isSaving) {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
                         )
                     }
                 },
@@ -393,6 +522,146 @@ fun AddEditScreen(
                         )
                     }
                 }
+
+                // Section 4: Attachments Bento Card
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    border = CardDefaults.outlinedCardBorder(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Documents & Attachments",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        AttachmentRow(
+                            label = "Resume / CV",
+                            attachment = resumeState,
+                            onPickFile = { resumeLauncher.launch("application/pdf") },
+                            onRemove = { resumeState = null }
+                        )
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                        AttachmentRow(
+                            label = "Cover Letter",
+                            attachment = coverLetterState,
+                            onPickFile = { coverLetterLauncher.launch("application/pdf") },
+                            onRemove = { coverLetterState = null }
+                        )
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                        AttachmentRow(
+                            label = "Additional Document",
+                            attachment = additionalDocumentState,
+                            onPickFile = { additionalDocLauncher.launch("application/pdf") },
+                            onRemove = { additionalDocumentState = null }
+                        )
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                        // Screenshots Grid
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Screenshots / Additional Images",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                screenshotsList.forEachIndexed { index, item ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                    ) {
+                                        if (item.attachment != null) {
+                                            val file = AttachmentHelper.getAttachmentFile(context, item.attachment.fileName)
+                                            AsyncImage(
+                                                model = file,
+                                                contentDescription = "Screenshot",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        } else {
+                                            AsyncImage(
+                                                model = item.uri,
+                                                contentDescription = "Screenshot",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+
+                                        // Delete badge
+                                        IconButton(
+                                            onClick = {
+                                                screenshotsList = screenshotsList.toMutableList().apply { removeAt(index) }
+                                            },
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .align(Alignment.TopEnd)
+                                                .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                                                .padding(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete screenshot",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                if (screenshotsList.size < 3) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                            .clickable { screenshotsLauncher.launch("image/*") }
+                                            .border(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Image,
+                                                contentDescription = "Add Screenshot",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Text(
+                                                text = "Add (${screenshotsList.size}/3)",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontSize = 10.sp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Fixed Bottom Action container supporting Save actions
@@ -412,42 +681,181 @@ fun AddEditScreen(
                 ) {
                     Button(
                         onClick = {
-                            val finalPlatform = when (platform) {
-                                "Other" -> customPlatformName.trim().ifEmpty { "Other" }
-                                else -> platform
-                            }
-                            
-                            val finalUrl = url.trim().ifEmpty { null }
-                            val finalEmail = if (platform == "Email") email.trim().ifEmpty { null } else null
+                            if (isSaving) return@Button
+                            isSaving = true
+                            scope.launch {
+                                try {
+                                    // Capture Compose states on the Main thread
+                                    val resumeVal = resumeState
+                                    val coverLetterVal = coverLetterState
+                                    val additionalDocVal = additionalDocumentState
+                                    val screenshotsVal = screenshotsList
+                                    val currentJobVal = selectedApp
+                                    val companyNameVal = companyName
+                                    val roleVal = role
+                                    val platformVal = platform
+                                    val customPlatformNameVal = customPlatformName
+                                    val urlVal = url
+                                    val emailVal = email
+                                    val statusVal = status
+                                    val jobDescriptionVal = jobDescription
+                                    val notesVal = notes
+                                    val appliedDateEpochVal = appliedDateEpoch
 
-                            viewModel.saveJobApplication(
-                                companyName = companyName,
-                                role = role,
-                                platform = finalPlatform,
-                                status = status,
-                                jobDescription = jobDescription,
-                                notes = notes,
-                                url = finalUrl,
-                                email = finalEmail,
-                                timeApplied = appliedDateEpoch,
-                                onSuccess = onNavigateBack
-                            )
+                                    var finalResume: Attachment? = null
+                                    var finalCoverLetter: Attachment? = null
+                                    var finalAdditionalDoc: Attachment? = null
+                                    var finalScreenshots: List<Attachment> = emptyList()
+
+                                    // Switch to Dispatchers.IO for background copying and cleaning
+                                    withContext(Dispatchers.IO) {
+                                        // 1. Copy Resume
+                                        finalResume = resumeVal?.let { item ->
+                                            if (item.attachment != null) {
+                                                item.attachment
+                                            } else {
+                                                val uri = item.uri!!
+                                                val origName = AttachmentHelper.getFileName(context, uri)
+                                                val ext = AttachmentHelper.getFileExtension(origName)
+                                                val uniqueName = "${UUID.randomUUID()}.$ext"
+                                                AttachmentHelper.copyUriToInternalStorage(context, uri, uniqueName)
+                                                Attachment(uniqueName, origName)
+                                            }
+                                        }
+
+                                        // 2. Copy Cover Letter
+                                        finalCoverLetter = coverLetterVal?.let { item ->
+                                            if (item.attachment != null) {
+                                                item.attachment
+                                            } else {
+                                                val uri = item.uri!!
+                                                val origName = AttachmentHelper.getFileName(context, uri)
+                                                val ext = AttachmentHelper.getFileExtension(origName)
+                                                val uniqueName = "${UUID.randomUUID()}.$ext"
+                                                AttachmentHelper.copyUriToInternalStorage(context, uri, uniqueName)
+                                                Attachment(uniqueName, origName)
+                                            }
+                                        }
+
+                                        // 3. Copy Additional Document
+                                        finalAdditionalDoc = additionalDocVal?.let { item ->
+                                            if (item.attachment != null) {
+                                                item.attachment
+                                            } else {
+                                                val uri = item.uri!!
+                                                val origName = AttachmentHelper.getFileName(context, uri)
+                                                val ext = AttachmentHelper.getFileExtension(origName)
+                                                val uniqueName = "${UUID.randomUUID()}.$ext"
+                                                AttachmentHelper.copyUriToInternalStorage(context, uri, uniqueName)
+                                                Attachment(uniqueName, origName)
+                                            }
+                                        }
+
+                                        // 4. Copy Screenshots
+                                        finalScreenshots = screenshotsVal.map { item ->
+                                            if (item.attachment != null) {
+                                                item.attachment
+                                            } else {
+                                                val uri = item.uri!!
+                                                val origName = AttachmentHelper.getFileName(context, uri)
+                                                val ext = AttachmentHelper.getFileExtension(origName)
+                                                val uniqueName = "${UUID.randomUUID()}.$ext"
+                                                AttachmentHelper.copyUriToInternalStorage(context, uri, uniqueName)
+                                                Attachment(uniqueName, origName)
+                                            }
+                                        }
+
+                                        // 5. Clean up old deleted files on disk
+                                        if (currentJobVal != null) {
+                                            val oldAttachments = listOfNotNull(
+                                                currentJobVal.resume,
+                                                currentJobVal.coverLetter,
+                                                currentJobVal.additionalDocument
+                                            ) + (currentJobVal.screenshots ?: emptyList())
+                                            
+                                            val newAttachments = listOfNotNull(
+                                                finalResume,
+                                                finalCoverLetter,
+                                                finalAdditionalDoc
+                                            ) + finalScreenshots
+                                            
+                                            val deletedAttachments = oldAttachments.filter { old ->
+                                                newAttachments.none { new -> new.fileName == old.fileName }
+                                            }
+                                            
+                                            deletedAttachments.forEach { attachment ->
+                                                AttachmentHelper.deleteFile(context, attachment.fileName)
+                                            }
+                                        }
+                                    }
+
+                                    val finalPlatform = when (platformVal) {
+                                        "Other" -> customPlatformNameVal.trim().ifEmpty { "Other" }
+                                        else -> platformVal
+                                    }
+                                    
+                                    val finalUrl = urlVal.trim().ifEmpty { null }
+                                    val finalEmail = if (platformVal == "Email") emailVal.trim().ifEmpty { null } else null
+
+                                    viewModel.saveJobApplication(
+                                        companyName = companyNameVal,
+                                        role = roleVal,
+                                        platform = finalPlatform,
+                                        status = statusVal,
+                                        jobDescription = jobDescriptionVal,
+                                        notes = notesVal,
+                                        url = finalUrl,
+                                        email = finalEmail,
+                                        timeApplied = appliedDateEpochVal,
+                                        resume = finalResume,
+                                        coverLetter = finalCoverLetter,
+                                        additionalDocument = finalAdditionalDoc,
+                                        screenshots = finalScreenshots,
+                                        onSuccess = onNavigateBack
+                                    )
+                                } catch (e: Exception) {
+                                    isSaving = false
+                                    Toast.makeText(context, "Failed to save: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                }
+                            }
                         },
+                        enabled = !isSaving,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
                             .testTag("save_application_button"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(
-                            text = if (jobId == null) "Save Application" else "Update Application",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        if (isSaving) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (jobId == null) "Saving..." else "Updating...",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = if (jobId == null) "Save Application" else "Update Application",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
                     }
                 }
             }

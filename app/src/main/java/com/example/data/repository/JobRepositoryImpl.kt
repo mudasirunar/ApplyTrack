@@ -4,6 +4,7 @@ import com.example.data.local.JobApplicationDao
 import com.example.model.DeletedJob
 import com.example.model.JobApplication
 import com.example.model.StatusHistoryEntry
+import com.example.model.Attachment
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
@@ -118,6 +119,18 @@ class JobRepositoryImpl(
                                 "timestamp" to entry.timestamp
                             )
                         },
+                        "resume" to job.resume?.let {
+                            hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                        },
+                        "coverLetter" to job.coverLetter?.let {
+                            hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                        },
+                        "additionalDocument" to job.additionalDocument?.let {
+                            hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                        },
+                        "screenshots" to job.screenshots?.map {
+                            hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                        },
                         "createdAt" to job.createdAt,
                         "updatedAt" to job.updatedAt
                     )
@@ -188,6 +201,36 @@ class JobRepositoryImpl(
             val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
             val updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
 
+            val resume = (doc.get("resume") as? Map<*, *>)?.let {
+                val fileName = it["fileName"] as? String
+                val originalName = it["originalName"] as? String
+                if (fileName != null && originalName != null) Attachment(fileName, originalName) else null
+            }
+            val coverLetter = (doc.get("coverLetter") as? Map<*, *>)?.let {
+                val fileName = it["fileName"] as? String
+                val originalName = it["originalName"] as? String
+                if (fileName != null && originalName != null) Attachment(fileName, originalName) else null
+            }
+            val additionalDocument = (doc.get("additionalDocument") as? Map<*, *>)?.let {
+                val fileName = it["fileName"] as? String
+                val originalName = it["originalName"] as? String
+                if (fileName != null && originalName != null) Attachment(fileName, originalName) else null
+            }
+            val rawScreenshots = doc.get("screenshots")
+            val screenshots = when (rawScreenshots) {
+                is List<*> -> {
+                    rawScreenshots.mapNotNull { item ->
+                        val map = item as? Map<*, *>
+                        val fileName = map?.get("fileName") as? String
+                        val originalName = map?.get("originalName") as? String
+                        if (fileName != null && originalName != null) {
+                            Attachment(fileName, originalName)
+                        } else null
+                    }
+                }
+                else -> null
+            }
+
             val localJob = dao.getApplicationByUuid(uuid)
             
             if (localJob == null) {
@@ -203,6 +246,10 @@ class JobRepositoryImpl(
                     url = url,
                     email = email,
                     statusHistory = statusHistory,
+                    resume = resume,
+                    coverLetter = coverLetter,
+                    additionalDocument = additionalDocument,
+                    screenshots = screenshots,
                     createdAt = createdAt,
                     updatedAt = updatedAt
                 )
@@ -220,6 +267,10 @@ class JobRepositoryImpl(
                         url = url,
                         email = email,
                         statusHistory = statusHistory,
+                        resume = resume,
+                        coverLetter = coverLetter,
+                        additionalDocument = additionalDocument,
+                        screenshots = screenshots,
                         createdAt = createdAt,
                         updatedAt = updatedAt
                     )
