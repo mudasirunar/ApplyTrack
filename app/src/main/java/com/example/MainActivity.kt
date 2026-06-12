@@ -22,6 +22,7 @@ import com.example.data.repository.JobRepositoryImpl
 import com.example.ui.JobViewModel
 import com.example.ui.JobViewModelFactory
 import com.example.ui.dashboard.DashboardScreen
+import com.example.ui.applications.ApplicationsScreen
 import com.example.ui.jobaddedit.AddEditScreen
 import com.example.ui.jobdetail.DetailScreen
 import com.example.ui.theme.*
@@ -29,6 +30,7 @@ import com.example.utils.PreferencesHelper
 import com.example.utils.AppTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -84,7 +86,7 @@ class MainActivity : ComponentActivity() {
                     Scaffold(
                         bottomBar = {
                             AnimatedVisibility(
-                                visible = (currentRoute == "dashboard" || currentRoute == "settings") && !isSearchFocused,
+                                visible = (currentRoute == "dashboard" || currentRoute == "applications" || currentRoute == "settings") && !isSearchFocused,
                                 enter = slideInVertically(
                                     initialOffsetY = { it },
                                     animationSpec = tween(120)
@@ -130,6 +132,30 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier.testTag("nav_home")
                                     )
                                     NavigationBarItem(
+                                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Applications") },
+                                        label = { Text("Applications") },
+                                        selected = currentRoute == "applications",
+                                        onClick = {
+                                            if (currentRoute != "applications") {
+                                                navController.navigate("applications") {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            }
+                                        },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = navSelectedIcon,
+                                            selectedTextColor = navSelectedText,
+                                            unselectedIconColor = navUnselected,
+                                            unselectedTextColor = navUnselected,
+                                            indicatorColor = navSelectedIndicator
+                                        ),
+                                        modifier = Modifier.testTag("nav_applications")
+                                    )
+                                    NavigationBarItem(
                                         icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                                         label = { Text("Settings") },
                                         selected = currentRoute == "settings",
@@ -168,6 +194,13 @@ class MainActivity : ComponentActivity() {
                         // 1. Dashboard Landing screen
                         composable("dashboard") {
                             DashboardScreen(
+                                viewModel = viewModel
+                            )
+                        }
+
+                        // Applications List Screen
+                        composable("applications") {
+                            ApplicationsScreen(
                                 viewModel = viewModel,
                                 onNavigateToAddEdit = { id ->
                                     val route = if (id != null) "add_edit?jobId=$id" else "add_edit"
