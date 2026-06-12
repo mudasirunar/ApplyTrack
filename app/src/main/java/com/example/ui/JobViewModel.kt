@@ -59,11 +59,13 @@ class JobViewModel(private val repository: JobRepository) : ViewModel() {
     ) { apps, params ->
         var result = apps
 
-        // Apply Search (Search by company or role)
+        // Apply Search (Search by company, role, job description, or notes)
         if (params.query.isNotBlank()) {
             result = result.filter {
                 it.companyName?.contains(params.query, ignoreCase = true) == true ||
-                it.role?.contains(params.query, ignoreCase = true) == true
+                it.role?.contains(params.query, ignoreCase = true) == true ||
+                it.jobDescription?.contains(params.query, ignoreCase = true) == true ||
+                it.notes?.contains(params.query, ignoreCase = true) == true
             }
         }
 

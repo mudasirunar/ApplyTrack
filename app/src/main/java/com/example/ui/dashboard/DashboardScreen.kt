@@ -154,7 +154,7 @@ fun DashboardScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.searchQuery.value = it },
-                    placeholder = { Text("Search company or role...") },
+                    placeholder = { Text("Search...") },
                     leadingIcon = {
                         if (isSearchFocused) {
                             IconButton(onClick = { focusManager.clearFocus() }) {
