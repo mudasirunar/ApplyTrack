@@ -1,5 +1,7 @@
 package com.example.ui.viewer
 
+import android.content.Intent
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
@@ -11,6 +13,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -87,6 +90,29 @@ fun ImageViewerScreen(
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(imageVector = Icons.Default.Close, contentDescription = "Close Viewer")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            val currentScreenshot = screenshots.getOrNull(pagerState.currentPage)
+                            if (currentScreenshot != null) {
+                                val file = AttachmentHelper.getAttachmentFile(context, currentScreenshot.fileName)
+                                if (file.exists()) {
+                                    val uri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        file
+                                    )
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "image/*"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share Image"))
+                                }
+                            }
+                        }) {
+                            Icon(imageVector = Icons.Default.Share, contentDescription = "Share Image")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)

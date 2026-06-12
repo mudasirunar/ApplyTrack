@@ -1,11 +1,14 @@
 package com.example.ui.viewer
 
+import android.content.Intent
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +62,34 @@ fun PdfViewerScreen(
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(imageVector = Icons.Default.Close, contentDescription = "Close PDF Viewer")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            if (file.exists()) {
+                                try {
+                                    val sharedDir = java.io.File(context.cacheDir, "shared_files")
+                                    if (!sharedDir.exists()) sharedDir.mkdirs()
+                                    val sharedFile = java.io.File(sharedDir, originalName)
+                                    file.copyTo(sharedFile, overwrite = true)
+                                    
+                                    val uri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        sharedFile
+                                    )
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "application/pdf"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share PDF"))
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }) {
+                            Icon(imageVector = Icons.Default.Share, contentDescription = "Share PDF")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
