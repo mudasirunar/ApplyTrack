@@ -50,6 +50,18 @@ import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.settings.SettingsScreen
 
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
+
 class MainActivity : ComponentActivity() {
 
     // Manual clean dependency injection container setup following recommended guidelines
@@ -82,8 +94,51 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
+                    val snackbarHostState = remember { SnackbarHostState() }
+                    
+                    val pendingDeleteJob by viewModel.pendingDeleteJob.collectAsStateWithLifecycle()
+                    val lifecycleOwner = LocalLifecycleOwner.current
+
+                    // Observe pending delete for Snackbar
+                    LaunchedEffect(pendingDeleteJob) {
+                        pendingDeleteJob?.let { job ->
+                            val roleName = job.role.takeUnless { it.isNullOrBlank() } ?: "Application"
+                            val result = snackbarHostState.showSnackbar(
+                                message = "'$roleName' deleted",
+                                actionLabel = "Undo",
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.undoDelete()
+                            } else if (result == SnackbarResult.Dismissed) {
+                                viewModel.commitPendingDelete()
+                            }
+                        }
+                    }
+
+                    // Commit delete if navigating to edit or detail screens
+                    LaunchedEffect(currentRoute) {
+                        if (currentRoute?.startsWith("add_edit") == true || currentRoute?.startsWith("detail") == true) {
+                            viewModel.commitPendingDelete()
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                        }
+                    }
+
+                    // Commit delete if app goes to background
+                    DisposableEffect(lifecycleOwner) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_STOP) {
+                                viewModel.commitPendingDelete()
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                        }
+                    }
 
                     Scaffold(
+                        snackbarHost = { SnackbarHost(snackbarHostState) },
                         bottomBar = {
                             AnimatedVisibility(
                                 visible = (currentRoute == "dashboard" || currentRoute == "applications" || currentRoute == "settings") && !isSearchFocused,

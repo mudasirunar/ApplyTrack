@@ -675,9 +675,8 @@ fun DetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteSelectedApplication(jobId) {
-                            onNavigateBack()
-                        }
+                        viewModel.requestDeleteApplication(selectedApp!!)
+                        onNavigateBack()
                         showDeleteConfirmDialog = false
                     },
                     modifier = Modifier.testTag("delete_dialog_confirm")

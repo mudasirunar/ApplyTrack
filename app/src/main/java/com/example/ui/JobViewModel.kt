@@ -56,6 +56,11 @@ class JobViewModel(
     private val _isInitialLoading = MutableStateFlow(true)
     val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
 
+    private val _pendingDeleteJob = MutableStateFlow<JobApplication?>(null)
+    val pendingDeleteJob: StateFlow<JobApplication?> = _pendingDeleteJob.asStateFlow()
+
+    private val permanentlyDeletedIds = MutableStateFlow<Set<Long>>(emptySet())
+
     // Helper data class to bypass Kotlin's 5-flow combine limitation in a type-safe manner
     private data class FilterParams(
         val query: String,
@@ -78,9 +83,11 @@ class JobViewModel(
     // Reactive State: All UI Job Applications list combined with filters, searches, months, years & sorting
     val filteredApplications: StateFlow<List<JobApplication>> = combine(
         repository.getAllApplications(),
-        filterParamsFlow
-    ) { apps, params ->
-        var result = apps
+        filterParamsFlow,
+        _pendingDeleteJob,
+        permanentlyDeletedIds
+    ) { apps, params, pendingDelete, permanentlyDeleted ->
+        var result = apps.filter { it.id != pendingDelete?.id && !permanentlyDeleted.contains(it.id) }
 
         // Apply Search (Search by company, role, job description, or notes)
         if (params.query.isNotBlank()) {
@@ -127,20 +134,24 @@ class JobViewModel(
     )
 
     // Summary Statistics Cards derived dynamically
-    val dashboardStats: StateFlow<DashboardStats> = repository.getAllApplications()
-        .map { apps ->
-            DashboardStats(
-                total = apps.size,
-                interviews = apps.count { it.status.equals("Interview", ignoreCase = true) },
-                rejected = apps.count { it.status.equals("Rejected", ignoreCase = true) },
-                offers = apps.count { it.status.equals("Offer", ignoreCase = true) },
-                saved = apps.count { it.status.equals("Saved", ignoreCase = true) || it.status.equals("Applied", ignoreCase = true) }
-            )
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = DashboardStats()
+    val dashboardStats: StateFlow<DashboardStats> = combine(
+        repository.getAllApplications(),
+        _pendingDeleteJob,
+        permanentlyDeletedIds
+    ) { apps, pendingDelete, permanentlyDeleted ->
+        val filteredApps = apps.filter { it.id != pendingDelete?.id && !permanentlyDeleted.contains(it.id) }
+        DashboardStats(
+            total = filteredApps.size,
+            interviews = filteredApps.count { it.status.equals("Interview", ignoreCase = true) },
+            rejected = filteredApps.count { it.status.equals("Rejected", ignoreCase = true) },
+            offers = filteredApps.count { it.status.equals("Offer", ignoreCase = true) },
+            saved = filteredApps.count { it.status.equals("Saved", ignoreCase = true) || it.status.equals("Applied", ignoreCase = true) }
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = DashboardStats()
+    )
 
     // Sync Status States
     private val _syncState = MutableStateFlow(SyncState.IDLE)
@@ -221,6 +232,33 @@ class JobViewModel(
             // Trigger auto upload sync if initialized
             triggerUploadSync()
             onSuccess()
+        }
+    }
+
+    fun requestDeleteApplication(job: JobApplication) {
+        viewModelScope.launch {
+            // Commit any existing pending delete first
+            _pendingDeleteJob.value?.let { commitDelete(it) }
+            _pendingDeleteJob.value = job
+        }
+    }
+
+    fun undoDelete() {
+        _pendingDeleteJob.value = null
+    }
+
+    fun commitPendingDelete() {
+        val jobToCommit = _pendingDeleteJob.value
+        if (jobToCommit != null) {
+            _pendingDeleteJob.value = null
+            commitDelete(jobToCommit)
+        }
+    }
+
+    private fun commitDelete(job: JobApplication) {
+        viewModelScope.launch {
+            repository.deleteApplication(job.id)
+            triggerUploadSync()
         }
     }
 

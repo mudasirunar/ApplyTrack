@@ -419,7 +419,7 @@ fun ApplicationsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteSelectedApplication(jobToDelete!!.id) {}
+                        viewModel.requestDeleteApplication(jobToDelete!!)
                         showDeleteConfirmDialog = false
                         jobToDelete = null
                     },
