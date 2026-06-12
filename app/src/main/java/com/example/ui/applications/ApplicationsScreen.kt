@@ -57,6 +57,9 @@ fun ApplicationsScreen(
     val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
     val sortByLatest by viewModel.sortByLatest.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val spacing = 8.dp
+    val fabBottomPadding = navigationBarsPadding + 80.dp + spacing
     val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
     val selectedMonth by viewModel.selectedMonth.collectAsStateWithLifecycle()
     val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
@@ -68,12 +71,17 @@ fun ApplicationsScreen(
     val coroutineScope = rememberCoroutineScope()
     var previousIndex by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemIndex) }
     var previousScrollOffset by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemScrollOffset) }
-    var isFabVisible by rememberSaveable { mutableStateOf(true) }
+    val isFabVisible by viewModel.isFabVisible.collectAsStateWithLifecycle()
     val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
 
     BackHandler(enabled = isSearchFocused) {
         focusManager.clearFocus()
+    }
+
+    DisposableEffect(Unit) {
+        viewModel.isFabVisible.value = true
+        onDispose {}
     }
 
     LaunchedEffect(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset) {
@@ -82,51 +90,23 @@ fun ApplicationsScreen(
         
         if (currentIndex > previousIndex || (currentIndex == previousIndex && currentOffset > previousScrollOffset)) {
             // Scrolling down
-            isFabVisible = false
+            viewModel.isFabVisible.value = false
         } else if (currentIndex < previousIndex || (currentIndex == previousIndex && currentOffset < previousScrollOffset)) {
             // Scrolling up
-            isFabVisible = true
+            viewModel.isFabVisible.value = true
         }
         
         previousIndex = currentIndex
         previousScrollOffset = currentOffset
     }
 
-    Scaffold(
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = isFabVisible && !isSearchFocused && !isInitialLoading,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-            ) {
-                val isSyncing = syncState == SyncState.SYNCING
-                val fabBgColor = if (isSyncing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
-                val fabContentColor = if (isSyncing) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onPrimary
-
-                FloatingActionButton(
-                    onClick = {
-                        if (!isSyncing) {
-                            onNavigateToAddEdit(null)
-                        }
-                    },
-                    containerColor = fabBgColor,
-                    contentColor = fabContentColor,
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .padding(bottom = 80.dp)
-                        .testTag("add_job_fab"),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add New Job Application")
-                }
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+    Scaffold { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background)
         ) {
             // Search Bar & Filter Rows
             Column(
@@ -406,6 +386,34 @@ fun ApplicationsScreen(
                 }
             }
         }
+
+        AnimatedVisibility(
+            visible = isFabVisible && !isSearchFocused && !isInitialLoading,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = fabBottomPadding)
+        ) {
+            val isSyncing = syncState == SyncState.SYNCING
+            val fabBgColor = if (isSyncing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
+            val fabContentColor = if (isSyncing) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onPrimary
+
+            FloatingActionButton(
+                onClick = {
+                    if (!isSyncing) {
+                        onNavigateToAddEdit(null)
+                    }
+                },
+                containerColor = fabBgColor,
+                contentColor = fabContentColor,
+                modifier = Modifier.testTag("add_job_fab"),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add New Job Application")
+            }
+        }
+    }
     }
 
     if (showDeleteConfirmDialog && jobToDelete != null) {

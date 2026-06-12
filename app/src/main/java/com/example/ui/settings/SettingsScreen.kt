@@ -764,7 +764,7 @@ fun SettingsScreen(
                         }
                     }
                 ) {
-                    Text("Ignore")
+                    Text("Keep")
                 }
             }
         )

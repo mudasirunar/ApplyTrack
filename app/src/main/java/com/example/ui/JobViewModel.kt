@@ -48,6 +48,7 @@ class JobViewModel(
     val selectedYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
     val sortByLatest = MutableStateFlow(true) // true: latest first, false: oldest first
     val isSearchFocused = MutableStateFlow(false)
+    val isFabVisible = MutableStateFlow(true)
 
     // Detailed application state (for detail/edit view)
     private val _selectedApplication = MutableStateFlow<JobApplication?>(null)
@@ -87,6 +88,13 @@ class JobViewModel(
         _pendingDeleteJob,
         permanentlyDeletedIds
     ) { apps, params, pendingDelete, permanentlyDeleted ->
+        val missingIds = permanentlyDeleted.filter { id -> apps.none { it.id == id } }
+        if (missingIds.isNotEmpty()) {
+            viewModelScope.launch {
+                permanentlyDeletedIds.value = permanentlyDeletedIds.value - missingIds.toSet()
+            }
+        }
+
         var result = apps.filter { it.id != pendingDelete?.id && !permanentlyDeleted.contains(it.id) }
 
         // Apply Search (Search by company, role, job description, or notes)
@@ -250,6 +258,7 @@ class JobViewModel(
     fun commitPendingDelete() {
         val jobToCommit = _pendingDeleteJob.value
         if (jobToCommit != null) {
+            permanentlyDeletedIds.value = permanentlyDeletedIds.value + jobToCommit.id
             _pendingDeleteJob.value = null
             commitDelete(jobToCommit)
         }
@@ -264,6 +273,7 @@ class JobViewModel(
 
     fun deleteSelectedApplication(id: Long, onSuccess: () -> Unit) {
         viewModelScope.launch {
+            permanentlyDeletedIds.value = permanentlyDeletedIds.value + id
             repository.deleteApplication(id)
             // Trigger auto upload sync if initialized
             triggerUploadSync()

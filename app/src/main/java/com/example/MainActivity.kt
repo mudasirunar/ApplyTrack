@@ -49,6 +49,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.settings.SettingsScreen
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.ui.Alignment
+import androidx.compose.animation.core.animateDpAsState
 
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -95,6 +101,27 @@ class MainActivity : ComponentActivity() {
                     val currentRoute = navBackStackEntry?.destination?.route
                     val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
                     val snackbarHostState = remember { SnackbarHostState() }
+                    val isFabVisible by viewModel.isFabVisible.collectAsStateWithLifecycle()
+                    val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
+                    val isFabVisibleOnScreen = currentRoute == "applications" && isFabVisible && !isSearchFocused && !isInitialLoading
+                    val isBottomBarVisible = (currentRoute == "dashboard" || currentRoute == "applications" || currentRoute == "settings") && !isSearchFocused
+                    
+                    val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    val snackbarSpacing = 2.dp
+                    val fabSpacing = 8.dp
+                    val fabHeight = 56.dp
+                    val bottomBarHeight = 80.dp
+                    
+                    val snackbarBottomPadding = when {
+                        isFabVisibleOnScreen -> navigationBarsPadding + bottomBarHeight + fabSpacing + fabHeight + snackbarSpacing
+                        isBottomBarVisible -> navigationBarsPadding + bottomBarHeight + snackbarSpacing
+                        else -> navigationBarsPadding + snackbarSpacing
+                    }
+                    val animatedPadding by animateDpAsState(
+                        targetValue = snackbarBottomPadding,
+                        animationSpec = tween(durationMillis = 300),
+                        label = "SnackbarPaddingAnimation"
+                    )
                     
                     val pendingDeleteJob by viewModel.pendingDeleteJob.collectAsStateWithLifecycle()
                     val lifecycleOwner = LocalLifecycleOwner.current
@@ -137,11 +164,11 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Scaffold(
-                        snackbarHost = { SnackbarHost(snackbarHostState) },
-                        bottomBar = {
-                            AnimatedVisibility(
-                                visible = (currentRoute == "dashboard" || currentRoute == "applications" || currentRoute == "settings") && !isSearchFocused,
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Scaffold(
+                            bottomBar = {
+                                AnimatedVisibility(
+                                    visible = isBottomBarVisible,
                                 enter = slideInVertically(
                                     initialOffsetY = { it },
                                     animationSpec = tween(120)
@@ -372,6 +399,14 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = animatedPadding)
+                )
+            }
                 }
             }
         }
