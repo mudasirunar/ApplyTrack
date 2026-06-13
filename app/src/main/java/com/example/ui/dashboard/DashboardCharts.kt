@@ -185,7 +185,7 @@ fun BarChart(
                                 val barCount = data.size
                                 if (barCount > 0) {
                                     val cellWidth = size.width.toFloat() / barCount
-                                    val barWidthPx = 14.dp.toPx()
+                                    val barWidthPx = 20.dp.toPx()
                                     val maxBarHeightPx = size.height.toFloat() - 24.dp.toPx()
                                     val bottomY = size.height.toFloat() - 20.dp.toPx()
                                     
@@ -209,7 +209,7 @@ fun BarChart(
                     if (barCount == 0) return@Canvas
 
                     val cellWidth = size.width / barCount
-                    val barWidth = 14.dp.toPx()
+                    val barWidth = 20.dp.toPx()
                     val maxBarHeight = size.height - 24.dp.toPx()
 
                     data.forEachIndexed { index, item ->

@@ -281,7 +281,16 @@ fun ApplicationsScreen(
                         ) {
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 OutlinedTextField(
-                                    value = selectedResume,
+                                    value = if (selectedResume == "Select---") "Select---" else {
+                                        selectedResume.let { n ->
+                                            when {
+                                                n.endsWith(".pdf", ignoreCase = true) -> n.dropLast(4)
+                                                n.endsWith(".docx", ignoreCase = true) -> n.dropLast(5)
+                                                n.endsWith(".doc", ignoreCase = true) -> n.dropLast(4)
+                                                else -> n
+                                            }
+                                        }
+                                    },
                                     onValueChange = {},
                                     readOnly = true,
                                     label = { Text("Select Resume / CV") },
@@ -364,8 +373,16 @@ fun ApplicationsScreen(
                                     )
                                 } else {
                                     filteredResumes.forEach { name ->
+                                        val displayName = name.let { n ->
+                                            when {
+                                                n.endsWith(".pdf", ignoreCase = true) -> n.dropLast(4)
+                                                n.endsWith(".docx", ignoreCase = true) -> n.dropLast(5)
+                                                n.endsWith(".doc", ignoreCase = true) -> n.dropLast(4)
+                                                else -> n
+                                            }
+                                        }
                                         DropdownMenuItem(
-                                            text = { Text(name) },
+                                            text = { Text(displayName) },
                                             onClick = {
                                                 viewModel.selectedResume.value = name
                                                 isResumeDropdownExpanded = false
