@@ -2,6 +2,8 @@ package com.example.ui.dashboard
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +34,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.Icons
 
 // ======================== Section A: Header & Message ========================
@@ -84,8 +89,13 @@ fun DashboardHeader(totalCount: Int) {
 // ======================== Section B: Overview Stats Row ========================
 
 @Composable
-fun OverviewStatsRow(analytics: DashboardAnalytics, onNavigateToAdd: () -> Unit) {
+fun OverviewStatsRow(
+    analytics: DashboardAnalytics,
+    onNavigateToAdd: () -> Unit,
+    onTotalApplicationsClick: () -> Unit
+) {
     Card(
+        onClick = onTotalApplicationsClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
@@ -199,7 +209,10 @@ private fun ActivityBadge(label: String, count: Int) {
 // ======================== Section C: Status Cards Grid ========================
 
 @Composable
-fun StatusCardsGrid(analytics: DashboardAnalytics) {
+fun StatusCardsGrid(
+    analytics: DashboardAnalytics,
+    onStatusClick: (String) -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Row 1: Applied, Saved, Interview
         Row(
@@ -211,21 +224,24 @@ fun StatusCardsGrid(analytics: DashboardAnalytics) {
                 count = analytics.applied.toString(),
                 textColor = WarningAmber,
                 tint = WarningAmber.copy(alpha = 0.1f),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onStatusClick("Applied") }
             )
             StatusStatCard(
                 title = "Saved",
                 count = analytics.saved.toString(),
                 textColor = SavedGray,
                 tint = SavedGray.copy(alpha = 0.1f),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onStatusClick("Saved") }
             )
             StatusStatCard(
                 title = "Interview",
                 count = analytics.interviews.toString(),
                 textColor = AccentGreen,
                 tint = AccentGreen.copy(alpha = 0.1f),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onStatusClick("Interview") }
             )
         }
         // Row 2: Offer, Rejected, Response Rate
@@ -238,61 +254,88 @@ fun StatusCardsGrid(analytics: DashboardAnalytics) {
                 count = analytics.offers.toString(),
                 textColor = LinkBlue,
                 tint = LinkBlue.copy(alpha = 0.1f),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onStatusClick("Offer") }
             )
             StatusStatCard(
                 title = "Rejected",
                 count = analytics.rejected.toString(),
                 textColor = ErrorRed,
                 tint = ErrorRed.copy(alpha = 0.1f),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onStatusClick("Rejected") }
             )
             StatusStatCard(
                 title = "Response",
                 count = "${analytics.responseRate.toInt()}%",
                 textColor = MaterialTheme.colorScheme.primary,
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = null
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatusStatCard(
     title: String,
     count: String,
     textColor: Color,
     tint: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
-    Card(
-        modifier = modifier.height(90.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(14.dp),
-        border = CardDefaults.outlinedCardBorder()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(tint.copy(alpha = 0.05f))
-                .padding(10.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+    if (onClick != null) {
+        Card(
+            onClick = onClick,
+            modifier = modifier.height(90.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(14.dp),
+            border = CardDefaults.outlinedCardBorder()
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1
-            )
-            Text(
-                text = count,
-                style = MaterialTheme.typography.headlineMedium,
-                color = textColor,
-                fontWeight = FontWeight.Bold
-            )
+            StatusStatCardContent(title, count, textColor, tint)
         }
+    } else {
+        Card(
+            modifier = modifier.height(90.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(14.dp),
+            border = CardDefaults.outlinedCardBorder()
+        ) {
+            StatusStatCardContent(title, count, textColor, tint)
+        }
+    }
+}
+
+@Composable
+private fun StatusStatCardContent(
+    title: String,
+    count: String,
+    textColor: Color,
+    tint: Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(tint.copy(alpha = 0.05f))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
+        Text(
+            text = count,
+            style = MaterialTheme.typography.headlineMedium,
+            color = textColor,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -366,7 +409,8 @@ private fun RateCard(
 fun MonthlyActivitySection(
     analytics: DashboardAnalytics,
     year: String,
-    onYearChange: (String) -> Unit
+    onYearChange: (String) -> Unit,
+    onMonthClick: (Int) -> Unit = {}
 ) {
     val isEmpty = analytics.monthlyActivity.all { it.count == 0 }
 
@@ -384,7 +428,8 @@ fun MonthlyActivitySection(
         } else {
             BarChart(
                 data = analytics.monthlyActivity,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                onBarClick = { index -> onMonthClick(index + 1) }
             )
         }
     }
@@ -395,12 +440,12 @@ fun YearFilterInput(
     year: String,
     onYearChange: (String) -> Unit
 ) {
-    var tempText by remember(year) { mutableStateOf(year) }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
             .background(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
@@ -411,14 +456,32 @@ fun YearFilterInput(
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(8.dp)
             )
-            .padding(start = 10.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp)
     ) {
+        // Previous Year Button
+        IconButton(
+            onClick = {
+                val currentYear = year.toIntOrNull() ?: java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                val newYear = (currentYear - 1).toString()
+                onYearChange(newYear)
+                focusManager.clearFocus()
+            },
+            modifier = Modifier.size(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = "Previous Year",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
         BasicTextField(
-            value = tempText,
+            value = year,
             onValueChange = { newValue ->
                 val filtered = newValue.filter { it.isDigit() }
                 if (filtered.length <= 4) {
-                    tempText = filtered
+                    onYearChange(filtered)
                 }
             },
             keyboardOptions = KeyboardOptions(
@@ -427,35 +490,34 @@ fun YearFilterInput(
             ),
             keyboardActions = KeyboardActions(
                 onDone = {
-                    if (tempText.isNotBlank()) {
-                        onYearChange(tempText)
-                    }
                     keyboardController?.hide()
+                    focusManager.clearFocus()
                 }
             ),
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Start
+                textAlign = TextAlign.Center
             ),
-            modifier = Modifier.width(44.dp)
+            modifier = Modifier.width(36.dp)
         )
 
+        // Next Year Button
         IconButton(
             onClick = {
-                if (tempText.isNotBlank()) {
-                    onYearChange(tempText)
-                }
-                keyboardController?.hide()
+                val currentYear = year.toIntOrNull() ?: java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                val newYear = (currentYear + 1).toString()
+                onYearChange(newYear)
+                focusManager.clearFocus()
             },
             modifier = Modifier.size(24.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Apply Filter",
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Next Year",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -464,8 +526,11 @@ fun YearFilterInput(
 // ======================== Section F: Platform Breakdown ========================
 
 @Composable
-fun PlatformBreakdownSection(platforms: List<PlatformStat>) {
-    SectionCard(title = "Top 5 Platforms") {
+fun PlatformBreakdownSection(
+    platforms: List<PlatformStat>,
+    onPlatformClick: (String) -> Unit = {}
+) {
+    SectionCard(title = "Platforms") {
         if (platforms.isEmpty()) {
             EmptyStateText("No platform data recorded yet. Add platforms to your applications to see breakdown.")
         } else {
@@ -476,7 +541,13 @@ fun PlatformBreakdownSection(platforms: List<PlatformStat>) {
                         label = platform.platform,
                         count = platform.count,
                         maxCount = maxCount,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onPlatformClick(platform.platform)
+                        }
                     )
                 }
             }
@@ -487,7 +558,10 @@ fun PlatformBreakdownSection(platforms: List<PlatformStat>) {
 // ======================== Section G: Resume Effectiveness ========================
 
 @Composable
-fun ResumeEffectivenessSection(resumeStats: List<ResumeStat>) {
+fun ResumeEffectivenessSection(
+    resumeStats: List<ResumeStat>,
+    onResumeClick: (String) -> Unit = {}
+) {
     SectionCard(title = "Resume Effectiveness") {
         if (resumeStats.isEmpty()) {
             EmptyStateText("No resumes attached yet. Attach a CV/resume to applications to track which works best.")
@@ -560,7 +634,14 @@ fun ResumeEffectivenessSection(resumeStats: List<ResumeStat>) {
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    onResumeClick(stat.resumeName)
+                                }
                         )
                         Text(
                             text = stat.totalUsed.toString(),

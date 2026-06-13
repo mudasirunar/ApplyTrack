@@ -15,7 +15,8 @@ import com.example.ui.JobViewModel
 @Composable
 fun DashboardScreen(
     viewModel: JobViewModel,
-    onNavigateToAdd: () -> Unit = {}
+    onNavigateToAdd: () -> Unit = {},
+    onNavigateToApplications: () -> Unit = {}
 ) {
     val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
     val analytics by viewModel.dashboardAnalytics.collectAsStateWithLifecycle()
@@ -38,10 +39,25 @@ fun DashboardScreen(
                 DashboardHeader(totalCount = analytics.total)
 
                 // Section B: Overview Stats Row
-                OverviewStatsRow(analytics = analytics, onNavigateToAdd = onNavigateToAdd)
+                OverviewStatsRow(
+                    analytics = analytics,
+                    onNavigateToAdd = onNavigateToAdd,
+                    onTotalApplicationsClick = {
+                        viewModel.statusFilter.value = "All"
+                        viewModel.shouldScrollToFilter.value = true
+                        onNavigateToApplications()
+                    }
+                )
 
                 // Section C: Status Cards Grid (3×2)
-                StatusCardsGrid(analytics = analytics)
+                StatusCardsGrid(
+                    analytics = analytics,
+                    onStatusClick = { status ->
+                        viewModel.statusFilter.value = status
+                        viewModel.shouldScrollToFilter.value = true
+                        onNavigateToApplications()
+                    }
+                )
 
                 // Section D: Conversion Funnel / Rate Cards
                 ConversionFunnelRow(analytics = analytics)
@@ -53,14 +69,37 @@ fun DashboardScreen(
                 MonthlyActivitySection(
                     analytics = analytics,
                     year = dashboardYear,
-                    onYearChange = { viewModel.setDashboardYear(it) }
+                    onYearChange = { viewModel.setDashboardYear(it) },
+                    onMonthClick = { month ->
+                        viewModel.statusFilter.value = "Month"
+                        viewModel.selectedMonth.value = month
+                        viewModel.selectedYear.value = dashboardYear
+                        viewModel.shouldScrollToFilter.value = true
+                        onNavigateToApplications()
+                    }
                 )
 
                 // Section F: Platform Breakdown
-                PlatformBreakdownSection(platforms = analytics.topPlatforms)
+                PlatformBreakdownSection(
+                    platforms = analytics.platforms,
+                    onPlatformClick = { platform ->
+                        viewModel.statusFilter.value = "Platform"
+                        viewModel.selectedPlatform.value = platform
+                        viewModel.shouldScrollToFilter.value = true
+                        onNavigateToApplications()
+                    }
+                )
 
                 // Section G: Resume/CV Effectiveness
-                ResumeEffectivenessSection(resumeStats = analytics.resumeStats)
+                ResumeEffectivenessSection(
+                    resumeStats = analytics.resumeStats,
+                    onResumeClick = { resumeName ->
+                        viewModel.statusFilter.value = "Resume"
+                        viewModel.selectedResume.value = resumeName
+                        viewModel.shouldScrollToFilter.value = true
+                        onNavigateToApplications()
+                    }
+                )
             }
         }
     }

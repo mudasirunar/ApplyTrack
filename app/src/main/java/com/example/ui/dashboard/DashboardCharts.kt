@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -104,7 +106,8 @@ fun BarChart(
     data: List<MonthActivity>,
     modifier: Modifier = Modifier,
     barColor: Color = MaterialTheme.colorScheme.primary,
-    animationDuration: Int = 800
+    animationDuration: Int = 800,
+    onBarClick: (Int) -> Unit = {}
 ) {
     val maxCount = data.maxOfOrNull { it.count } ?: 1
     val animatedProgress = remember { Animatable(0f) }
@@ -177,6 +180,30 @@ fun BarChart(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)
+                        .pointerInput(data, animatedProgress.value) {
+                            detectTapGestures { offset ->
+                                val barCount = data.size
+                                if (barCount > 0) {
+                                    val cellWidth = size.width.toFloat() / barCount
+                                    val barWidthPx = 14.dp.toPx()
+                                    val maxBarHeightPx = size.height.toFloat() - 24.dp.toPx()
+                                    val bottomY = size.height.toFloat() - 20.dp.toPx()
+                                    
+                                    data.forEachIndexed { index, item ->
+                                        if (item.count > 0) {
+                                            val barHeight = (item.count.toFloat() / maxCount) * maxBarHeightPx * animatedProgress.value
+                                            val x = index * cellWidth + (cellWidth - barWidthPx) / 2
+                                            val y = bottomY - barHeight
+                                            
+                                            if (offset.x >= x && offset.x <= x + barWidthPx &&
+                                                offset.y >= y && offset.y <= bottomY) {
+                                                onBarClick(index)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                 ) {
                     val barCount = data.size
                     if (barCount == 0) return@Canvas

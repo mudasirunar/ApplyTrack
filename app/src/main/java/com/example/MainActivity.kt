@@ -279,6 +279,15 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onNavigateToAdd = {
                                     navController.navigate("add_edit")
+                                },
+                                onNavigateToApplications = {
+                                    navController.navigate("applications") {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             )
                         }

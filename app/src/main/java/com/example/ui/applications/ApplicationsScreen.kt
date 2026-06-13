@@ -10,6 +10,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,6 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Info
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -107,12 +111,18 @@ fun ApplicationsScreen(
     val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
     val selectedMonth by viewModel.selectedMonth.collectAsStateWithLifecycle()
     val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
+    val shouldScrollToFilter by viewModel.shouldScrollToFilter.collectAsStateWithLifecycle()
+    val isListCalculating by viewModel.isListCalculating.collectAsStateWithLifecycle()
+    val selectedResume by viewModel.selectedResume.collectAsStateWithLifecycle()
+    val resumeSearchQuery by viewModel.resumeSearchQuery.collectAsStateWithLifecycle()
+    val selectedPlatform by viewModel.selectedPlatform.collectAsStateWithLifecycle()
     
     var jobToDelete by remember { mutableStateOf<JobApplication?>(null) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showSortBottomSheet by remember { mutableStateOf(false) }
 
     val lazyListState = rememberLazyListState()
+    val filterLazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var previousIndex by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemIndex) }
     var previousScrollOffset by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemScrollOffset) }
@@ -143,6 +153,27 @@ fun ApplicationsScreen(
         
         previousIndex = currentIndex
         previousScrollOffset = currentOffset
+    }
+
+    LaunchedEffect(shouldScrollToFilter) {
+        if (shouldScrollToFilter) {
+            val statuses = listOf("All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Resume", "Platform", "Month")
+            val selectedIndex = statuses.indexOf(statusFilter)
+            if (selectedIndex >= 0) {
+                filterLazyListState.animateScrollToItem(selectedIndex)
+            }
+            viewModel.shouldScrollToFilter.value = false
+        }
+    }
+
+    val currentFilters = listOf(searchQuery, statusFilter, selectedResume, selectedPlatform, selectedMonth, selectedYear, sortOption)
+    var lastFilters by remember { mutableStateOf(currentFilters) }
+
+    LaunchedEffect(currentFilters) {
+        if (lastFilters != currentFilters) {
+            lazyListState.scrollToItem(0)
+            lastFilters = currentFilters
+        }
     }
 
     Scaffold { innerPadding ->
@@ -207,10 +238,11 @@ fun ApplicationsScreen(
 
                     // Scrollable Filter Chips row
                     LazyRow(
+                        state = filterLazyListState,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        val statuses = listOf("All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Month")
+                        val statuses = listOf("All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Resume", "Platform", "Month")
                         items(statuses) { status ->
                             val isSelected = statusFilter == status
                             FilterChip(
@@ -229,6 +261,178 @@ fun ApplicationsScreen(
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                                 )
                             )
+                        }
+                    }
+
+                    // Resume Sub-filter controls
+                    AnimatedVisibility(
+                        visible = statusFilter == "Resume",
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        var isResumeDropdownExpanded by remember { mutableStateOf(false) }
+                        val resumeNames = stats.resumeStats.map { it.resumeName }
+                        val filteredResumes = resumeNames.filter { it.contains(resumeSearchQuery, ignoreCase = true) }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                OutlinedTextField(
+                                    value = selectedResume,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Select Resume / CV") },
+                                    trailingIcon = {
+                                        IconButton(onClick = { isResumeDropdownExpanded = true }) {
+                                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Open Resume Dropdown")
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                    )
+                                )
+
+                                // Clickable overlay to open dropdown
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) { isResumeDropdownExpanded = true }
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = isResumeDropdownExpanded,
+                                onDismissRequest = { 
+                                    isResumeDropdownExpanded = false
+                                    viewModel.resumeSearchQuery.value = ""
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.9f)
+                                    .heightIn(max = 280.dp)
+                            ) {
+                                // Search Input inside Dropdown
+                                OutlinedTextField(
+                                    value = resumeSearchQuery,
+                                    onValueChange = { viewModel.resumeSearchQuery.value = it },
+                                    placeholder = { Text("Search resumes...") },
+                                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                                    trailingIcon = {
+                                        if (resumeSearchQuery.isNotEmpty()) {
+                                            IconButton(onClick = { viewModel.resumeSearchQuery.value = "" }) {
+                                                Icon(Icons.Default.Clear, contentDescription = "Clear Search")
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                    )
+                                )
+
+                                DropdownMenuItem(
+                                    text = { Text("Select---") },
+                                    onClick = {
+                                        viewModel.selectedResume.value = "Select---"
+                                        isResumeDropdownExpanded = false
+                                        viewModel.resumeSearchQuery.value = ""
+                                    }
+                                )
+
+                                if (filteredResumes.isEmpty()) {
+                                    DropdownMenuItem(
+                                        text = { 
+                                            Text(
+                                                text = "No resumes found", 
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                style = MaterialTheme.typography.bodyMedium
+                                            ) 
+                                        },
+                                        onClick = {},
+                                        enabled = false
+                                    )
+                                } else {
+                                    filteredResumes.forEach { name ->
+                                        DropdownMenuItem(
+                                            text = { Text(name) },
+                                            onClick = {
+                                                viewModel.selectedResume.value = name
+                                                isResumeDropdownExpanded = false
+                                                viewModel.resumeSearchQuery.value = ""
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Platform Sub-filter controls
+                    AnimatedVisibility(
+                        visible = statusFilter == "Platform",
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        var isPlatformDropdownExpanded by remember { mutableStateOf(false) }
+                        val platformOptions = listOf("LinkedIn", "Indeed", "Email", "Website", "Other")
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = selectedPlatform,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Select Platform") },
+                                trailingIcon = {
+                                    IconButton(onClick = { isPlatformDropdownExpanded = true }) {
+                                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Open Platform Dropdown")
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                )
+                            )
+
+                            // Clickable overlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { isPlatformDropdownExpanded = true }
+                            )
+
+                            DropdownMenu(
+                                expanded = isPlatformDropdownExpanded,
+                                onDismissRequest = { isPlatformDropdownExpanded = false }
+                            ) {
+                                platformOptions.forEach { name ->
+                                    DropdownMenuItem(
+                                        text = { Text(name) },
+                                        onClick = {
+                                            viewModel.selectedPlatform.value = name
+                                            isPlatformDropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -274,7 +478,10 @@ fun ApplicationsScreen(
                                 Box(
                                     modifier = Modifier
                                         .matchParentSize()
-                                        .clickable { isMonthDropdownExpanded = true }
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) { isMonthDropdownExpanded = true }
                                 )
 
                                 DropdownMenu(
@@ -304,7 +511,13 @@ fun ApplicationsScreen(
                                 label = { Text("Year") },
                                 singleLine = true,
                                 modifier = Modifier.width(120.dp),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number,
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = { focusManager.clearFocus() }
+                                ),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = MaterialTheme.colorScheme.surface,
                                     unfocusedContainerColor = MaterialTheme.colorScheme.surface
@@ -348,8 +561,7 @@ fun ApplicationsScreen(
             }
 
             // Job Applications List with Loader and Empty State Handler
-            val isListCalculating = apps.isEmpty() && stats.total > 0 && searchQuery.isEmpty() && statusFilter == "All"
-            if (isInitialLoading || isListCalculating) {
+            if (isInitialLoading) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -357,8 +569,46 @@ fun ApplicationsScreen(
                 ) {
                     ApplicationsShimmerScreen()
                 }
+            } else if (isListCalculating) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             } else if (apps.isEmpty()) {
                 val isSearchOrFilterActive = stats.total > 0
+                
+                // Determine custom icon, title and description for Resume filter cases
+                val emptyIcon = when {
+                    statusFilter == "Resume" && stats.total > 0 && stats.resumeStats.isEmpty() -> Icons.Default.AttachFile
+                    statusFilter == "Resume" && stats.total > 0 && selectedResume == "Select---" -> Icons.Default.Info
+                    isSearchOrFilterActive -> Icons.Default.Search
+                    else -> Icons.Default.Info
+                }
+                
+                val emptyTitle = when {
+                    statusFilter == "Resume" && stats.total > 0 && stats.resumeStats.isEmpty() -> "No resumes found"
+                    statusFilter == "Resume" && stats.total > 0 && selectedResume == "Select---" -> "Select a Resume"
+                    isSearchOrFilterActive -> "No results found"
+                    else -> "No applications saved yet"
+                }
+                
+                val emptyDescription = when {
+                    statusFilter == "Resume" && stats.total > 0 && stats.resumeStats.isEmpty() -> 
+                        "Attach a CV/resume (PDF) to your applications to track and filter them."
+                    statusFilter == "Resume" && stats.total > 0 && selectedResume == "Select---" -> 
+                        "Choose a resume from the dropdown above to filter your applications."
+                    isSearchOrFilterActive -> 
+                        "No applications match your current search terms or active filters. Try adjusting them!"
+                    else -> 
+                        "Tap the '+' button in the bottom right corner to start!"
+                }
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -371,25 +621,21 @@ fun ApplicationsScreen(
                         modifier = Modifier.padding(horizontal = 32.dp)
                     ) {
                         Icon(
-                            imageVector = if (isSearchOrFilterActive) Icons.Default.Search else Icons.Default.Info,
-                            contentDescription = if (isSearchOrFilterActive) "No search results" else "Information empty local database",
+                            imageVector = emptyIcon,
+                            contentDescription = emptyTitle,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = if (isSearchOrFilterActive) "No results found" else "No applications saved yet",
+                            text = emptyTitle,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = if (isSearchOrFilterActive) {
-                                "No applications match your current search terms or active filters. Try adjusting them!"
-                            } else {
-                                "Tap the '+' button in the bottom right corner to start!"
-                            },
+                            text = emptyDescription,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center
@@ -422,7 +668,7 @@ fun ApplicationsScreen(
         }
 
         AnimatedVisibility(
-            visible = isFabVisible && !isSearchFocused && !isInitialLoading,
+            visible = isFabVisible && !isSearchFocused && !isInitialLoading && !isListCalculating,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier

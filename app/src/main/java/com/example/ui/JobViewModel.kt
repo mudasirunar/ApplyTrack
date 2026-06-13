@@ -3,11 +3,13 @@ package com.example.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.compose.runtime.Immutable
 import com.example.data.repository.JobRepository
 import com.example.model.JobApplication
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import com.example.model.StatusHistoryEntry
 import com.example.model.Attachment
 import com.example.utils.PreferencesHelper
@@ -54,6 +56,9 @@ class JobViewModel(
     val selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH) + 1) // 1..12
     val selectedYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
     val dashboardYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
+    val selectedResume = MutableStateFlow("Select---")
+    val resumeSearchQuery = MutableStateFlow("")
+    val selectedPlatform = MutableStateFlow("LinkedIn")
 
     fun setDashboardYear(year: String) {
         dashboardYear.value = year.trim()
@@ -62,6 +67,7 @@ class JobViewModel(
     val sortOption = MutableStateFlow(SortOption.STATUS_LATEST)
     val isSearchFocused = MutableStateFlow(false)
     val isFabVisible = MutableStateFlow(true)
+    val shouldScrollToFilter = MutableStateFlow(false)
 
     // Detailed application state (for detail/edit view)
     private val _selectedApplication = MutableStateFlow<JobApplication?>(null)
@@ -81,17 +87,55 @@ class JobViewModel(
         val status: String,
         val month: Int,
         val year: String,
-        val sortOption: SortOption
+        val sortOption: SortOption,
+        val selectedResume: String,
+        val selectedPlatform: String
     )
 
     private val filterParamsFlow: Flow<FilterParams> = combine(
-        searchQuery,
-        statusFilter,
-        selectedMonth,
-        selectedYear,
-        sortOption
-    ) { query, status, month, year, sort ->
-        FilterParams(query, status, month, year, sort)
+        listOf<Flow<Any>>(
+            searchQuery,
+            statusFilter,
+            selectedMonth,
+            selectedYear,
+            sortOption,
+            selectedResume,
+            selectedPlatform
+        )
+    ) { array ->
+        FilterParams(
+            query = array[0] as String,
+            status = array[1] as String,
+            month = array[2] as Int,
+            year = array[3] as String,
+            sortOption = array[4] as SortOption,
+            selectedResume = array[5] as String,
+            selectedPlatform = array[6] as String
+        )
+    }
+
+    val isListCalculating = MutableStateFlow(false)
+    private var calculationDelayJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            filterParamsFlow.collect {
+                startCalculationTracking()
+            }
+        }
+    }
+
+    private fun startCalculationTracking() {
+        calculationDelayJob?.cancel()
+        calculationDelayJob = viewModelScope.launch {
+            delay(100L) // Wait 100ms before showing loader
+            isListCalculating.value = true
+        }
+    }
+
+    private fun stopCalculationTracking() {
+        calculationDelayJob?.cancel()
+        isListCalculating.value = false
     }
 
     // Reactive State: All UI Job Applications list combined with filters, searches, months, years & sorting
@@ -110,32 +154,65 @@ class JobViewModel(
 
         var result = apps.filter { it.id != pendingDelete?.id && !permanentlyDeleted.contains(it.id) }
 
-        // Apply Search (Search by company, role, job description, or notes)
+        // Apply Search (Search by company, role, job description, notes, attachment names, urls, or emails)
         if (params.query.isNotBlank()) {
             result = result.filter {
                 it.companyName?.contains(params.query, ignoreCase = true) == true ||
                 it.role?.contains(params.query, ignoreCase = true) == true ||
                 it.jobDescription?.contains(params.query, ignoreCase = true) == true ||
-                it.notes?.contains(params.query, ignoreCase = true) == true
+                it.notes?.contains(params.query, ignoreCase = true) == true ||
+                it.resume?.originalName?.contains(params.query, ignoreCase = true) == true ||
+                it.coverLetter?.originalName?.contains(params.query, ignoreCase = true) == true ||
+                it.additionalDocument?.originalName?.contains(params.query, ignoreCase = true) == true ||
+                it.url?.contains(params.query, ignoreCase = true) == true ||
+                it.email?.contains(params.query, ignoreCase = true) == true
             }
         }
 
-        // Apply Status or Month/Year Filter
-        if (params.status == "Month") {
-            val targetYear = params.year.toIntOrNull()
-            if (targetYear != null) {
-                val cal = Calendar.getInstance()
-                result = result.filter { app ->
-                    val statusTimestamp = app.statusHistory?.lastOrNull()?.timestamp ?: app.createdAt
-                    cal.timeInMillis = statusTimestamp
-                    val appMonth = cal.get(Calendar.MONTH) + 1 // 1..12
-                    val appYear = cal.get(Calendar.YEAR)
-                    appMonth == params.month && appYear == targetYear
+        // Apply Status, Month/Year, Resume, or Platform Filter
+        when (params.status) {
+            "Month" -> {
+                val targetYear = params.year.toIntOrNull()
+                if (targetYear != null) {
+                    val cal = Calendar.getInstance()
+                    result = result.filter { app ->
+                        val statusTimestamp = app.statusHistory?.lastOrNull()?.timestamp ?: app.createdAt
+                        cal.timeInMillis = statusTimestamp
+                        val appMonth = cal.get(Calendar.MONTH) + 1 // 1..12
+                        val appYear = cal.get(Calendar.YEAR)
+                        appMonth == params.month && appYear == targetYear
+                    }
                 }
             }
-        } else if (params.status != "All") {
-            result = result.filter {
-                it.status.equals(params.status, ignoreCase = true)
+            "Resume" -> {
+                if (params.selectedResume == "Select---") {
+                    result = emptyList()
+                } else {
+                    result = result.filter { app ->
+                        app.resume?.originalName == params.selectedResume
+                    }
+                }
+            }
+            "Platform" -> {
+                val standardPlatforms = listOf("LinkedIn", "Indeed", "Email", "Website")
+                if (params.selectedPlatform == "Other") {
+                    result = result.filter { app ->
+                        val platformName = app.platform ?: ""
+                        platformName !in standardPlatforms
+                    }
+                } else {
+                    result = result.filter { app ->
+                        app.platform.equals(params.selectedPlatform, ignoreCase = true)
+                    }
+                }
+            }
+            "All" -> {
+                // Show all
+            }
+            else -> {
+                result = result.filter {
+                    it.status.equals(params.status, ignoreCase = true)
+                }
             }
         }
 
@@ -151,9 +228,10 @@ class JobViewModel(
     }.flowOn(Dispatchers.Default)
     .onEach {
         _isInitialLoading.value = false
+        stopCalculationTracking()
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        started = SharingStarted.Lazily,
         initialValue = emptyList()
     )
 
@@ -171,7 +249,7 @@ class JobViewModel(
         _isInitialLoading.value = false
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        started = SharingStarted.Lazily,
         initialValue = DashboardAnalytics()
     )
 
@@ -188,9 +266,13 @@ class JobViewModel(
         val interviewRate = if (total > 0) (interviews.toFloat() / total * 100f) else 0f
         val responseRate = if (total > 0) ((interviews + offers + rejected).toFloat() / total * 100f) else 0f
 
-        // Platform analytics
-        val topPlatforms = apps.filter { !it.platform.isNullOrBlank() }
-            .groupBy { it.platform!!.trim() }
+        // Platform analytics (group custom platforms under "Other" to align with dropdown options)
+        val standardPlatforms = listOf("LinkedIn", "Indeed", "Email", "Website")
+        val platforms = apps.filter { !it.platform.isNullOrBlank() }
+            .groupBy { app ->
+                val trimmed = app.platform!!.trim()
+                standardPlatforms.firstOrNull { it.equals(trimmed, ignoreCase = true) } ?: "Other"
+            }
             .map { (platform, platformApps) ->
                 PlatformStat(
                     platform = platform,
@@ -276,7 +358,7 @@ class JobViewModel(
             rejectionRate = rejectionRate,
             interviewRate = interviewRate,
             responseRate = responseRate,
-            topPlatforms = topPlatforms,
+            platforms = platforms,
             resumeStats = resumeStats,
             monthlyActivity = monthlyActivity,
             statusDistribution = statusDistribution,
@@ -536,6 +618,7 @@ class JobViewModel(
 }
 
 // Analytics Holder
+@Immutable
 data class DashboardAnalytics(
     val total: Int = 0,
     val applied: Int = 0,
@@ -547,7 +630,7 @@ data class DashboardAnalytics(
     val rejectionRate: Float = 0f,
     val interviewRate: Float = 0f,
     val responseRate: Float = 0f,
-    val topPlatforms: List<PlatformStat> = emptyList(),
+    val platforms: List<PlatformStat> = emptyList(),
     val resumeStats: List<ResumeStat> = emptyList(),
     val monthlyActivity: List<MonthActivity> = emptyList(),
     val statusDistribution: List<StatusSlice> = emptyList(),
@@ -555,8 +638,11 @@ data class DashboardAnalytics(
     val applicationsThisMonth: Int = 0
 )
 
+@Immutable
 data class PlatformStat(val platform: String, val count: Int, val interviewCount: Int, val offerCount: Int)
+@Immutable
 data class ResumeStat(val resumeName: String, val totalUsed: Int, val interviewCount: Int, val offerCount: Int, val rejectedCount: Int)
+@Immutable
 data class MonthActivity(
     val label: String,
     val count: Int,
@@ -566,6 +652,7 @@ data class MonthActivity(
     val offerCount: Int = 0,
     val rejectedCount: Int = 0
 )
+@Immutable
 data class StatusSlice(val status: String, val count: Int, val color: Long)
 
 // ViewModel Factory Creator
