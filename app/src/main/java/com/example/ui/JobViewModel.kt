@@ -53,6 +53,12 @@ class JobViewModel(
     val statusFilter = MutableStateFlow("All") // "All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Month"
     val selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH) + 1) // 1..12
     val selectedYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
+    val dashboardYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
+
+    fun setDashboardYear(year: String) {
+        dashboardYear.value = year.trim()
+    }
+
     val sortOption = MutableStateFlow(SortOption.STATUS_LATEST)
     val isSearchFocused = MutableStateFlow(false)
     val isFabVisible = MutableStateFlow(true)
@@ -142,7 +148,8 @@ class JobViewModel(
         }
 
         result
-    }.onEach {
+    }.flowOn(Dispatchers.Default)
+    .onEach {
         _isInitialLoading.value = false
     }.stateIn(
         scope = viewModelScope,
@@ -151,24 +158,132 @@ class JobViewModel(
     )
 
     // Summary Statistics Cards derived dynamically
-    val dashboardStats: StateFlow<DashboardStats> = combine(
+    val dashboardAnalytics: StateFlow<DashboardAnalytics> = combine(
         repository.getAllApplications(),
+        dashboardYear,
         _pendingDeleteJob,
         permanentlyDeletedIds
-    ) { apps, pendingDelete, permanentlyDeleted ->
+    ) { apps, dbYear, pendingDelete, permanentlyDeleted ->
         val filteredApps = apps.filter { it.id != pendingDelete?.id && !permanentlyDeleted.contains(it.id) }
-        DashboardStats(
-            total = filteredApps.size,
-            interviews = filteredApps.count { it.status.equals("Interview", ignoreCase = true) },
-            rejected = filteredApps.count { it.status.equals("Rejected", ignoreCase = true) },
-            offers = filteredApps.count { it.status.equals("Offer", ignoreCase = true) },
-            saved = filteredApps.count { it.status.equals("Saved", ignoreCase = true) || it.status.equals("Applied", ignoreCase = true) }
-        )
+        computeDashboardAnalytics(filteredApps, dbYear)
+    }.flowOn(Dispatchers.Default)
+    .onEach {
+        _isInitialLoading.value = false
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = DashboardStats()
+        initialValue = DashboardAnalytics()
     )
+
+    private fun computeDashboardAnalytics(apps: List<JobApplication>, year: String): DashboardAnalytics {
+        val total = apps.size
+        val applied = apps.count { it.status.equals("Applied", ignoreCase = true) }
+        val saved = apps.count { it.status.equals("Saved", ignoreCase = true) }
+        val interviews = apps.count { it.status.equals("Interview", ignoreCase = true) }
+        val offers = apps.count { it.status.equals("Offer", ignoreCase = true) }
+        val rejected = apps.count { it.status.equals("Rejected", ignoreCase = true) }
+
+        val successRate = if (total > 0) (offers.toFloat() / total * 100f) else 0f
+        val rejectionRate = if (total > 0) (rejected.toFloat() / total * 100f) else 0f
+        val interviewRate = if (total > 0) (interviews.toFloat() / total * 100f) else 0f
+        val responseRate = if (total > 0) ((interviews + offers + rejected).toFloat() / total * 100f) else 0f
+
+        // Platform analytics
+        val topPlatforms = apps.filter { !it.platform.isNullOrBlank() }
+            .groupBy { it.platform!!.trim() }
+            .map { (platform, platformApps) ->
+                PlatformStat(
+                    platform = platform,
+                    count = platformApps.size,
+                    interviewCount = platformApps.count { it.status.equals("Interview", ignoreCase = true) },
+                    offerCount = platformApps.count { it.status.equals("Offer", ignoreCase = true) }
+                )
+            }
+            .sortedByDescending { it.count }
+            .take(5)
+
+        // Resume effectiveness
+        val resumeStats = apps.filter { it.resume != null }
+            .groupBy { it.resume!!.originalName }
+            .map { (name, resumeApps) ->
+                ResumeStat(
+                    resumeName = name,
+                    totalUsed = resumeApps.size,
+                    interviewCount = resumeApps.count { it.status.equals("Interview", ignoreCase = true) },
+                    offerCount = resumeApps.count { it.status.equals("Offer", ignoreCase = true) },
+                    rejectedCount = resumeApps.count { it.status.equals("Rejected", ignoreCase = true) }
+                )
+            }
+            .sortedByDescending { it.totalUsed }
+
+        // Monthly activity (all 12 months for the selected year)
+        val cal = Calendar.getInstance()
+        val monthNames = arrayOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+        val targetYear = year.toIntOrNull() ?: cal.get(Calendar.YEAR)
+        val monthlyActivity = (0 until 12).map { monthIndex ->
+            val monthApps = apps.filter { app ->
+                val appCal = Calendar.getInstance().apply { timeInMillis = app.createdAt }
+                appCal.get(Calendar.MONTH) == monthIndex && appCal.get(Calendar.YEAR) == targetYear
+            }
+            val count = monthApps.size
+            val appliedCount = monthApps.count { it.status.equals("Applied", ignoreCase = true) }
+            val savedCount = monthApps.count { it.status.equals("Saved", ignoreCase = true) }
+            val interviewCount = monthApps.count { it.status.equals("Interview", ignoreCase = true) }
+            val offerCount = monthApps.count { it.status.equals("Offer", ignoreCase = true) }
+            val rejectedCount = monthApps.count { it.status.equals("Rejected", ignoreCase = true) }
+
+            MonthActivity(
+                label = monthNames[monthIndex],
+                count = count,
+                appliedCount = appliedCount,
+                savedCount = savedCount,
+                interviewCount = interviewCount,
+                offerCount = offerCount,
+                rejectedCount = rejectedCount
+            )
+        }
+
+        // Status distribution
+        val statusDistribution = listOf(
+            StatusSlice("Applied", applied, 0xFFFFB300),
+            StatusSlice("Saved", saved, 0xFF78909C),
+            StatusSlice("Interview", interviews, 0xFF4CAF50),
+            StatusSlice("Offer", offers, 0xFF1E88E5),
+            StatusSlice("Rejected", rejected, 0xFFE53935)
+        ).filter { it.count > 0 }
+
+        // Weekly/monthly activity counts
+        val now = System.currentTimeMillis()
+        val oneWeekAgo = now - 7L * 24 * 60 * 60 * 1000
+        val applicationsThisWeek = apps.count { it.createdAt >= oneWeekAgo }
+
+        cal.timeInMillis = now
+        val thisMonth = cal.get(Calendar.MONTH)
+        val thisYear = cal.get(Calendar.YEAR)
+        val applicationsThisMonth = apps.count { app ->
+            val appCal = Calendar.getInstance().apply { timeInMillis = app.createdAt }
+            appCal.get(Calendar.MONTH) == thisMonth && appCal.get(Calendar.YEAR) == thisYear
+        }
+
+        return DashboardAnalytics(
+            total = total,
+            applied = applied,
+            saved = saved,
+            interviews = interviews,
+            offers = offers,
+            rejected = rejected,
+            successRate = successRate,
+            rejectionRate = rejectionRate,
+            interviewRate = interviewRate,
+            responseRate = responseRate,
+            topPlatforms = topPlatforms,
+            resumeStats = resumeStats,
+            monthlyActivity = monthlyActivity,
+            statusDistribution = statusDistribution,
+            applicationsThisWeek = applicationsThisWeek,
+            applicationsThisMonth = applicationsThisMonth
+        )
+    }
 
     // Sync Status States
     private val _syncState = MutableStateFlow(SyncState.IDLE)
@@ -420,14 +535,38 @@ class JobViewModel(
     }
 }
 
-// Stats Holder
-data class DashboardStats(
+// Analytics Holder
+data class DashboardAnalytics(
     val total: Int = 0,
+    val applied: Int = 0,
+    val saved: Int = 0,
     val interviews: Int = 0,
-    val rejected: Int = 0,
     val offers: Int = 0,
-    val saved: Int = 0
+    val rejected: Int = 0,
+    val successRate: Float = 0f,
+    val rejectionRate: Float = 0f,
+    val interviewRate: Float = 0f,
+    val responseRate: Float = 0f,
+    val topPlatforms: List<PlatformStat> = emptyList(),
+    val resumeStats: List<ResumeStat> = emptyList(),
+    val monthlyActivity: List<MonthActivity> = emptyList(),
+    val statusDistribution: List<StatusSlice> = emptyList(),
+    val applicationsThisWeek: Int = 0,
+    val applicationsThisMonth: Int = 0
 )
+
+data class PlatformStat(val platform: String, val count: Int, val interviewCount: Int, val offerCount: Int)
+data class ResumeStat(val resumeName: String, val totalUsed: Int, val interviewCount: Int, val offerCount: Int, val rejectedCount: Int)
+data class MonthActivity(
+    val label: String,
+    val count: Int,
+    val appliedCount: Int = 0,
+    val savedCount: Int = 0,
+    val interviewCount: Int = 0,
+    val offerCount: Int = 0,
+    val rejectedCount: Int = 0
+)
+data class StatusSlice(val status: String, val count: Int, val color: Long)
 
 // ViewModel Factory Creator
 class JobViewModelFactory(

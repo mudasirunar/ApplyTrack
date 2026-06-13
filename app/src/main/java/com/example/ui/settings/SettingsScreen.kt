@@ -90,8 +90,8 @@ fun SettingsScreen(
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val syncError by viewModel.syncErrorMessage.collectAsStateWithLifecycle()
     val isFirebaseConfigured = viewModel.isFirebaseConfigured
-    val dashboardStats by viewModel.dashboardStats.collectAsStateWithLifecycle()
-    val hasApplications = dashboardStats.total > 0
+    val dashboardAnalytics by viewModel.dashboardAnalytics.collectAsStateWithLifecycle()
+    val hasApplications = dashboardAnalytics.total > 0
     
     val snackbarHostState = remember { SnackbarHostState() }
 

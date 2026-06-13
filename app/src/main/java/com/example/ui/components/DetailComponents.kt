@@ -31,11 +31,13 @@ import com.example.ui.theme.AccentGreen
 import com.example.ui.theme.ErrorRed
 import com.example.ui.theme.LinkBlue
 import com.example.ui.theme.WarningAmber
+import com.example.ui.theme.SavedGray
 
 @Composable
 fun StatusPill(status: String) {
     val chipBgColor = when (status.lowercase()) {
-        "applied", "saved" -> WarningAmber.copy(alpha = 0.1f)
+        "applied" -> WarningAmber.copy(alpha = 0.1f)
+        "saved" -> SavedGray.copy(alpha = 0.1f)
         "interview", "interviewing" -> AccentGreen.copy(alpha = 0.1f)
         "rejected" -> ErrorRed.copy(alpha = 0.1f)
         "offer" -> LinkBlue.copy(alpha = 0.1f)
@@ -43,7 +45,8 @@ fun StatusPill(status: String) {
     }
 
     val chipContentColor = when (status.lowercase()) {
-        "applied", "saved" -> WarningAmber
+        "applied" -> WarningAmber
+        "saved" -> SavedGray
         "interview", "interviewing" -> AccentGreen
         "rejected" -> ErrorRed
         "offer" -> LinkBlue

@@ -23,6 +23,7 @@ import com.example.ui.theme.AccentGreen
 import com.example.ui.theme.ErrorRed
 import com.example.ui.theme.WarningAmber
 import com.example.ui.theme.LinkBlue
+import com.example.ui.theme.SavedGray
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -35,7 +36,8 @@ fun JobCard(
     modifier: Modifier = Modifier
 ) {
     val leftBarColor = when (job.status.lowercase()) {
-        "applied", "saved" -> WarningAmber
+        "applied" -> WarningAmber
+        "saved" -> SavedGray
         "interview", "interviewing" -> AccentGreen
         "rejected" -> ErrorRed
         "offer" -> LinkBlue
@@ -43,7 +45,8 @@ fun JobCard(
     }
 
     val chipBgColor = when (job.status.lowercase()) {
-        "applied", "saved" -> WarningAmber.copy(alpha = 0.1f)
+        "applied" -> WarningAmber.copy(alpha = 0.1f)
+        "saved" -> SavedGray.copy(alpha = 0.1f)
         "interview", "interviewing" -> AccentGreen.copy(alpha = 0.1f)
         "rejected" -> ErrorRed.copy(alpha = 0.1f)
         "offer" -> LinkBlue.copy(alpha = 0.1f)
@@ -51,7 +54,8 @@ fun JobCard(
     }
 
     val chipContentColor = when (job.status.lowercase()) {
-        "applied", "saved" -> WarningAmber
+        "applied" -> WarningAmber
+        "saved" -> SavedGray
         "interview", "interviewing" -> AccentGreen
         "rejected" -> ErrorRed
         "offer" -> LinkBlue

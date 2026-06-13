@@ -9,6 +9,7 @@ val AccentGreen = Color(0xFF4CAF50)
 val WarningAmber = Color(0xFFFFB300)
 val ErrorRed = Color(0xFFE53935)
 val LinkBlue = Color(0xFF1E88E5)
+val SavedGray = Color(0xFF78909C)
 
 
 // M3 Light/Dark Support Mapping Values

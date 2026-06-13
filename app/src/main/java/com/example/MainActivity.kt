@@ -276,7 +276,10 @@ class MainActivity : ComponentActivity() {
                         // 1. Dashboard Landing screen
                         composable("dashboard") {
                             DashboardScreen(
-                                viewModel = viewModel
+                                viewModel = viewModel,
+                                onNavigateToAdd = {
+                                    navController.navigate("add_edit")
+                                }
                             )
                         }
 
