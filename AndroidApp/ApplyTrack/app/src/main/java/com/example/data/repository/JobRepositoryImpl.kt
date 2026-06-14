@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.content.Context
 import com.example.utils.AttachmentHelper
 import com.example.data.sync.SupabaseStorageHelper
@@ -337,32 +341,38 @@ class JobRepositoryImpl(
         }
     }
 
-    override suspend fun deleteAllApplications() {
+    override suspend fun deleteAllApplications() = withContext(Dispatchers.IO) {
         // Collect all existing local application records first
         val allApps = dao.getAllApplicationsList()
         
-        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-        if (userId != null) {
-            val filesToDelete = allApps.flatMap { app ->
-                listOfNotNull(
-                    app.resume?.let { "resumes" to it.fileName },
-                    app.coverLetter?.let { "cover_letters" to it.fileName },
-                    app.additionalDocument?.let { "additional_documents" to it.fileName }
-                ) + (app.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
-            }
-            kotlin.runCatching {
-                filesToDelete.forEach { (type, fileName) ->
-                    supabaseStorageHelper.deleteFile(userId, type, fileName)
-                }
-            }
-        }
-
-        // Record their deletions in the deleted_jobs table so we propagate this wipe to Firestore on next sync
+        // Record their deletions in the deleted_jobs table first so we propagate this wipe to Firestore on next sync
         for (app in allApps) {
             dao.insertDeletedJob(DeletedJob(uuid = app.uuid))
         }
-        // Wipes local databases
+        
+        // Wipes local database table instantly
         dao.deleteAllApplications()
+        
+        // Clean up remote attachments asynchronously so it returns instantly and doesn't block UI thread
+        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            kotlin.runCatching {
+                val filesToDelete = allApps.flatMap { app ->
+                    listOfNotNull(
+                        app.resume?.let { "resumes" to it.fileName },
+                        app.coverLetter?.let { "cover_letters" to it.fileName },
+                        app.additionalDocument?.let { "additional_documents" to it.fileName }
+                    ) + (app.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+                }
+                
+                // Launch background IO operations
+                CoroutineScope(Dispatchers.IO).launch {
+                    filesToDelete.forEach { (type, fileName) ->
+                        supabaseStorageHelper.deleteFile(userId, type, fileName)
+                    }
+                }
+            }
+        }
     }
 
     override suspend fun importBackup(

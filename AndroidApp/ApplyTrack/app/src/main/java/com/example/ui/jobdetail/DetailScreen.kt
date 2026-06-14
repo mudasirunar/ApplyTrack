@@ -66,9 +66,9 @@ fun DetailScreen(
     var isDescriptionExpanded by remember { mutableStateOf(true) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     
-    var hasLoadedOnce by remember { mutableStateOf(false) }
-    LaunchedEffect(selectedApp) {
-        if (selectedApp != null) {
+    var hasLoadedOnce by remember(jobId) { mutableStateOf(false) }
+    LaunchedEffect(selectedApp, jobId) {
+        if (selectedApp != null && selectedApp?.id == jobId) {
             hasLoadedOnce = true
         }
     }

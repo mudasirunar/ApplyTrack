@@ -108,9 +108,9 @@ fun AddEditScreen(
 ) {
     val selectedApp by viewModel.selectedApplication.collectAsStateWithLifecycle()
 
-    var hasLoadedOnce by remember { mutableStateOf(false) }
-    LaunchedEffect(selectedApp) {
-        if (jobId != null && selectedApp != null) {
+    var hasLoadedOnce by remember(jobId) { mutableStateOf(false) }
+    LaunchedEffect(selectedApp, jobId) {
+        if (jobId != null && selectedApp != null && selectedApp?.id == jobId) {
             hasLoadedOnce = true
         }
     }

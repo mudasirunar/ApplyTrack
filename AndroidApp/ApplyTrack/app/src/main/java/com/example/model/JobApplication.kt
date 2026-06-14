@@ -2,9 +2,13 @@ package com.example.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Index
 import java.util.UUID
 
-@Entity(tableName = "job_applications")
+@Entity(
+    tableName = "job_applications",
+    indices = [Index(value = ["uuid"], unique = true)]
+)
 data class JobApplication(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val uuid: String = UUID.randomUUID().toString(),

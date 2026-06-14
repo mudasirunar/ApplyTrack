@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import kotlinx.coroutines.launch
+import com.example.auth.toUserFriendlyMessage
 
 @Composable
 fun LoginScreen(
@@ -109,10 +110,9 @@ fun LoginScreen(
                                 val result = onGoogleSignIn()
                                 isLoading = false
                                 if (result.isFailure) {
-                                    val errorMsg = result.exceptionOrNull()?.localizedMessage ?: "Google Sign-In failed"
-                                    // Filter out user cancellation messages to avoid annoying popups
-                                    if (!errorMsg.contains("cancel", ignoreCase = true) && 
-                                        !errorMsg.contains("20002")) {
+                                    val exception = result.exceptionOrNull()
+                                    val errorMsg = exception?.toUserFriendlyMessage()
+                                    if (errorMsg != null) {
                                         Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
                                     }
                                 }
@@ -158,11 +158,9 @@ fun LoginScreen(
                                 val result = onGuestSignIn()
                                 isLoading = false
                                 if (result.isFailure) {
-                                    Toast.makeText(
-                                        context,
-                                        result.exceptionOrNull()?.localizedMessage ?: "Guest login failed",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                    val exception = result.exceptionOrNull()
+                                    val errorMsg = exception?.toUserFriendlyMessage() ?: "Guest login failed"
+                                    Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
                                 }
                             }
                         }

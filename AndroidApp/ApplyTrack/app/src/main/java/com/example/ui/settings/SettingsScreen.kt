@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.auth.AuthManager
 import com.example.auth.AuthState
+import com.example.auth.toUserFriendlyMessage
 import com.example.ui.JobViewModel
 import com.example.utils.AppTheme
 import java.text.SimpleDateFormat
@@ -93,6 +94,7 @@ fun SettingsScreen(
 
     // Dialog states for reset confirmation
     var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var isWipingData by remember { mutableStateOf(false) }
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
 
     // Dialog states for import conflicts
@@ -237,9 +239,9 @@ fun SettingsScreen(
                         val result = authManager.signInWithGoogle(context)
                         showAuthProgress = false
                         if (result.isFailure) {
-                            val errorMsg = result.exceptionOrNull()?.localizedMessage ?: "Sign-in failed"
-                            if (!errorMsg.contains("cancel", ignoreCase = true) && 
-                                !errorMsg.contains("20002")) {
+                            val exception = result.exceptionOrNull()
+                            val errorMsg = exception?.toUserFriendlyMessage()
+                            if (errorMsg != null) {
                                 Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
                             }
                         } else {
@@ -276,11 +278,14 @@ fun SettingsScreen(
 
     if (showResetConfirmDialog) {
         ResetConfirmDialog(
+            isWiping = isWipingData,
             onDismiss = { showResetConfirmDialog = false },
             onConfirm = {
-                showResetConfirmDialog = false
+                isWipingData = true
                 viewModel.clearAllLocalData(context) {
-                    Toast.makeText(context, "All local & remote data wiped successfully", Toast.LENGTH_SHORT).show()
+                    isWipingData = false
+                    showResetConfirmDialog = false
+                    Toast.makeText(context, "All local data wiped successfully. Remote cleanup started in background.", Toast.LENGTH_SHORT).show()
                 }
             }
         )

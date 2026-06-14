@@ -183,6 +183,7 @@ class AuthManager(
 
             return Result.success(Unit)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             e.printStackTrace()
             return Result.failure(e)
         }

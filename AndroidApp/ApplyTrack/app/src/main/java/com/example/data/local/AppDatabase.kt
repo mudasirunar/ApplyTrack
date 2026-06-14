@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import com.example.model.DeletedJob
 import com.example.model.JobApplication
 
-@Database(entities = [JobApplication::class, DeletedJob::class], version = 1, exportSchema = false)
+@Database(entities = [JobApplication::class, DeletedJob::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
