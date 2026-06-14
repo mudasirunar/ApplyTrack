@@ -88,12 +88,22 @@ class AuthManager(
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    suspend fun signInAnonymously(): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun signInAnonymously(): Result<Unit> = withContext(Dispatchers.Main) {
         try {
-            if (auth.currentUser == null) {
-                auth.signInAnonymously().await()
-            }
+            // Instantly toggle offline guest preference locally to trigger immediate navigation
             preferencesHelper.setOfflineGuest(true)
+            
+            // Execute the Firebase anonymous login on a background thread in application scope
+            scope.launch(Dispatchers.IO) {
+                try {
+                    if (auth.currentUser == null) {
+                        auth.signInAnonymously().await()
+                    }
+                } catch (e: Exception) {
+                    // Suppress connection failures for offline-first support; login was saved locally
+                    e.printStackTrace()
+                }
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             e.printStackTrace()

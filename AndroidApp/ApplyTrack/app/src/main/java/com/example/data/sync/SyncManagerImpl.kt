@@ -23,6 +23,15 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.tasks.await
 import com.example.utils.AttachmentHelper
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 
 class SyncManagerImpl(
     private val context: Context,
@@ -47,6 +56,20 @@ class SyncManagerImpl(
     override val syncErrorMessage: StateFlow<String?> = _syncErrorMessage.asStateFlow()
 
     private var activeUserId: String? = null
+    private var uploadJob: Job? = null
+
+    private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            // Trigger background sync immediately as soon as we come online
+            scope.launch {
+                val userId = activeUserId
+                if (userId != null && repository.isFirebaseConfigured()) {
+                    repository.uploadLocalChanges()
+                }
+            }
+        }
+    }
 
     override fun startSync() {
         scope.launch {
@@ -63,10 +86,33 @@ class SyncManagerImpl(
                 }
             }
         }
+        
+        // Register network connectivity listener
+        try {
+            val networkRequest = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun stopSync() {
         stopActiveListeners()
+        
+        // Unregister network callback
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Schedule background SyncWorker task so pending changes compile and upload after app closes
+        if (activeUserId != null && repository.isFirebaseConfigured()) {
+            enqueueBackgroundSync()
+        }
+
         scope.coroutineContext.cancelChildren()
     }
 
@@ -75,9 +121,29 @@ class SyncManagerImpl(
         jobApplicationsListener = null
     }
 
+    private fun enqueueBackgroundSync() {
+        try {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(constraints)
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                "ApplyTrackSyncWork",
+                ExistingWorkPolicy.REPLACE,
+                syncRequest
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun triggerUpload() {
         if (preferencesHelper.isAutoSyncEnabled() && repository.isFirebaseConfigured()) {
-            scope.launch {
+            uploadJob?.cancel()
+            uploadJob = scope.launch {
+                delay(1500) // 1.5 seconds debounce to avoid calling network repeatedly while user types
                 repository.uploadLocalChanges()
             }
         }

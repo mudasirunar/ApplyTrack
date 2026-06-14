@@ -40,6 +40,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +93,7 @@ fun SettingsScreen(
 
     // Dialog states for reset confirmation
     var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var showSignOutConfirmDialog by remember { mutableStateOf(false) }
 
     // Dialog states for import conflicts
     var showConflictDialog by remember { mutableStateOf(false) }
@@ -226,19 +228,7 @@ fun SettingsScreen(
                 authState = authState,
                 currentUser = currentUser,
                 onSignOutClick = {
-                    showAuthProgress = true
-                    authProgressMessage = "Signing out..."
-                    scope.launch {
-                        val result = authManager.signOut()
-                        showAuthProgress = false
-                        if (result.isFailure) {
-                            Toast.makeText(
-                                context,
-                                result.exceptionOrNull()?.localizedMessage ?: "Sign out failed",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
+                    showSignOutConfirmDialog = true
                 },
                 onLinkGoogleClick = {
                     showAuthProgress = true
@@ -291,6 +281,29 @@ fun SettingsScreen(
                 showResetConfirmDialog = false
                 viewModel.clearAllLocalData(context) {
                     Toast.makeText(context, "All local & remote data wiped successfully", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    if (showSignOutConfirmDialog) {
+        SignOutConfirmDialog(
+            onDismiss = { showSignOutConfirmDialog = false },
+            onConfirm = {
+                showSignOutConfirmDialog = false
+                showAuthProgress = true
+                authProgressMessage = "Signing out..."
+                scope.launch {
+                    delay(500) 
+                    val result = authManager.signOut()
+                    showAuthProgress = false
+                    if (result.isFailure) {
+                        Toast.makeText(
+                            context,
+                            result.exceptionOrNull()?.localizedMessage ?: "Sign out failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         )

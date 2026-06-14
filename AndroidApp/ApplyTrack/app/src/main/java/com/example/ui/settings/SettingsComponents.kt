@@ -29,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 import com.example.auth.AuthState
 import com.example.ui.SyncState
 import com.example.ui.theme.AccentGreen
@@ -69,10 +71,13 @@ fun AccountCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val photoUrl = currentUser.photoUrl?.toString()
+                    val photoUrl = currentUser.photoUrl?.toString()?.replace("http://", "https://")
                     if (!photoUrl.isNullOrEmpty()) {
                         AsyncImage(
-                            model = photoUrl,
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(photoUrl)
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Profile Picture",
                             modifier = Modifier
                                 .size(60.dp)
@@ -430,6 +435,30 @@ fun ResetConfirmDialog(
                 onClick = onConfirm
             ) {
                 Text("Wipe All", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun SignOutConfirmDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sign Out") },
+        text = { Text("Are you sure you want to sign out?") },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm
+            ) {
+                Text("Sign Out", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {

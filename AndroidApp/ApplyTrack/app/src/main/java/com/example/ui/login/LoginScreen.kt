@@ -154,6 +154,7 @@ fun LoginScreen(
                         .clickable(enabled = !isLoading) {
                             isLoading = true
                             coroutineScope.launch {
+                                kotlinx.coroutines.delay(400)
                                 val result = onGuestSignIn()
                                 isLoading = false
                                 if (result.isFailure) {
