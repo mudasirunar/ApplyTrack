@@ -108,6 +108,13 @@ fun AddEditScreen(
 ) {
     val selectedApp by viewModel.selectedApplication.collectAsStateWithLifecycle()
 
+    var hasLoadedOnce by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedApp) {
+        if (jobId != null && selectedApp != null) {
+            hasLoadedOnce = true
+        }
+    }
+
     // Load job data if editing
     LaunchedEffect(jobId) {
         if (jobId != null) {
@@ -929,5 +936,26 @@ fun AddEditScreen(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    if (jobId != null && hasLoadedOnce && selectedApp == null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Application Deleted", fontWeight = FontWeight.ExtraBold) },
+            text = { Text("This job application has been deleted from another device.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onNavigateBack()
+                    }
+                ) {
+                    Text("Return to Dashboard", fontWeight = FontWeight.Bold)
+                }
+            },
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
+        )
     }
 }

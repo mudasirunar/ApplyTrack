@@ -35,19 +35,15 @@ enum class SyncState {
 
 class JobViewModel(
     private val repository: JobRepository,
-    private val preferencesHelper: PreferencesHelper
+    private val preferencesHelper: PreferencesHelper,
+    private val syncManager: com.example.data.sync.SyncManager
 ) : ViewModel() {
 
     // Theme & Preferences State
     val appTheme = preferencesHelper.themeFlow
-    val autoSyncEnabled = preferencesHelper.autoSyncFlow
 
     fun setAppTheme(theme: AppTheme) {
         preferencesHelper.setTheme(theme)
-    }
-
-    fun setAutoSyncEnabled(enabled: Boolean) {
-        preferencesHelper.setAutoSyncEnabled(enabled)
     }
 
     // Current Search & Filter states
@@ -367,12 +363,10 @@ class JobViewModel(
         )
     }
 
-    // Sync Status States
-    private val _syncState = MutableStateFlow(SyncState.IDLE)
-    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
-
-    private val _syncErrorMessage = MutableStateFlow<String?>(null)
-    val syncErrorMessage: StateFlow<String?> = _syncErrorMessage.asStateFlow()
+    // Sync Status States delegated to SyncManager
+    val syncState: StateFlow<SyncState> = syncManager.syncState
+    val syncErrorMessage: StateFlow<String?> = syncManager.syncErrorMessage
+    val downloadingFiles: StateFlow<Set<String>> = syncManager.downloadingFiles
 
     val isFirebaseConfigured = repository.isFirebaseConfigured()
 
@@ -491,41 +485,13 @@ class JobViewModel(
 
     // --- Dynamic Background Serialization Sync Layer ---
     fun runFullSync() {
-        if (!isFirebaseConfigured) {
-            _syncState.value = SyncState.ERROR
-            _syncErrorMessage.value = "Firebase Firestore is not configured. Drop google-services.json to sync!"
-            return
-        }
-
         viewModelScope.launch {
-            _syncState.value = SyncState.SYNCING
-            _syncErrorMessage.value = null
-
-            // 1. Fetch remote changes to synchronize local db representation
-            val fetchResult = repository.fetchRemoteUpdates()
-            if (fetchResult.isFailure) {
-                _syncState.value = SyncState.ERROR
-                _syncErrorMessage.value = "Failed to fetch remote updates: ${fetchResult.exceptionOrNull()?.message}"
-                return@launch
-            }
-
-            // 2. Upload local updates with merged last-write-wins priority override
-            val uploadResult = repository.uploadLocalChanges()
-            if (uploadResult.isFailure) {
-                _syncState.value = SyncState.ERROR
-                _syncErrorMessage.value = "Failed to upload local changes: ${uploadResult.exceptionOrNull()?.message}"
-            } else {
-                _syncState.value = SyncState.SUCCESS
-            }
+            syncManager.runFullSync()
         }
     }
 
     private fun triggerUploadSync() {
-        if (isFirebaseConfigured && preferencesHelper.isAutoSyncEnabled()) {
-            viewModelScope.launch {
-                repository.uploadLocalChanges()
-            }
-        }
+        syncManager.triggerUpload()
     }
 
     fun clearAllLocalData(context: Context, onSuccess: () -> Unit) {
@@ -658,12 +624,13 @@ data class StatusSlice(val status: String, val count: Int, val color: Long)
 // ViewModel Factory Creator
 class JobViewModelFactory(
     private val repository: JobRepository,
-    private val preferencesHelper: PreferencesHelper
+    private val preferencesHelper: PreferencesHelper,
+    private val syncManager: com.example.data.sync.SyncManager
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(JobViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return JobViewModel(repository, preferencesHelper) as T
+            return JobViewModel(repository, preferencesHelper, syncManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class representation")
     }

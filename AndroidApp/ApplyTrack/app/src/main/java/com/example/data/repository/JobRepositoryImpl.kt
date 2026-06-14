@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import android.content.Context
+import com.example.utils.AttachmentHelper
+import com.example.data.sync.SupabaseStorageHelper
+import java.io.File
 import java.util.UUID
 
 // Custom task await implementation to avoid direct dependency on play-services-coroutines
@@ -25,8 +29,11 @@ suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { continuation 
 }
 
 class JobRepositoryImpl(
+    private val context: Context,
     private val dao: JobApplicationDao
 ) : JobRepository {
+
+    private val supabaseStorageHelper = SupabaseStorageHelper()
 
     private val firestore: FirebaseFirestore? by lazy {
         try {
@@ -56,6 +63,21 @@ class JobRepositoryImpl(
     override suspend fun deleteApplication(id: Long) {
         val app = dao.getApplicationById(id)
         if (app != null) {
+            val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            if (userId != null) {
+                val filesToDelete = listOfNotNull(
+                    app.resume?.let { "resumes" to it.fileName },
+                    app.coverLetter?.let { "cover_letters" to it.fileName },
+                    app.additionalDocument?.let { "additional_documents" to it.fileName }
+                ) + (app.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+                
+                kotlin.runCatching {
+                    filesToDelete.forEach { (type, fileName) ->
+                        supabaseStorageHelper.deleteFile(userId, type, fileName)
+                    }
+                }
+            }
+            
             // Track deletion for remote sync
             dao.insertDeletedJob(DeletedJob(uuid = app.uuid))
             // Delete from Room table
@@ -70,12 +92,16 @@ class JobRepositoryImpl(
     // --- Core Sync Optimization Layer: Last-write-wins & Delete-Overrides ---
     override suspend fun uploadLocalChanges(): Result<Unit> = kotlin.runCatching {
         val fs = firestore ?: throw IllegalStateException("Firebase Firestore is not configured or initialized.")
+        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            ?: throw IllegalStateException("No authenticated user session found.")
         
         // 1. Process local deletions first (Deletes always override remote)
         val deletedJobs = dao.getAllDeletedJobs()
         for (deletedJob in deletedJobs) {
             try {
-                fs.collection("job_applications")
+                fs.collection("users")
+                    .document(userId)
+                    .collection("job_applications")
                     .document(deletedJob.uuid)
                     .delete()
                     .await()
@@ -91,7 +117,10 @@ class JobRepositoryImpl(
         for (job in localJobs) {
             try {
                 // Check if document exists and get its update timestamp
-                val docRef = fs.collection("job_applications").document(job.uuid)
+                val docRef = fs.collection("users")
+                    .document(userId)
+                    .collection("job_applications")
+                    .document(job.uuid)
                 val docSnapshot = docRef.get().await()
                 
                 var shouldUpload = true
@@ -135,6 +164,23 @@ class JobRepositoryImpl(
                         "updatedAt" to job.updatedAt
                     )
                     docRef.set(data).await()
+
+                    // Upload attachments to Supabase Storage if they exist locally
+                    val uploads = listOfNotNull(
+                        job.resume?.let { "resumes" to it.fileName },
+                        job.coverLetter?.let { "cover_letters" to it.fileName },
+                        job.additionalDocument?.let { "additional_documents" to it.fileName }
+                    ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+
+                    uploads.forEach { (type, fileName) ->
+                        val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
+                        if (localFile.exists()) {
+                            val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
+                            if (!existsOnCloud) {
+                                supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 // Ignore individual document failure and continue sync process
@@ -144,9 +190,15 @@ class JobRepositoryImpl(
 
     override suspend fun fetchRemoteUpdates(): Result<Unit> = kotlin.runCatching {
         val fs = firestore ?: throw IllegalStateException("Firebase Firestore is not configured or initialized.")
+        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            ?: throw IllegalStateException("No authenticated user session found.")
         
-        // 1. Fetch all applications from Firestore
-        val querySnapshot = fs.collection("job_applications").get().await()
+        // 1. Fetch all applications from Firestore under the user's subcollection
+        val querySnapshot = fs.collection("users")
+            .document(userId)
+            .collection("job_applications")
+            .get()
+            .await()
         val deletedUuids = dao.getAllDeletedJobs().map { it.uuid }.toSet()
 
         for (doc in querySnapshot.documents) {
@@ -155,7 +207,12 @@ class JobRepositoryImpl(
             // If deleted locally, local delete always overrides remote database
             if (deletedUuids.contains(uuid)) {
                 try {
-                    fs.collection("job_applications").document(uuid).delete().await()
+                    fs.collection("users")
+                        .document(userId)
+                        .collection("job_applications")
+                        .document(uuid)
+                        .delete()
+                        .await()
                     dao.removeDeletedJobTracking(uuid)
                 } catch (e: Exception) {
                     // Ignore deletion errors, tracking remains for retry
@@ -283,6 +340,23 @@ class JobRepositoryImpl(
     override suspend fun deleteAllApplications() {
         // Collect all existing local application records first
         val allApps = dao.getAllApplicationsList()
+        
+        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            val filesToDelete = allApps.flatMap { app ->
+                listOfNotNull(
+                    app.resume?.let { "resumes" to it.fileName },
+                    app.coverLetter?.let { "cover_letters" to it.fileName },
+                    app.additionalDocument?.let { "additional_documents" to it.fileName }
+                ) + (app.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+            }
+            kotlin.runCatching {
+                filesToDelete.forEach { (type, fileName) ->
+                    supabaseStorageHelper.deleteFile(userId, type, fileName)
+                }
+            }
+        }
+
         // Record their deletions in the deleted_jobs table so we propagate this wipe to Firestore on next sync
         for (app in allApps) {
             dao.insertDeletedJob(DeletedJob(uuid = app.uuid))

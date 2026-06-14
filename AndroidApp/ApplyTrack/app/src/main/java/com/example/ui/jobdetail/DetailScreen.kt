@@ -62,8 +62,16 @@ fun DetailScreen(
     onNavigateBack: () -> Unit
 ) {
     val selectedApp by viewModel.selectedApplication.collectAsStateWithLifecycle()
+    val downloadingFiles by viewModel.downloadingFiles.collectAsStateWithLifecycle()
     var isDescriptionExpanded by remember { mutableStateOf(true) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    
+    var hasLoadedOnce by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedApp) {
+        if (selectedApp != null) {
+            hasLoadedOnce = true
+        }
+    }
 
     val context = LocalContext.current
 
@@ -713,6 +721,27 @@ fun DetailScreen(
                     Text(text = "Cancel")
                 }
             }
+        )
+    }
+
+    if (hasLoadedOnce && selectedApp == null) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Application Deleted", fontWeight = FontWeight.ExtraBold) },
+            text = { Text("This job application has been deleted from another device.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onNavigateBack()
+                    }
+                ) {
+                    Text("Return to Dashboard", fontWeight = FontWeight.Bold)
+                }
+            },
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
         )
     }
 }

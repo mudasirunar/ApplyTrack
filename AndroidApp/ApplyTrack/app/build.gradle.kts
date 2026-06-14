@@ -1,7 +1,10 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
+  alias(libs.plugins.google.services)
 }
 
 android {
@@ -16,6 +19,17 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(localPropertiesFile.inputStream())
+    }
+    val supabaseUrl = localProperties.getProperty("supabase.url") ?: "https://glrjlwwggnpzrsrakdzx.supabase.co"
+    val supabaseKey = localProperties.getProperty("supabase.anonkey") ?: ""
+
+    buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+    buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
   }
 
   buildTypes {
@@ -30,6 +44,7 @@ android {
   }
   buildFeatures {
     compose = true
+    buildConfig = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
@@ -38,6 +53,11 @@ dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.firestore)
+  implementation(libs.firebase.auth)
+  implementation(libs.androidx.credentials)
+  implementation(libs.androidx.credentials.play.services.auth)
+  implementation(libs.googleid)
+  implementation(libs.kotlinx.coroutines.play.services)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material3)

@@ -20,8 +20,8 @@ class PreferencesHelper(context: Context) {
     private val _themeFlow = MutableStateFlow(getSavedTheme())
     val themeFlow: StateFlow<AppTheme> = _themeFlow.asStateFlow()
 
-    private val _autoSyncFlow = MutableStateFlow(isAutoSyncEnabled())
-    val autoSyncFlow: StateFlow<Boolean> = _autoSyncFlow.asStateFlow()
+    private val _isOfflineGuest = MutableStateFlow(isOfflineGuestEnabled())
+    val isOfflineGuest: StateFlow<Boolean> = _isOfflineGuest.asStateFlow()
 
     fun getSavedTheme(): AppTheme {
         val themeName = sharedPrefs.getString("app_theme", AppTheme.SYSTEM.name) ?: AppTheme.SYSTEM.name
@@ -33,16 +33,28 @@ class PreferencesHelper(context: Context) {
     }
 
     fun setTheme(theme: AppTheme) {
-        sharedPrefs.edit().putString("app_theme", theme.name).apply()
+        sharedPrefs.edit()
+            .putString("app_theme", theme.name)
+            .apply()
         _themeFlow.value = theme
     }
 
     fun isAutoSyncEnabled(): Boolean {
-        return sharedPrefs.getBoolean("auto_sync", true)
+        return true
     }
 
-    fun setAutoSyncEnabled(enabled: Boolean) {
-        sharedPrefs.edit().putBoolean("auto_sync", enabled).apply()
-        _autoSyncFlow.value = enabled
+    fun isOfflineGuestEnabled(): Boolean {
+        return sharedPrefs.getBoolean("is_offline_guest", false)
+    }
+
+    fun setOfflineGuest(value: Boolean) {
+        sharedPrefs.edit().putBoolean("is_offline_guest", value).apply()
+        _isOfflineGuest.value = value
+    }
+
+    fun clearAll() {
+        sharedPrefs.edit().clear().apply()
+        _themeFlow.value = AppTheme.SYSTEM
+        _isOfflineGuest.value = false
     }
 }

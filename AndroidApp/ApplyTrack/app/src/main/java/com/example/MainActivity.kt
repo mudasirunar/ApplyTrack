@@ -17,6 +17,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.auth.AuthManager
+import com.example.data.sync.SyncManager
+import com.example.data.sync.SyncManagerImpl
+import com.example.auth.AuthState
+import com.example.ui.login.LoginScreen
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.unit.sp
 import com.example.data.local.AppDatabase
 import com.example.data.repository.JobRepositoryImpl
 import com.example.ui.JobViewModel
@@ -55,6 +62,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.ui.Alignment
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
 
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -72,11 +81,21 @@ class MainActivity : ComponentActivity() {
 
     // Manual clean dependency injection container setup following recommended guidelines
     private val database by lazy { AppDatabase.getDatabase(this) }
-    private val repository by lazy { JobRepositoryImpl(database.jobApplicationDao()) }
+    private val repository by lazy { JobRepositoryImpl(applicationContext, database.jobApplicationDao()) }
     private val preferencesHelper by lazy { PreferencesHelper(applicationContext) }
+    private val authManager by lazy { AuthManager(applicationContext, preferencesHelper) }
+    private val syncManager by lazy {
+        SyncManagerImpl(
+            context = applicationContext,
+            repository = repository,
+            dao = database.jobApplicationDao(),
+            preferencesHelper = preferencesHelper,
+            authManager = authManager
+        )
+    }
     
     private val viewModel: JobViewModel by viewModels {
-        JobViewModelFactory(repository, preferencesHelper)
+        JobViewModelFactory(repository, preferencesHelper, syncManager)
     }
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -84,6 +103,15 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // Start live sync manager
+        syncManager.startSync()
+        
+        // Setup guest data upgrade callback
+        authManager.onUserUpgradeCallback = {
+            syncManager.migrateLocalDataToCloud()
+        }
+        
         setContent {
             val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
             val isDarkTheme = when (appTheme) {
@@ -96,7 +124,30 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val navController = rememberNavController()
+                    val authState by authManager.authState.collectAsStateWithLifecycle()
+                    when (authState) {
+                        AuthState.LOADING -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.background),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 3.dp,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
+                        }
+                        AuthState.UNAUTHENTICATED -> {
+                            LoginScreen(
+                                onGoogleSignIn = { authManager.signInWithGoogle(this@MainActivity) },
+                                onGuestSignIn = { authManager.signInAnonymously() }
+                            )
+                        }
+                        AuthState.GUEST, AuthState.AUTHENTICATED -> {
+                            val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
@@ -407,7 +458,10 @@ class MainActivity : ComponentActivity() {
 
                         // 6. Settings Screen
                         composable("settings") {
-                            SettingsScreen(viewModel = viewModel)
+                            SettingsScreen(
+                                viewModel = viewModel,
+                                authManager = authManager
+                            )
                         }
                     }
                 }
@@ -418,9 +472,16 @@ class MainActivity : ComponentActivity() {
                         .align(Alignment.BottomCenter)
                         .padding(bottom = animatedPadding)
                 )
-            }
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        syncManager.stopSync()
     }
 }
