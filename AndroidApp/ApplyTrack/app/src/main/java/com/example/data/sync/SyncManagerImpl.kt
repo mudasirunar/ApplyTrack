@@ -57,7 +57,9 @@ class SyncManagerImpl(
     override val syncErrorMessage: StateFlow<String?> = _syncErrorMessage.asStateFlow()
 
     private var activeUserId: String? = null
+    private var activeUserAnonymous: Boolean? = null
     private var uploadJob: Job? = null
+    private var toastSuccessJob: Job? = null
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
@@ -76,11 +78,13 @@ class SyncManagerImpl(
         scope.launch {
             authManager.currentUserFlow.collectLatest { user ->
                 val newUid = user?.uid
-                if (newUid != activeUserId) {
+                val isAnonymous = user?.isAnonymous ?: true
+                if (newUid != activeUserId || isAnonymous != activeUserAnonymous) {
                     stopActiveListeners()
                     activeUserId = newUid
+                    activeUserAnonymous = isAnonymous
                     
-                    if (newUid != null && repository.isFirebaseConfigured()) {
+                    if (newUid != null && !isAnonymous && repository.isFirebaseConfigured()) {
                         startJobApplicationsListener(newUid)
                         runFullSync()
                     }
@@ -141,7 +145,7 @@ class SyncManagerImpl(
     }
 
     override fun triggerUpload() {
-        if (preferencesHelper.isAutoSyncEnabled() && repository.isFirebaseConfigured()) {
+        if (preferencesHelper.isAutoSyncEnabled() && repository.isFirebaseConfigured() && activeUserAnonymous == false) {
             uploadJob?.cancel()
             uploadJob = scope.launch {
                 delay(200) // 200ms debounce to run sync quickly after database transactions commit
@@ -152,8 +156,7 @@ class SyncManagerImpl(
 
     override suspend fun runFullSync(): Result<Unit> = withContext(Dispatchers.IO) {
         if (!repository.isFirebaseConfigured()) {
-            _syncState.value = SyncState.ERROR
-            _syncErrorMessage.value = "Firestore is not configured. Add google-services.json to sync!"
+            triggerError("Firestore is not configured. Add google-services.json to sync!")
             return@withContext Result.failure(IllegalStateException("Firestore is not configured."))
         }
         
@@ -162,30 +165,30 @@ class SyncManagerImpl(
         try {
             val uploadResult = repository.uploadLocalChanges()
             if (uploadResult.isFailure) {
-                _syncState.value = SyncState.ERROR
-                _syncErrorMessage.value = "Failed to upload local changes: ${uploadResult.exceptionOrNull()?.message}"
+                triggerError("Failed to upload local changes: ${uploadResult.exceptionOrNull()?.message}")
                 return@withContext uploadResult
             }
             
             val fetchResult = repository.fetchRemoteUpdates()
             if (fetchResult.isFailure) {
-                _syncState.value = SyncState.ERROR
-                _syncErrorMessage.value = "Failed to fetch remote updates: ${fetchResult.exceptionOrNull()?.message}"
+                triggerError("Failed to fetch remote updates: ${fetchResult.exceptionOrNull()?.message}")
                 return@withContext Result.failure(fetchResult.exceptionOrNull() ?: RuntimeException("Failed to fetch remote updates"))
             }
             
             val changesCount = fetchResult.getOrDefault(0)
             if (changesCount > 0) {
-                _syncState.value = SyncState.SYNCING
-                delay(1000)
+                toastSuccessJob?.cancel()
                 _syncState.value = SyncState.SUCCESS
+                toastSuccessJob = scope.launch {
+                    delay(2500)
+                    _syncState.value = SyncState.IDLE
+                }
             } else {
                 _syncState.value = SyncState.IDLE
             }
             Result.success(Unit)
         } catch (e: Exception) {
-            _syncState.value = SyncState.ERROR
-            _syncErrorMessage.value = e.localizedMessage ?: "Synchronization failed"
+            triggerError(e.localizedMessage ?: "Synchronization failed")
             Result.failure(e)
         }
     }
@@ -267,8 +270,7 @@ class SyncManagerImpl(
         jobApplicationsListener = collectionRef.addSnapshotListener { snapshots, error ->
             if (error != null) {
                 error.printStackTrace()
-                _syncState.value = SyncState.ERROR
-                _syncErrorMessage.value = error.localizedMessage
+                triggerError(error.localizedMessage ?: "Listener failed")
                 return@addSnapshotListener
             }
             if (snapshots == null) return@addSnapshotListener
@@ -410,16 +412,20 @@ class SyncManagerImpl(
                         }
                     }
                     if (actualChangesCount > 0) {
-                        _syncState.value = SyncState.SYNCING
-                        delay(1000)
+                        toastSuccessJob?.cancel()
                         _syncState.value = SyncState.SUCCESS
+                        toastSuccessJob = scope.launch {
+                            delay(2500)
+                            _syncState.value = SyncState.IDLE
+                        }
                     } else {
-                        _syncState.value = SyncState.IDLE
+                        if (_syncState.value != SyncState.SYNCING) {
+                            _syncState.value = SyncState.IDLE
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    _syncState.value = SyncState.ERROR
-                    _syncErrorMessage.value = e.localizedMessage
+                    triggerError(e.localizedMessage ?: "Sync listener failed")
                 }
             }
         }
@@ -449,6 +455,17 @@ class SyncManagerImpl(
             val status = map?.get("status") as? String
             val timestamp = map?.get("timestamp") as? Long
             if (status != null && timestamp != null) StatusHistoryEntry(status, timestamp) else null
+        }
+    }
+
+    private fun triggerError(message: String) {
+        _syncState.value = SyncState.ERROR
+        _syncErrorMessage.value = message
+        scope.launch {
+            delay(3500)
+            if (_syncState.value == SyncState.ERROR) {
+                _syncState.value = SyncState.IDLE
+            }
         }
     }
 }

@@ -162,18 +162,10 @@ class MainActivity : ComponentActivity() {
                      var toastState by remember { mutableStateOf(SyncState.IDLE) }
 
                      LaunchedEffect(syncState) {
-                         if (syncState == SyncState.SYNCING) {
-                             toastState = SyncState.SYNCING
+                         if (syncState != SyncState.IDLE) {
+                             toastState = syncState
                              showToast = true
-                         } else if (syncState == SyncState.SUCCESS) {
-                             toastState = SyncState.SUCCESS
-                             showToast = true
-                             delay(2500)
-                             showToast = false
-                         } else if (syncState == SyncState.ERROR) {
-                             toastState = SyncState.ERROR
-                             showToast = true
-                             delay(3500)
+                         } else {
                              showToast = false
                          }
                      }

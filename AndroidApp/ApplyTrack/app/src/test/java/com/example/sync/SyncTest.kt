@@ -177,4 +177,110 @@ class SyncTest {
         assertEquals(0, remote.remoteApplications.size)
         assertEquals(0, dao.getAllDeletedJobs().size)
     }
+
+    @Test
+    fun testSync_FullEntityDataMappingIntegrity() = runBlocking {
+        val dao = FakeJobApplicationDao()
+        val remote = FakeRemoteService()
+        val engine = SyncEngine(dao, remote)
+
+        val complexJob = JobApplication(
+            id = 1L,
+            uuid = "complex-uuid-12345",
+            companyName = "Tech Corp",
+            role = "Software Engineer",
+            platform = "LinkedIn",
+            status = "Interview",
+            jobDescription = "Build beautiful Android apps with Kotlin and Jetpack Compose.",
+            notes = "Spoke with recruiter on Monday. Tech round scheduled for next week.",
+            url = "https://example.com/tech-corp-job",
+            email = "jobs@techcorp.com",
+            statusHistory = listOf(
+                com.example.model.StatusHistoryEntry("Applied", 1000L),
+                com.example.model.StatusHistoryEntry("Interview", 2000L)
+            ),
+            resume = com.example.model.Attachment("resume_123.pdf", "MyResume.pdf"),
+            coverLetter = com.example.model.Attachment("cover_letter_123.pdf", "MyCoverLetter.pdf"),
+            additionalDocument = com.example.model.Attachment("cert_123.pdf", "Cert.pdf"),
+            screenshots = listOf(
+                com.example.model.Attachment("screen1.png", "Screenshot1.png"),
+                com.example.model.Attachment("screen2.png", "Screenshot2.png")
+            ),
+            createdAt = 1000L,
+            updatedAt = 3000L,
+            lastSyncedAt = 0L // Dirty
+        )
+
+        // Insert locally
+        dao.insertApplication(complexJob)
+
+        // Run upload to remote
+        val uploadResult = engine.uploadLocalChanges()
+        assertTrue(uploadResult.isSuccess)
+
+        // Verify remote got the full data structure correctly
+        val remoteJob = remote.remoteApplications["complex-uuid-12345"]!!
+        assertEquals(complexJob.uuid, remoteJob.uuid)
+        assertEquals(complexJob.companyName, remoteJob.companyName)
+        assertEquals(complexJob.role, remoteJob.role)
+        assertEquals(complexJob.platform, remoteJob.platform)
+        assertEquals(complexJob.status, remoteJob.status)
+        assertEquals(complexJob.jobDescription, remoteJob.jobDescription)
+        assertEquals(complexJob.notes, remoteJob.notes)
+        assertEquals(complexJob.url, remoteJob.url)
+        assertEquals(complexJob.email, remoteJob.email)
+        
+        assertEquals(complexJob.statusHistory?.size, remoteJob.statusHistory?.size)
+        assertEquals("Applied", remoteJob.statusHistory?.get(0)?.status)
+        assertEquals(1000L, remoteJob.statusHistory?.get(0)?.timestamp)
+        assertEquals("Interview", remoteJob.statusHistory?.get(1)?.status)
+        assertEquals(2000L, remoteJob.statusHistory?.get(1)?.timestamp)
+
+        assertEquals(complexJob.resume?.fileName, remoteJob.resume?.fileName)
+        assertEquals(complexJob.resume?.originalName, remoteJob.resume?.originalName)
+        assertEquals(complexJob.coverLetter?.fileName, remoteJob.coverLetter?.fileName)
+        assertEquals(complexJob.coverLetter?.originalName, remoteJob.coverLetter?.originalName)
+        assertEquals(complexJob.additionalDocument?.fileName, remoteJob.additionalDocument?.fileName)
+        assertEquals(complexJob.additionalDocument?.originalName, remoteJob.additionalDocument?.originalName)
+
+        assertEquals(complexJob.screenshots?.size, remoteJob.screenshots?.size)
+        assertEquals("screen1.png", remoteJob.screenshots?.get(0)?.fileName)
+        assertEquals("screen2.png", remoteJob.screenshots?.get(1)?.fileName)
+
+        assertEquals(complexJob.createdAt, remoteJob.createdAt)
+        assertEquals(complexJob.updatedAt, remoteJob.updatedAt)
+
+        // Clean local database to simulate another device
+        dao.deleteAllApplications()
+        assertEquals(0, dao.getAllApplicationsList().size)
+
+        // Now run fetch/download to simulate syncing to other device
+        val fetchResult = engine.fetchRemoteUpdates()
+        assertTrue(fetchResult.isSuccess)
+
+        // Verify local database now has the full structured object perfectly integrated
+        val syncedJob = dao.getApplicationByUuid("complex-uuid-12345")!!
+        assertEquals(complexJob.uuid, syncedJob.uuid)
+        assertEquals(complexJob.companyName, syncedJob.companyName)
+        assertEquals(complexJob.role, syncedJob.role)
+        assertEquals(complexJob.platform, syncedJob.platform)
+        assertEquals(complexJob.status, syncedJob.status)
+        assertEquals(complexJob.jobDescription, syncedJob.jobDescription)
+        assertEquals(complexJob.notes, syncedJob.notes)
+        assertEquals(complexJob.url, syncedJob.url)
+        assertEquals(complexJob.email, syncedJob.email)
+
+        assertEquals(complexJob.statusHistory?.size, syncedJob.statusHistory?.size)
+        assertEquals("Applied", syncedJob.statusHistory?.get(0)?.status)
+        assertEquals("Interview", syncedJob.statusHistory?.get(1)?.status)
+
+        assertEquals(complexJob.resume?.fileName, syncedJob.resume?.fileName)
+        assertEquals(complexJob.coverLetter?.fileName, syncedJob.coverLetter?.fileName)
+        assertEquals(complexJob.additionalDocument?.fileName, syncedJob.additionalDocument?.fileName)
+
+        assertEquals(complexJob.screenshots?.size, syncedJob.screenshots?.size)
+        assertEquals("screen1.png", syncedJob.screenshots?.get(0)?.fileName)
+        assertEquals("screen2.png", syncedJob.screenshots?.get(1)?.fileName)
+    }
 }
+

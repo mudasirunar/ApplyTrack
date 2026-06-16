@@ -365,10 +365,7 @@ class JobViewModel(
 
     // Sync Status States delegated to SyncManager
     val syncState: StateFlow<SyncState> = syncManager.syncState
-    val syncErrorMessage: StateFlow<String?> = syncManager.syncErrorMessage
     val downloadingFiles: StateFlow<Set<String>> = syncManager.downloadingFiles
-
-    val isFirebaseConfigured = repository.isFirebaseConfigured()
 
     private var loadJob: Job? = null
 
@@ -472,24 +469,7 @@ class JobViewModel(
             triggerUploadSync()
         }
     }
-
-    fun deleteSelectedApplication(id: Long, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            permanentlyDeletedIds.value = permanentlyDeletedIds.value + id
-            repository.deleteApplication(id)
-            // Trigger auto upload sync if initialized
-            triggerUploadSync()
-            onSuccess()
-        }
-    }
-
     // --- Dynamic Background Serialization Sync Layer ---
-    fun runFullSync() {
-        viewModelScope.launch {
-            syncManager.runFullSync()
-        }
-    }
-
     private fun triggerUploadSync() {
         syncManager.triggerUpload()
     }

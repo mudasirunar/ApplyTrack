@@ -85,7 +85,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.JobApplication
 import com.example.ui.JobViewModel
 import com.example.ui.SortOption
-import com.example.ui.SyncState
 import com.example.ui.components.AddJobFab
 import com.example.ui.components.JobCard
 import com.example.ui.dashboard.ApplicationsShimmerScreen
@@ -103,7 +102,6 @@ fun ApplicationsScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
     val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
-    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val spacing = 8.dp
     val fabBottomPadding = navigationBarsPadding + 80.dp + spacing

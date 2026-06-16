@@ -97,69 +97,98 @@ class JobRepositoryImpl(
     // --- Core Sync Optimization Layer: Last-write-wins & Delete-Overrides ---
     override suspend fun uploadLocalChanges(): Result<Unit> = kotlin.runCatching {
         val fs = firestore ?: throw IllegalStateException("Firebase Firestore is not configured or initialized.")
-        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-            ?: throw IllegalStateException("No authenticated user session found.")
         
-        // 1. Process local deletions first (Deletes always override remote)
-        val deletedJobs = dao.getAllDeletedJobs()
-        for (deletedJob in deletedJobs) {
-            try {
-                fs.collection("users")
-                    .document(userId)
-                    .collection("job_applications")
-                    .document(deletedJob.uuid)
-                    .delete()
-                    .await()
-                // Successfully deleted remotely, clean local tracking
-                dao.removeDeletedJobTracking(deletedJob.uuid)
-            } catch (e: Exception) {
-                // If deletion fails (e.g. no internet), keep local tracking to retry later
+        // Await Firebase user session restoration (up to 3 seconds)
+        var firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (firebaseUser == null) {
+            for (i in 1..30) {
+                kotlinx.coroutines.delay(100)
+                firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (firebaseUser != null) break
             }
+        }
+        if (firebaseUser == null || firebaseUser.isAnonymous) {
+            return@runCatching
+        }
+        val userId = firebaseUser.uid
+        
+        val deletedJobs = dao.getAllDeletedJobs()
+        val dirtyJobs = dao.getDirtyApplications()
+        
+        if (deletedJobs.isEmpty() && dirtyJobs.isEmpty()) {
+            return@runCatching
+        }
+
+        // Group operations into a Firestore WriteBatch
+        val batch = fs.batch()
+
+        // 1. Process local deletions first
+        for (deletedJob in deletedJobs) {
+            val docRef = fs.collection("users")
+                .document(userId)
+                .collection("job_applications")
+                .document(deletedJob.uuid)
+            batch.delete(docRef)
         }
 
         // 2. Upload local updates (Last-write-wins dirty tracking)
-        val dirtyJobs = dao.getDirtyApplications()
         for (job in dirtyJobs) {
-            try {
-                val docRef = fs.collection("users")
-                    .document(userId)
-                    .collection("job_applications")
-                    .document(job.uuid)
-                
-                val data = hashMapOf(
-                    "uuid" to job.uuid,
-                    "companyName" to job.companyName,
-                    "role" to job.role,
-                    "platform" to job.platform,
-                    "status" to job.status,
-                    "jobDescription" to job.jobDescription,
-                    "notes" to job.notes,
-                    "url" to job.url,
-                    "email" to job.email,
-                    "statusHistory" to job.statusHistory?.map { entry ->
-                        hashMapOf(
-                            "status" to entry.status,
-                            "timestamp" to entry.timestamp
-                        )
-                    },
-                    "resume" to job.resume?.let {
-                        hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
-                    },
-                    "coverLetter" to job.coverLetter?.let {
-                        hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
-                    },
-                    "additionalDocument" to job.additionalDocument?.let {
-                        hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
-                    },
-                    "screenshots" to job.screenshots?.map {
-                        hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
-                    },
-                    "createdAt" to job.createdAt,
-                    "updatedAt" to job.updatedAt
-                )
-                docRef.set(data).await()
+            val docRef = fs.collection("users")
+                .document(userId)
+                .collection("job_applications")
+                .document(job.uuid)
+            
+            val data = hashMapOf(
+                "uuid" to job.uuid,
+                "companyName" to job.companyName,
+                "role" to job.role,
+                "platform" to job.platform,
+                "status" to job.status,
+                "jobDescription" to job.jobDescription,
+                "notes" to job.notes,
+                "url" to job.url,
+                "email" to job.email,
+                "statusHistory" to job.statusHistory?.map { entry ->
+                    hashMapOf(
+                        "status" to entry.status,
+                        "timestamp" to entry.timestamp
+                    )
+                },
+                "resume" to job.resume?.let {
+                    hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                },
+                "coverLetter" to job.coverLetter?.let {
+                    hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                },
+                "additionalDocument" to job.additionalDocument?.let {
+                    hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                },
+                "screenshots" to job.screenshots?.map {
+                    hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                },
+                "createdAt" to job.createdAt,
+                "updatedAt" to job.updatedAt
+            )
+            batch.set(docRef, data)
+        }
 
-                // Upload attachments to Supabase Storage if they exist locally
+        // Commit batch atomically to Firestore
+        batch.commit().await()
+
+        // Commit local SQLite updates in a transaction
+        val db = com.example.data.local.AppDatabase.getDatabase(context)
+        db.withTransaction {
+            for (job in dirtyJobs) {
+                dao.updateLastSyncedAt(job.uuid, job.updatedAt)
+            }
+            for (deletedJob in deletedJobs) {
+                dao.removeDeletedJobTracking(deletedJob.uuid)
+            }
+        }
+
+        // Upload attachments asynchronously in the background so they don't block the UI / database sync success
+        CoroutineScope(Dispatchers.IO).launch {
+            for (job in dirtyJobs) {
                 val uploads = listOfNotNull(
                     job.resume?.let { "resumes" to it.fileName },
                     job.coverLetter?.let { "cover_letters" to it.fileName },
@@ -167,27 +196,38 @@ class JobRepositoryImpl(
                 ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
 
                 uploads.forEach { (type, fileName) ->
-                    val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
-                    if (localFile.exists()) {
-                        val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
-                        if (!existsOnCloud) {
-                            supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
+                    try {
+                        val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
+                        if (localFile.exists()) {
+                            val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
+                            if (!existsOnCloud) {
+                                supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
+                            }
                         }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
-
-                // Update sync status locally since Firestore write succeeded
-                dao.updateLastSyncedAt(job.uuid, job.updatedAt)
-            } catch (e: Exception) {
-                // Ignore individual document failure and continue sync process
             }
         }
     }
 
     override suspend fun fetchRemoteUpdates(): Result<Int> = kotlin.runCatching {
         val fs = firestore ?: throw IllegalStateException("Firebase Firestore is not configured or initialized.")
-        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-            ?: throw IllegalStateException("No authenticated user session found.")
+        
+        // Await Firebase user session restoration (up to 3 seconds)
+        var firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (firebaseUser == null) {
+            for (i in 1..30) {
+                kotlinx.coroutines.delay(100)
+                firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (firebaseUser != null) break
+            }
+        }
+        if (firebaseUser == null || firebaseUser.isAnonymous) {
+            return@runCatching 0
+        }
+        val userId = firebaseUser.uid
         
         // Fetch all applications from Firestore under the user's subcollection
         val querySnapshot = fs.collection("users")
