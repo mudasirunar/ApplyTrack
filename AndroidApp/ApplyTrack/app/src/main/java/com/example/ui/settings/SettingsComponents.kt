@@ -73,11 +73,23 @@ fun AccountCard(
                 ) {
                     val photoUrl = currentUser.photoUrl?.toString()?.replace("http://", "https://")
                     if (!photoUrl.isNullOrEmpty()) {
-                        AsyncImage(
+                        coil.compose.SubcomposeAsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(photoUrl)
                                 .crossfade(true)
                                 .build(),
+                            loading = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            },
                             contentDescription = "Profile Picture",
                             modifier = Modifier
                                 .size(60.dp)
