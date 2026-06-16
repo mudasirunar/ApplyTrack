@@ -37,7 +37,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AttachFile
@@ -52,7 +51,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -88,6 +86,7 @@ import com.example.model.JobApplication
 import com.example.ui.JobViewModel
 import com.example.ui.SortOption
 import com.example.ui.SyncState
+import com.example.ui.components.AddJobFab
 import com.example.ui.components.JobCard
 import com.example.ui.dashboard.ApplicationsShimmerScreen
 import kotlinx.coroutines.launch
@@ -684,26 +683,14 @@ fun ApplicationsScreen(
             }
         }
 
-        AnimatedVisibility(
+        AddJobFab(
             visible = isFabVisible && !isSearchFocused && !isInitialLoading && !isListCalculating,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = fabBottomPadding)
-        ) {
-            FloatingActionButton(
-                onClick = {
-                    onNavigateToAddEdit(null)
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.testTag("add_job_fab"),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add New Job Application")
-            }
-        }
+            bottomPadding = fabBottomPadding,
+            onClick = {
+                onNavigateToAddEdit(null)
+            },
+            modifier = Modifier.align(Alignment.BottomEnd)
+        )
     }
     }
 

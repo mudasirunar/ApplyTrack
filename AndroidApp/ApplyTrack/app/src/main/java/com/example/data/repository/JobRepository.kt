@@ -21,7 +21,7 @@ interface JobRepository {
 
     // Sync Operations
     suspend fun uploadLocalChanges(): Result<Unit>
-    suspend fun fetchRemoteUpdates(): Result<Unit>
+    suspend fun fetchRemoteUpdates(): Result<Int>
 
     suspend fun deleteAllApplications()
     suspend fun importBackup(applications: List<JobApplication>, overwriteConflicts: Boolean): ImportResult

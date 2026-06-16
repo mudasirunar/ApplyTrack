@@ -65,13 +65,18 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.statusBarsPadding
+import com.example.ui.SyncState
+import com.example.ui.components.JobSnackbarHost
+import com.example.ui.components.SyncToast
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -151,7 +156,27 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
-                    val snackbarHostState = remember { SnackbarHostState() }
+                     val snackbarHostState = remember { SnackbarHostState() }
+                     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+                     var showToast by remember { mutableStateOf(false) }
+                     var toastState by remember { mutableStateOf(SyncState.IDLE) }
+
+                     LaunchedEffect(syncState) {
+                         if (syncState == SyncState.SYNCING) {
+                             toastState = SyncState.SYNCING
+                             showToast = true
+                         } else if (syncState == SyncState.SUCCESS) {
+                             toastState = SyncState.SUCCESS
+                             showToast = true
+                             delay(2500)
+                             showToast = false
+                         } else if (syncState == SyncState.ERROR) {
+                             toastState = SyncState.ERROR
+                             showToast = true
+                             delay(3500)
+                             showToast = false
+                         }
+                     }
                     val isFabVisible by viewModel.isFabVisible.collectAsStateWithLifecycle()
                     val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
                     val isFabVisibleOnScreen = currentRoute == "applications" && isFabVisible && !isSearchFocused && !isInitialLoading
@@ -466,11 +491,19 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                SnackbarHost(
+                JobSnackbarHost(
                     hostState = snackbarHostState,
+                    bottomPadding = animatedPadding,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+
+                SyncToast(
+                    visible = showToast,
+                    toastState = toastState,
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = animatedPadding)
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(top = 16.dp)
                 )
                             }
                         }

@@ -32,6 +32,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.room.withTransaction
 
 class SyncManagerImpl(
     private val context: Context,
@@ -156,7 +157,6 @@ class SyncManagerImpl(
             return@withContext Result.failure(IllegalStateException("Firestore is not configured."))
         }
         
-        _syncState.value = SyncState.SYNCING
         _syncErrorMessage.value = null
         
         try {
@@ -171,10 +171,17 @@ class SyncManagerImpl(
             if (fetchResult.isFailure) {
                 _syncState.value = SyncState.ERROR
                 _syncErrorMessage.value = "Failed to fetch remote updates: ${fetchResult.exceptionOrNull()?.message}"
-                return@withContext fetchResult
+                return@withContext Result.failure(fetchResult.exceptionOrNull() ?: RuntimeException("Failed to fetch remote updates"))
             }
             
-            _syncState.value = SyncState.SUCCESS
+            val changesCount = fetchResult.getOrDefault(0)
+            if (changesCount > 0) {
+                _syncState.value = SyncState.SYNCING
+                delay(1000)
+                _syncState.value = SyncState.SUCCESS
+            } else {
+                _syncState.value = SyncState.IDLE
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             _syncState.value = SyncState.ERROR
@@ -260,137 +267,159 @@ class SyncManagerImpl(
         jobApplicationsListener = collectionRef.addSnapshotListener { snapshots, error ->
             if (error != null) {
                 error.printStackTrace()
+                _syncState.value = SyncState.ERROR
+                _syncErrorMessage.value = error.localizedMessage
                 return@addSnapshotListener
             }
             if (snapshots == null) return@addSnapshotListener
             
             scope.launch(Dispatchers.IO) {
-                val deletedUuids = dao.getAllDeletedJobs().map { it.uuid }.toSet()
-                
-                for (change in snapshots.documentChanges) {
-                    val doc = change.document
-                    val uuid = doc.getString("uuid") ?: doc.id
-                    
-                    when (change.type) {
-                        DocumentChange.Type.ADDED, DocumentChange.Type.MODIFIED -> {
-                            if (deletedUuids.contains(uuid)) {
-                                try {
-                                    collectionRef.document(uuid).delete().await()
-                                    dao.removeDeletedJobTracking(uuid)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                                continue
-                            }
+                try {
+                    var actualChangesCount = 0
+                    val db = com.example.data.local.AppDatabase.getDatabase(context)
+                    db.withTransaction {
+                        val deletedUuids = dao.getAllDeletedJobs().map { it.uuid }.toSet()
+                        
+                        for (change in snapshots.documentChanges) {
+                            val doc = change.document
+                            val uuid = doc.getString("uuid") ?: doc.id
                             
-                            val companyName = doc.getString("companyName")
-                            val role = doc.getString("role")
-                            val platform = doc.getString("platform")
-                            val status = doc.getString("status") ?: "Applied"
-                            val jobDescription = doc.getString("jobDescription")
-                            val notes = doc.getString("notes")
-                            val url = doc.getString("url")
-                            val email = doc.getString("email")
-                            val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
-                            val remoteUpdatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
-                            
-                            val resume = parseAttachment(doc.get("resume"))
-                            val coverLetter = parseAttachment(doc.get("coverLetter"))
-                            val additionalDocument = parseAttachment(doc.get("additionalDocument"))
-                            val screenshots = parseScreenshotsList(doc.get("screenshots"))
-                            val statusHistory = parseStatusHistory(doc.get("statusHistory"))
-                            
-                            val localJob = dao.getApplicationByUuid(uuid)
-                            var shouldDownloadFiles = false
-                            if (localJob == null) {
-                                val newJob = JobApplication(
-                                    uuid = uuid,
-                                    companyName = companyName,
-                                    role = role,
-                                    platform = platform,
-                                    status = status,
-                                    jobDescription = jobDescription,
-                                    notes = notes,
-                                    url = url,
-                                    email = email,
-                                    statusHistory = statusHistory,
-                                    resume = resume,
-                                    coverLetter = coverLetter,
-                                    additionalDocument = additionalDocument,
-                                    screenshots = screenshots,
-                                    createdAt = createdAt,
-                                    updatedAt = remoteUpdatedAt,
-                                    lastSyncedAt = remoteUpdatedAt
-                                )
-                                dao.insertApplication(newJob)
-                                shouldDownloadFiles = true
-                            } else if (remoteUpdatedAt > localJob.updatedAt) {
-                                val updatedJob = localJob.copy(
-                                    companyName = companyName,
-                                    role = role,
-                                    platform = platform,
-                                    status = status,
-                                    jobDescription = jobDescription,
-                                    notes = notes,
-                                    url = url,
-                                    email = email,
-                                    statusHistory = statusHistory,
-                                    resume = resume,
-                                    coverLetter = coverLetter,
-                                    additionalDocument = additionalDocument,
-                                    screenshots = screenshots,
-                                    createdAt = createdAt,
-                                    updatedAt = remoteUpdatedAt,
-                                    lastSyncedAt = remoteUpdatedAt
-                                )
-                                dao.insertApplication(updatedJob)
-                                shouldDownloadFiles = true
-                            } else if (remoteUpdatedAt == localJob.updatedAt && localJob.lastSyncedAt < localJob.updatedAt) {
-                                dao.updateLastSyncedAt(uuid, localJob.updatedAt)
-                            }
+                            when (change.type) {
+                                DocumentChange.Type.ADDED, DocumentChange.Type.MODIFIED -> {
+                                    if (deletedUuids.contains(uuid)) {
+                                        try {
+                                            collectionRef.document(uuid).delete().await()
+                                            dao.removeDeletedJobTracking(uuid)
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                        continue
+                                    }
+                                    
+                                    val companyName = doc.getString("companyName")
+                                    val role = doc.getString("role")
+                                    val platform = doc.getString("platform")
+                                    val status = doc.getString("status") ?: "Applied"
+                                    val jobDescription = doc.getString("jobDescription")
+                                    val notes = doc.getString("notes")
+                                    val url = doc.getString("url")
+                                    val email = doc.getString("email")
+                                    val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+                                    val remoteUpdatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
+                                    
+                                    val resume = parseAttachment(doc.get("resume"))
+                                    val coverLetter = parseAttachment(doc.get("coverLetter"))
+                                    val additionalDocument = parseAttachment(doc.get("additionalDocument"))
+                                    val screenshots = parseScreenshotsList(doc.get("screenshots"))
+                                    val statusHistory = parseStatusHistory(doc.get("statusHistory"))
+                                    
+                                    val localJob = dao.getApplicationByUuid(uuid)
+                                    var shouldDownloadFiles = false
+                                    if (localJob == null) {
+                                        val newJob = JobApplication(
+                                            uuid = uuid,
+                                            companyName = companyName,
+                                            role = role,
+                                            platform = platform,
+                                            status = status,
+                                            jobDescription = jobDescription,
+                                            notes = notes,
+                                            url = url,
+                                            email = email,
+                                            statusHistory = statusHistory,
+                                            resume = resume,
+                                            coverLetter = coverLetter,
+                                            additionalDocument = additionalDocument,
+                                            screenshots = screenshots,
+                                            createdAt = createdAt,
+                                            updatedAt = remoteUpdatedAt,
+                                            lastSyncedAt = remoteUpdatedAt
+                                        )
+                                        dao.insertApplication(newJob)
+                                        shouldDownloadFiles = true
+                                        actualChangesCount++
+                                    } else if (remoteUpdatedAt > localJob.updatedAt) {
+                                        val updatedJob = localJob.copy(
+                                            companyName = companyName,
+                                            role = role,
+                                            platform = platform,
+                                            status = status,
+                                            jobDescription = jobDescription,
+                                            notes = notes,
+                                            url = url,
+                                            email = email,
+                                            statusHistory = statusHistory,
+                                            resume = resume,
+                                            coverLetter = coverLetter,
+                                            additionalDocument = additionalDocument,
+                                            screenshots = screenshots,
+                                            createdAt = createdAt,
+                                            updatedAt = remoteUpdatedAt,
+                                            lastSyncedAt = remoteUpdatedAt
+                                        )
+                                        dao.insertApplication(updatedJob)
+                                        shouldDownloadFiles = true
+                                        actualChangesCount++
+                                    } else if (remoteUpdatedAt == localJob.updatedAt && localJob.lastSyncedAt < localJob.updatedAt) {
+                                        dao.updateLastSyncedAt(uuid, localJob.updatedAt)
+                                    }
 
-                            if (shouldDownloadFiles) {
-                                val downloads = listOfNotNull(
-                                    resume?.let { "resumes" to it.fileName },
-                                    coverLetter?.let { "cover_letters" to it.fileName },
-                                    additionalDocument?.let { "additional_documents" to it.fileName }
-                                ) + (screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+                                    if (shouldDownloadFiles) {
+                                        val downloads = listOfNotNull(
+                                            resume?.let { "resumes" to it.fileName },
+                                            coverLetter?.let { "cover_letters" to it.fileName },
+                                            additionalDocument?.let { "additional_documents" to it.fileName }
+                                        ) + (screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
 
-                                scope.launch(Dispatchers.IO) {
-                                    downloads.forEach { (type, fileName) ->
-                                        val destFile = AttachmentHelper.getAttachmentFile(context, fileName)
-                                        if (!destFile.exists()) {
-                                            _downloadingFiles.update { it + fileName }
-                                            try {
-                                                supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
-                                            } finally {
-                                                _downloadingFiles.update { it - fileName }
+                                        scope.launch(Dispatchers.IO) {
+                                            downloads.forEach { (type, fileName) ->
+                                                val destFile = AttachmentHelper.getAttachmentFile(context, fileName)
+                                                if (!destFile.exists()) {
+                                                    _downloadingFiles.update { it + fileName }
+                                                    try {
+                                                        supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
+                                                    } finally {
+                                                        _downloadingFiles.update { it - fileName }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                        }
-                        DocumentChange.Type.REMOVED -> {
-                            val localJob = dao.getApplicationByUuid(uuid)
-                            if (localJob != null) {
-                                val filesToDelete = listOfNotNull(
-                                    localJob.resume?.let { "resumes" to it.fileName },
-                                    localJob.coverLetter?.let { "cover_letters" to it.fileName },
-                                    localJob.additionalDocument?.let { "additional_documents" to it.fileName }
-                                ) + (localJob.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+                                DocumentChange.Type.REMOVED -> {
+                                    val localJob = dao.getApplicationByUuid(uuid)
+                                    if (localJob != null) {
+                                        val filesToDelete = listOfNotNull(
+                                            localJob.resume?.let { "resumes" to it.fileName },
+                                            localJob.coverLetter?.let { "cover_letters" to it.fileName },
+                                            localJob.additionalDocument?.let { "additional_documents" to it.fileName }
+                                        ) + (localJob.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
 
-                                scope.launch(Dispatchers.IO) {
-                                    filesToDelete.forEach { (type, fileName) ->
-                                        supabaseStorageHelper.deleteFile(userId, type, fileName)
+                                        scope.launch(Dispatchers.IO) {
+                                            filesToDelete.forEach { (type, fileName) ->
+                                                supabaseStorageHelper.deleteFile(userId, type, fileName)
+                                            }
+                                        }
+
+                                        dao.deleteApplication(localJob)
+                                        dao.removeDeletedJobTracking(uuid)
+                                        actualChangesCount++
                                     }
                                 }
-
-                                dao.deleteApplication(localJob)
-                                dao.removeDeletedJobTracking(uuid)
                             }
                         }
                     }
+                    if (actualChangesCount > 0) {
+                        _syncState.value = SyncState.SYNCING
+                        delay(1000)
+                        _syncState.value = SyncState.SUCCESS
+                    } else {
+                        _syncState.value = SyncState.IDLE
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    _syncState.value = SyncState.ERROR
+                    _syncErrorMessage.value = e.localizedMessage
                 }
             }
         }
