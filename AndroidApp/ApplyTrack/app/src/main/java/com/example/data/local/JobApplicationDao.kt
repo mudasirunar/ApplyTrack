@@ -50,4 +50,10 @@ interface JobApplicationDao {
 
     @Query("DELETE FROM job_applications")
     suspend fun deleteAllApplications()
+
+    @Query("SELECT * FROM job_applications WHERE updatedAt > lastSyncedAt")
+    suspend fun getDirtyApplications(): List<JobApplication>
+
+    @Query("UPDATE job_applications SET lastSyncedAt = :lastSyncedAt WHERE uuid = :uuid")
+    suspend fun updateLastSyncedAt(uuid: String, lastSyncedAt: Long)
 }

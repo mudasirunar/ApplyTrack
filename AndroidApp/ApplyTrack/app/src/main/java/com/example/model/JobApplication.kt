@@ -26,5 +26,6 @@ data class JobApplication(
     val additionalDocument: Attachment? = null,
     val screenshots: List<Attachment>? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+    val lastSyncedAt: Long = 0L
 )

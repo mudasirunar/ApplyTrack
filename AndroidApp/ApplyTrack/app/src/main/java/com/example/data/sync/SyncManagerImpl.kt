@@ -143,7 +143,7 @@ class SyncManagerImpl(
         if (preferencesHelper.isAutoSyncEnabled() && repository.isFirebaseConfigured()) {
             uploadJob?.cancel()
             uploadJob = scope.launch {
-                delay(1500) // 1.5 seconds debounce to avoid calling network repeatedly while user types
+                delay(200) // 200ms debounce to run sync quickly after database transactions commit
                 repository.uploadLocalChanges()
             }
         }
@@ -319,7 +319,8 @@ class SyncManagerImpl(
                                     additionalDocument = additionalDocument,
                                     screenshots = screenshots,
                                     createdAt = createdAt,
-                                    updatedAt = remoteUpdatedAt
+                                    updatedAt = remoteUpdatedAt,
+                                    lastSyncedAt = remoteUpdatedAt
                                 )
                                 dao.insertApplication(newJob)
                                 shouldDownloadFiles = true
@@ -339,10 +340,13 @@ class SyncManagerImpl(
                                     additionalDocument = additionalDocument,
                                     screenshots = screenshots,
                                     createdAt = createdAt,
-                                    updatedAt = remoteUpdatedAt
+                                    updatedAt = remoteUpdatedAt,
+                                    lastSyncedAt = remoteUpdatedAt
                                 )
                                 dao.insertApplication(updatedJob)
                                 shouldDownloadFiles = true
+                            } else if (remoteUpdatedAt == localJob.updatedAt && localJob.lastSyncedAt < localJob.updatedAt) {
+                                dao.updateLastSyncedAt(uuid, localJob.updatedAt)
                             }
 
                             if (shouldDownloadFiles) {

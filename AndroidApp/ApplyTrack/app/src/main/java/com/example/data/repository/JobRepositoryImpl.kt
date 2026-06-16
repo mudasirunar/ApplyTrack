@@ -116,76 +116,67 @@ class JobRepositoryImpl(
             }
         }
 
-        // 2. Upload local updates (Last-write-wins)
-        val localJobs = dao.getAllApplicationsList()
-        for (job in localJobs) {
+        // 2. Upload local updates (Last-write-wins dirty tracking)
+        val dirtyJobs = dao.getDirtyApplications()
+        for (job in dirtyJobs) {
             try {
-                // Check if document exists and get its update timestamp
                 val docRef = fs.collection("users")
                     .document(userId)
                     .collection("job_applications")
                     .document(job.uuid)
-                val docSnapshot = docRef.get().await()
                 
-                var shouldUpload = true
-                if (docSnapshot.exists()) {
-                    val remoteUpdatedAt = docSnapshot.getLong("updatedAt") ?: 0L
-                    if (remoteUpdatedAt > job.updatedAt) {
-                        shouldUpload = false // Remote is newer, fetchRemoteUpdates will sync it
-                    }
-                }
+                val data = hashMapOf(
+                    "uuid" to job.uuid,
+                    "companyName" to job.companyName,
+                    "role" to job.role,
+                    "platform" to job.platform,
+                    "status" to job.status,
+                    "jobDescription" to job.jobDescription,
+                    "notes" to job.notes,
+                    "url" to job.url,
+                    "email" to job.email,
+                    "statusHistory" to job.statusHistory?.map { entry ->
+                        hashMapOf(
+                            "status" to entry.status,
+                            "timestamp" to entry.timestamp
+                        )
+                    },
+                    "resume" to job.resume?.let {
+                        hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                    },
+                    "coverLetter" to job.coverLetter?.let {
+                        hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                    },
+                    "additionalDocument" to job.additionalDocument?.let {
+                        hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                    },
+                    "screenshots" to job.screenshots?.map {
+                        hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
+                    },
+                    "createdAt" to job.createdAt,
+                    "updatedAt" to job.updatedAt
+                )
+                docRef.set(data).await()
 
-                if (shouldUpload) {
-                    val data = hashMapOf(
-                        "uuid" to job.uuid,
-                        "companyName" to job.companyName,
-                        "role" to job.role,
-                        "platform" to job.platform,
-                        "status" to job.status,
-                        "jobDescription" to job.jobDescription,
-                        "notes" to job.notes,
-                        "url" to job.url,
-                        "email" to job.email,
-                        "statusHistory" to job.statusHistory?.map { entry ->
-                            hashMapOf(
-                                "status" to entry.status,
-                                "timestamp" to entry.timestamp
-                            )
-                        },
-                        "resume" to job.resume?.let {
-                            hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
-                        },
-                        "coverLetter" to job.coverLetter?.let {
-                            hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
-                        },
-                        "additionalDocument" to job.additionalDocument?.let {
-                            hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
-                        },
-                        "screenshots" to job.screenshots?.map {
-                            hashMapOf("fileName" to it.fileName, "originalName" to it.originalName)
-                        },
-                        "createdAt" to job.createdAt,
-                        "updatedAt" to job.updatedAt
-                    )
-                    docRef.set(data).await()
+                // Upload attachments to Supabase Storage if they exist locally
+                val uploads = listOfNotNull(
+                    job.resume?.let { "resumes" to it.fileName },
+                    job.coverLetter?.let { "cover_letters" to it.fileName },
+                    job.additionalDocument?.let { "additional_documents" to it.fileName }
+                ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
 
-                    // Upload attachments to Supabase Storage if they exist locally
-                    val uploads = listOfNotNull(
-                        job.resume?.let { "resumes" to it.fileName },
-                        job.coverLetter?.let { "cover_letters" to it.fileName },
-                        job.additionalDocument?.let { "additional_documents" to it.fileName }
-                    ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
-
-                    uploads.forEach { (type, fileName) ->
-                        val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
-                        if (localFile.exists()) {
-                            val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
-                            if (!existsOnCloud) {
-                                supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
-                            }
+                uploads.forEach { (type, fileName) ->
+                    val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
+                    if (localFile.exists()) {
+                        val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
+                        if (!existsOnCloud) {
+                            supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
                         }
                     }
                 }
+
+                // Update sync status locally since Firestore write succeeded
+                dao.updateLastSyncedAt(job.uuid, job.updatedAt)
             } catch (e: Exception) {
                 // Ignore individual document failure and continue sync process
             }
@@ -197,7 +188,7 @@ class JobRepositoryImpl(
         val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
             ?: throw IllegalStateException("No authenticated user session found.")
         
-        // 1. Fetch all applications from Firestore under the user's subcollection
+        // Fetch all applications from Firestore under the user's subcollection
         val querySnapshot = fs.collection("users")
             .document(userId)
             .collection("job_applications")
@@ -312,7 +303,8 @@ class JobRepositoryImpl(
                     additionalDocument = additionalDocument,
                     screenshots = screenshots,
                     createdAt = createdAt,
-                    updatedAt = updatedAt
+                    updatedAt = updatedAt,
+                    lastSyncedAt = updatedAt
                 )
                 dao.insertApplication(incomingJob)
             } else {
@@ -333,14 +325,16 @@ class JobRepositoryImpl(
                         additionalDocument = additionalDocument,
                         screenshots = screenshots,
                         createdAt = createdAt,
-                        updatedAt = updatedAt
+                        updatedAt = updatedAt,
+                        lastSyncedAt = updatedAt
                     )
                     dao.insertApplication(updatedJob)
+                } else if (updatedAt == localJob.updatedAt && localJob.lastSyncedAt < localJob.updatedAt) {
+                    dao.updateLastSyncedAt(uuid, localJob.updatedAt)
                 }
             }
         }
     }
-
     override suspend fun deleteAllApplications() = withContext(Dispatchers.IO) {
         // Collect all existing local application records first
         val allApps = dao.getAllApplicationsList()

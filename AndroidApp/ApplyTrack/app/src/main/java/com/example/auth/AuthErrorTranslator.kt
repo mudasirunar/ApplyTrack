@@ -9,6 +9,7 @@ fun Throwable.toUserFriendlyMessage(): String? {
         msg.contains("composition", ignoreCase = true) -> null
         msg.contains("network", ignoreCase = true) || 
         msg.contains("timeout", ignoreCase = true) || 
+        msg.contains("connect", ignoreCase = true) ||
         msg.contains("connection", ignoreCase = true) ||
         msg.contains("Unable to resolve host", ignoreCase = true) -> 
             "Network connection error. Please check your internet and try again."

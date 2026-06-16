@@ -692,18 +692,12 @@ fun ApplicationsScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = fabBottomPadding)
         ) {
-            val isSyncing = syncState == SyncState.SYNCING
-            val fabBgColor = if (isSyncing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
-            val fabContentColor = if (isSyncing) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onPrimary
-
             FloatingActionButton(
                 onClick = {
-                    if (!isSyncing) {
-                        onNavigateToAddEdit(null)
-                    }
+                    onNavigateToAddEdit(null)
                 },
-                containerColor = fabBgColor,
-                contentColor = fabContentColor,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.testTag("add_job_fab"),
                 shape = RoundedCornerShape(16.dp)
             ) {

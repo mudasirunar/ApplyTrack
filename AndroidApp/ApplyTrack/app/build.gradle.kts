@@ -46,7 +46,16 @@ android {
     compose = true
     buildConfig = true
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+    }
+  }
+}
+
+tasks.withType<Test> {
+    systemProperty("java.io.tmpdir", "${project.layout.buildDirectory.asFile.get().absolutePath}/tmp")
+    systemProperty("net.bytebuddy.experimental", "true")
 }
 
 dependencies {
@@ -86,6 +95,8 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
+  testImplementation("org.mockito:mockito-core:5.11.0")
+  testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
   androidTestImplementation(platform(libs.androidx.compose.bom))
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(libs.androidx.runner)
