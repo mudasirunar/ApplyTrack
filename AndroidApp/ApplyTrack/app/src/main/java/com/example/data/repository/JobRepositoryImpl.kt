@@ -15,6 +15,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import android.content.Context
 import com.example.utils.AttachmentHelper
 import com.example.data.sync.SupabaseStorageHelper
@@ -61,7 +64,10 @@ class JobRepositoryImpl(
     }
 
     override suspend fun saveApplication(application: JobApplication): Long {
-        val updatedApp = application.copy(updatedAt = System.currentTimeMillis())
+        val updatedApp = application.copy(
+            updatedAt = System.currentTimeMillis(),
+            lastSyncedAt = 0L
+        )
         return dao.insertApplication(updatedApp)
     }
 
@@ -185,30 +191,34 @@ class JobRepositoryImpl(
                 dao.removeDeletedJobTracking(deletedJob.uuid)
             }
         }
-
-        // Upload attachments asynchronously in the background so they don't block the UI / database sync success
-        CoroutineScope(Dispatchers.IO).launch {
+        // Upload attachments in parallel and await completion so background workers don't get terminated early
+        kotlinx.coroutines.coroutineScope {
+            val uploadTasks = mutableListOf<Deferred<Unit>>()
             for (job in dirtyJobs) {
-                val uploads = listOfNotNull(
+                val jobUploads = listOfNotNull(
                     job.resume?.let { "resumes" to it.fileName },
                     job.coverLetter?.let { "cover_letters" to it.fileName },
                     job.additionalDocument?.let { "additional_documents" to it.fileName }
                 ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
 
-                uploads.forEach { (type, fileName) ->
-                    try {
-                        val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
-                        if (localFile.exists()) {
-                            val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
-                            if (!existsOnCloud) {
-                                supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
+                for ((type, fileName) in jobUploads) {
+                    val task = async(Dispatchers.IO) {
+                        try {
+                            val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
+                            if (localFile.exists()) {
+                                val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
+                                if (!existsOnCloud) {
+                                    supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
+                                }
                             }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
                     }
+                    uploadTasks.add(task)
                 }
             }
+            uploadTasks.awaitAll()
         }
     }
 
@@ -429,20 +439,31 @@ class JobRepositoryImpl(
         for (importedApp in applications) {
             val match = existingApps.find { it.uuid == importedApp.uuid }
             if (match == null) {
-                // New record -> insert
-                dao.insertApplication(importedApp.copy(id = 0L))
+                // New record -> insert and mark dirty for sync
+                dao.insertApplication(importedApp.copy(
+                    id = 0L,
+                    lastSyncedAt = 0L,
+                    updatedAt = System.currentTimeMillis()
+                ))
                 importedCount++
             } else {
-                // Duplicate UUID exists -> check if it has changes
-                val importedWithLocalId = importedApp.copy(id = match.id)
-                if (match == importedWithLocalId) {
+                // Duplicate UUID exists -> check if there are actual content changes
+                // Reset transient fields (id, sync timestamps) for content comparison
+                val contentMatch = match.copy(id = 0, lastSyncedAt = 0, updatedAt = 0)
+                val contentImported = importedApp.copy(id = 0, lastSyncedAt = 0, updatedAt = 0)
+                
+                if (contentMatch == contentImported) {
                     // Identical content -> ignore
                     ignoredCount++
                 } else {
                     // Conflict detected (changes found)
                     if (overwriteConflicts) {
-                        // Overwrite with backup version
-                        dao.updateApplication(importedWithLocalId)
+                        // Overwrite with backup version and mark dirty
+                        dao.insertApplication(importedApp.copy(
+                            id = match.id,
+                            lastSyncedAt = 0L,
+                            updatedAt = System.currentTimeMillis()
+                        ))
                         updatedCount++
                     } else {
                         // Ignore the changes

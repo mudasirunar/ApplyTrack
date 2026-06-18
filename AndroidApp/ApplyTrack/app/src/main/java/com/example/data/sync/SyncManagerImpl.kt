@@ -176,6 +176,12 @@ class SyncManagerImpl(
             }
             
             val changesCount = fetchResult.getOrDefault(0)
+            val userId = activeUserId
+            if (userId != null) {
+                scope.launch {
+                    downloadMissingFiles(userId)
+                }
+            }
             if (changesCount > 0) {
                 toastSuccessJob?.cancel()
                 _syncState.value = SyncState.SUCCESS
@@ -455,6 +461,35 @@ class SyncManagerImpl(
             val status = map?.get("status") as? String
             val timestamp = map?.get("timestamp") as? Long
             if (status != null && timestamp != null) StatusHistoryEntry(status, timestamp) else null
+        }
+    }
+
+    private suspend fun downloadMissingFiles(userId: String) = withContext(Dispatchers.IO) {
+        try {
+            val apps = dao.getAllApplicationsList()
+            for (job in apps) {
+                val downloads = listOfNotNull(
+                    job.resume?.let { "resumes" to it.fileName },
+                    job.coverLetter?.let { "cover_letters" to it.fileName },
+                    job.additionalDocument?.let { "additional_documents" to it.fileName }
+                ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+
+                for ((type, fileName) in downloads) {
+                    val destFile = AttachmentHelper.getAttachmentFile(context, fileName)
+                    if (!destFile.exists()) {
+                        _downloadingFiles.update { it + fileName }
+                        try {
+                            supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        } finally {
+                            _downloadingFiles.update { it - fileName }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
