@@ -123,10 +123,12 @@ class AuthManager(
             val digest = md.digest(bytes)
             val hashedNonce = digest.fold("") { str, it -> str + "%02x".format(it) }
 
-            // 2. Get Web Client ID from google-services.json
-            val webClientIdId = applicationContext.resources.getIdentifier("default_web_client_id", "string", applicationContext.packageName)
-            if (webClientIdId == 0) throw Exception("Web Client ID not found. Ensure google-services.json is configured.")
-            val webClientId = applicationContext.getString(webClientIdId)
+            // 2. Get Web Client ID from google-services.json (statically referenced to prevent resource shrinking)
+            val webClientId = try {
+                applicationContext.getString(com.example.R.string.default_web_client_id)
+            } catch (e: android.content.res.Resources.NotFoundException) {
+                throw Exception("Web Client ID not found. Ensure google-services.json is configured.", e)
+            }
             
             // 3. Build Google ID Option
             val googleIdOption = GetGoogleIdOption.Builder()
@@ -172,7 +174,7 @@ class AuthManager(
                         try {
                             callback()
                         } catch (e: Exception) {
-                            e.printStackTrace()
+                            android.util.Log.e("AuthManager", "Error in upgrade callback", e)
                         }
                     }
                 }
@@ -192,7 +194,7 @@ class AuthManager(
             return Result.success(Unit)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            e.printStackTrace()
+            android.util.Log.e("AuthManager", "Google Sign-in failed: ${e.message}", e)
             return Result.failure(e)
         }
     }

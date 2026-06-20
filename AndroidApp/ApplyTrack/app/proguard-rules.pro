@@ -18,4 +18,5 @@
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Preserve model classes for database and firestore serialization
+-keep class com.example.model.** { *; }
