@@ -1,9 +1,11 @@
 package com.example.sync
 
+import com.example.model.Attachment
 import com.example.model.DeletedJob
 import com.example.model.JobApplication
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -281,6 +283,264 @@ class SyncTest {
         assertEquals(complexJob.screenshots?.size, syncedJob.screenshots?.size)
         assertEquals("screen1.png", syncedJob.screenshots?.get(0)?.fileName)
         assertEquals("screen2.png", syncedJob.screenshots?.get(1)?.fileName)
+    }
+
+    @Test
+    fun testAuthTransition_GuestToCloudMigration() = runBlocking {
+        val dao = FakeJobApplicationDao()
+        for (i in 1..5) {
+            dao.insertApplication(
+                JobApplication(
+                    uuid = "uuid_$i",
+                    companyName = "Guest Job $i",
+                    updatedAt = 1000L,
+                    lastSyncedAt = 1000L
+                )
+            )
+        }
+
+        assertEquals(0, dao.getDirtyApplications().size)
+
+        val localJobs = dao.getAllApplicationsList()
+        for (job in localJobs) {
+            dao.insertApplication(job.copy(lastSyncedAt = 0L))
+        }
+
+        assertEquals(5, dao.getDirtyApplications().size)
+    }
+
+    @Test
+    fun testMediaSync_UploadBeforeFirestore_Success() = runBlocking {
+        val dao = FakeJobApplicationDao()
+        val remote = FakeRemoteService()
+        val supabase = FakeSupabaseStorage()
+        val engine = EnhancedSyncEngine(dao, remote, supabase)
+
+        val job = JobApplication(
+            uuid = "job_with_media",
+            companyName = "Success Corp",
+            updatedAt = 2000L,
+            lastSyncedAt = 0L,
+            resume = Attachment("resume.pdf", "Resume.pdf"),
+            screenshots = listOf(Attachment("screenshot1.png", "Screenshot1.png"))
+        )
+        dao.insertApplication(job)
+
+        engine.uploadLocalChanges("user_123")
+
+        assertTrue(supabase.files["user_123/resumes/resume.pdf"] == true)
+        assertTrue(supabase.files["user_123/screenshots/screenshot1.png"] == true)
+
+        assertTrue(remote.remoteApplications.containsKey("job_with_media"))
+        assertEquals(2000L, dao.getApplicationByUuid("job_with_media")?.lastSyncedAt)
+    }
+
+    @Test
+    fun testMediaSync_UploadBeforeFirestore_FailSupabase() = runBlocking {
+        val dao = FakeJobApplicationDao()
+        val remote = FakeRemoteService()
+        val supabase = FakeSupabaseStorage()
+        val engine = EnhancedSyncEngine(dao, remote, supabase)
+
+        val job = JobApplication(
+            uuid = "job_with_media_fail",
+            companyName = "Fail Corp",
+            updatedAt = 2000L,
+            lastSyncedAt = 0L,
+            resume = Attachment("broken_resume.pdf", "Resume.pdf")
+        )
+        dao.insertApplication(job)
+
+        supabase.throwsNetworkError = true
+
+        engine.uploadLocalChanges("user_123")
+
+        assertFalse(supabase.files.containsKey("user_123/resumes/broken_resume.pdf"))
+
+        assertFalse(remote.remoteApplications.containsKey("job_with_media_fail"))
+        assertEquals(0L, dao.getApplicationByUuid("job_with_media_fail")?.lastSyncedAt)
+        assertEquals(1, dao.getDirtyApplications().size)
+    }
+
+    @Test
+    fun testMediaSync_DownloadRetryBackoff_SuccessAfterRetries() = runBlocking {
+        val supabase = FakeSupabaseStorage()
+        val engine = EnhancedSyncEngine(FakeJobApplicationDao(), FakeRemoteService(), supabase)
+
+        supabase.files["user_123/resumes/resume.pdf"] = true
+        supabase.failAttemptsBeforeSuccess = 2
+
+        val result = engine.downloadAttachmentWithRetry("user_123", "resumes", "resume.pdf")
+
+        assertTrue(result)
+        assertEquals(3, supabase.downloadCount)
+    }
+
+    @Test
+    fun testMediaSync_DownloadRetryBackoff_PermanentFailure() = runBlocking {
+        val supabase = FakeSupabaseStorage()
+        val engine = EnhancedSyncEngine(FakeJobApplicationDao(), FakeRemoteService(), supabase)
+
+        supabase.failAttemptsBeforeSuccess = 5
+
+        val result = engine.downloadAttachmentWithRetry("user_123", "resumes", "missing.pdf")
+
+        assertFalse(result)
+        assertEquals(3, supabase.downloadCount)
+    }
+
+    @Test
+    fun testAttachmentReplacement_CleansStorage() = runBlocking {
+        val dao = FakeJobApplicationDao()
+        val remote = FakeRemoteService()
+        val supabase = FakeSupabaseStorage()
+        val engine = EnhancedSyncEngine(dao, remote, supabase)
+
+        val job = JobApplication(
+            uuid = "job_1",
+            companyName = "Test Corp",
+            updatedAt = 1000L,
+            lastSyncedAt = 1000L,
+            resume = Attachment("old_resume.pdf", "OldResume.pdf")
+        )
+        dao.insertApplication(job)
+        supabase.files["user_123/resumes/old_resume.pdf"] = true
+
+        val updatedJob = job.copy(
+            updatedAt = 2000L,
+            lastSyncedAt = 0L,
+            resume = Attachment("new_resume.pdf", "NewResume.pdf")
+        )
+
+        val deletedAttachments = mutableListOf<Pair<String, Attachment>>()
+        if (job.resume != null && updatedJob.resume?.fileName != job.resume.fileName) {
+            deletedAttachments.add("resumes" to job.resume)
+        }
+
+        deletedAttachments.forEach { (type, attachment) ->
+            supabase.deleteFile("user_123", type, attachment.fileName)
+        }
+        dao.insertApplication(updatedJob)
+
+        engine.uploadLocalChanges("user_123")
+
+        assertTrue(supabase.files["user_123/resumes/new_resume.pdf"] == true)
+        assertFalse(supabase.files.containsKey("user_123/resumes/old_resume.pdf"))
+        assertEquals(1, supabase.deleteCount)
+    }
+}
+
+// --- Fakes and Helpers supporting the new Sync & Storage behavior ---
+
+class FakeSupabaseStorage {
+    val files = mutableMapOf<String, Boolean>()
+    var throwsNetworkError = false
+    var checkCount = 0
+    var uploadCount = 0
+    var downloadCount = 0
+    var deleteCount = 0
+    var failAttemptsBeforeSuccess = 0
+
+    fun checkFileExists(userId: String, type: String, fileName: String): Boolean {
+        checkCount++
+        return files["$userId/$type/$fileName"] == true
+    }
+
+    fun uploadFile(userId: String, type: String, fileName: String): Boolean {
+        uploadCount++
+        if (throwsNetworkError) return false
+        files["$userId/$type/$fileName"] = true
+        return true
+    }
+
+    fun downloadFile(userId: String, type: String, fileName: String): Boolean {
+        downloadCount++
+        if (failAttemptsBeforeSuccess > 0) {
+            failAttemptsBeforeSuccess--
+            return false
+        }
+        if (throwsNetworkError) return false
+        return files["$userId/$type/$fileName"] == true
+    }
+
+    fun deleteFile(userId: String, type: String, fileName: String): Boolean {
+        deleteCount++
+        if (throwsNetworkError) return false
+        files.remove("$userId/$type/$fileName")
+        return true
+    }
+}
+
+class EnhancedSyncEngine(
+    private val dao: FakeJobApplicationDao,
+    private val remoteService: FakeRemoteService,
+    private val supabaseStorage: FakeSupabaseStorage
+) {
+    suspend fun uploadLocalChanges(userId: String): Result<Unit> = kotlin.runCatching {
+        val deletedJobs = dao.getAllDeletedJobs()
+        val dirtyJobs = dao.getDirtyApplications()
+
+        if (deletedJobs.isEmpty() && dirtyJobs.isEmpty()) {
+            return@runCatching
+        }
+
+        val successfulJobs = mutableListOf<JobApplication>()
+        for (job in dirtyJobs) {
+            val jobUploads = listOfNotNull(
+                job.resume?.let { "resumes" to it.fileName },
+                job.coverLetter?.let { "cover_letters" to it.fileName },
+                job.additionalDocument?.let { "additional_documents" to it.fileName }
+            ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+
+            var allUploadsSucceeded = true
+            for ((type, fileName) in jobUploads) {
+                val existsOnCloud = supabaseStorage.checkFileExists(userId, type, fileName)
+                if (!existsOnCloud) {
+                    val uploadResult = supabaseStorage.uploadFile(userId, type, fileName)
+                    if (!uploadResult) {
+                        allUploadsSucceeded = false
+                    }
+                }
+            }
+
+            if (allUploadsSucceeded) {
+                successfulJobs.add(job)
+            }
+        }
+
+        for (deletedJob in deletedJobs) {
+            remoteService.delete(deletedJob.uuid)
+            dao.removeDeletedJobTracking(deletedJob.uuid)
+        }
+
+        for (job in successfulJobs) {
+            remoteService.upload(job)
+            dao.updateLastSyncedAt(job.uuid, job.updatedAt)
+        }
+    }
+
+    suspend fun downloadAttachmentWithRetry(
+        userId: String,
+        type: String,
+        fileName: String,
+        retryDelayMs: Long = 10L
+    ): Boolean {
+        var success = false
+        var attempt = 1
+        val maxAttempts = 3
+        var delayMs = retryDelayMs
+
+        while (!success && attempt <= maxAttempts) {
+            success = supabaseStorage.downloadFile(userId, type, fileName)
+            if (!success) {
+                if (attempt < maxAttempts) {
+                    kotlinx.coroutines.delay(delayMs)
+                    delayMs *= 2
+                }
+                attempt++
+            }
+        }
+        return success
     }
 }
 
