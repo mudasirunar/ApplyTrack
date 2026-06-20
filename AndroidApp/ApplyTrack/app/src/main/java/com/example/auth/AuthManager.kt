@@ -167,7 +167,15 @@ class AuthManager(
                     auth.signInWithCredential(authCredential).await()
                 }
                 preferencesHelper.setOfflineGuest(false)
-                onUserUpgradeCallback?.invoke()
+                onUserUpgradeCallback?.let { callback ->
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            callback()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
             } else {
                 val oldUid = currentUser?.uid
                 auth.signInWithCredential(authCredential).await()

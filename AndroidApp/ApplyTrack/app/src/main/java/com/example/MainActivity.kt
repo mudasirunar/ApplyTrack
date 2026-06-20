@@ -161,14 +161,14 @@ class MainActivity : ComponentActivity() {
                      var showToast by remember { mutableStateOf(false) }
                      var toastState by remember { mutableStateOf(SyncState.IDLE) }
 
-                     LaunchedEffect(syncState) {
-                         if (syncState != SyncState.IDLE) {
-                             toastState = syncState
-                             showToast = true
-                         } else {
-                             showToast = false
-                         }
-                     }
+                      LaunchedEffect(syncState, authState) {
+                          if (syncState != SyncState.IDLE && authState != AuthState.GUEST) {
+                              toastState = syncState
+                              showToast = true
+                          } else {
+                              showToast = false
+                          }
+                      }
                     val isFabVisible by viewModel.isFabVisible.collectAsStateWithLifecycle()
                     val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
                     val isFabVisibleOnScreen = currentRoute == "applications" && isFabVisible && !isSearchFocused && !isInitialLoading

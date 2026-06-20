@@ -60,6 +60,9 @@ class SyncManagerImpl(
     private var activeUserAnonymous: Boolean? = null
     private var uploadJob: Job? = null
     private var toastSuccessJob: Job? = null
+    private var wasAuthenticatedAtStartup = false
+    private var isFirstSync = true
+    private var isInitialListenerSnapshot = true
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
@@ -75,6 +78,9 @@ class SyncManagerImpl(
     }
 
     override fun startSync() {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        wasAuthenticatedAtStartup = currentUser != null && !currentUser.isAnonymous
+
         scope.launch {
             authManager.currentUserFlow.collectLatest { user ->
                 val newUid = user?.uid
@@ -87,6 +93,8 @@ class SyncManagerImpl(
                     if (newUid != null && !isAnonymous && repository.isFirebaseConfigured()) {
                         startJobApplicationsListener(newUid)
                         runFullSync()
+                    } else {
+                        _syncState.value = SyncState.IDLE
                     }
                 }
             }
@@ -124,6 +132,7 @@ class SyncManagerImpl(
     private fun stopActiveListeners() {
         jobApplicationsListener?.remove()
         jobApplicationsListener = null
+        isInitialListenerSnapshot = true
     }
 
     private fun enqueueBackgroundSync() {
@@ -154,9 +163,21 @@ class SyncManagerImpl(
         }
     }
 
-    override suspend fun runFullSync(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun runFullSync(): Result<Unit> {
+        val shouldShow = if (isFirstSync) {
+            isFirstSync = false
+            !wasAuthenticatedAtStartup
+        } else {
+            true
+        }
+        return runFullSyncInternal(shouldShow)
+    }
+
+    private suspend fun runFullSyncInternal(showToast: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
         if (!repository.isFirebaseConfigured()) {
-            triggerError("Firestore is not configured. Add google-services.json to sync!")
+            if (activeUserAnonymous != true) {
+                triggerError("Firestore is not configured. Add google-services.json to sync!")
+            }
             return@withContext Result.failure(IllegalStateException("Firestore is not configured."))
         }
         
@@ -165,13 +186,17 @@ class SyncManagerImpl(
         try {
             val uploadResult = repository.uploadLocalChanges()
             if (uploadResult.isFailure) {
-                triggerError("Failed to upload local changes: ${uploadResult.exceptionOrNull()?.message}")
+                if (activeUserAnonymous != true) {
+                    triggerError("Failed to upload local changes: ${uploadResult.exceptionOrNull()?.message}")
+                }
                 return@withContext uploadResult
             }
             
             val fetchResult = repository.fetchRemoteUpdates()
             if (fetchResult.isFailure) {
-                triggerError("Failed to fetch remote updates: ${fetchResult.exceptionOrNull()?.message}")
+                if (activeUserAnonymous != true) {
+                    triggerError("Failed to fetch remote updates: ${fetchResult.exceptionOrNull()?.message}")
+                }
                 return@withContext Result.failure(fetchResult.exceptionOrNull() ?: RuntimeException("Failed to fetch remote updates"))
             }
             
@@ -182,7 +207,7 @@ class SyncManagerImpl(
                     downloadMissingFiles(userId)
                 }
             }
-            if (changesCount > 0) {
+            if (changesCount > 0 && showToast && activeUserAnonymous != true) {
                 toastSuccessJob?.cancel()
                 _syncState.value = SyncState.SUCCESS
                 toastSuccessJob = scope.launch {
@@ -194,7 +219,9 @@ class SyncManagerImpl(
             }
             Result.success(Unit)
         } catch (e: Exception) {
-            triggerError(e.localizedMessage ?: "Synchronization failed")
+            if (activeUserAnonymous != true) {
+                triggerError(e.localizedMessage ?: "Synchronization failed")
+            }
             Result.failure(e)
         }
     }
@@ -417,7 +444,8 @@ class SyncManagerImpl(
                             }
                         }
                     }
-                    if (actualChangesCount > 0) {
+                    // Trigger toast if actual downloaded remote changes exist and initial snapshot has loaded
+                    if (actualChangesCount > 0 && !isInitialListenerSnapshot && activeUserAnonymous != true) {
                         toastSuccessJob?.cancel()
                         _syncState.value = SyncState.SUCCESS
                         toastSuccessJob = scope.launch {
@@ -429,6 +457,7 @@ class SyncManagerImpl(
                             _syncState.value = SyncState.IDLE
                         }
                     }
+                    isInitialListenerSnapshot = false
                 } catch (e: Exception) {
                     e.printStackTrace()
                     triggerError(e.localizedMessage ?: "Sync listener failed")
@@ -494,6 +523,7 @@ class SyncManagerImpl(
     }
 
     private fun triggerError(message: String) {
+        if (activeUserAnonymous == true) return
         _syncState.value = SyncState.ERROR
         _syncErrorMessage.value = message
         scope.launch {
