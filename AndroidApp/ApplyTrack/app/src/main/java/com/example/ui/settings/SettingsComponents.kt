@@ -417,7 +417,7 @@ fun AboutCard() {
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = "Version 1.0.0",
+                        text = "Version ${com.example.BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
