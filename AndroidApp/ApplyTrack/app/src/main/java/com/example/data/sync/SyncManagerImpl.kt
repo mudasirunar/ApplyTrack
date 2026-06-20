@@ -93,6 +93,7 @@ class SyncManagerImpl(
                     if (newUid != null && !isAnonymous && repository.isFirebaseConfigured()) {
                         startJobApplicationsListener(newUid)
                         runFullSync()
+                        enqueueBackgroundSync()
                     } else {
                         _syncState.value = SyncState.IDLE
                     }
@@ -159,6 +160,7 @@ class SyncManagerImpl(
             uploadJob = scope.launch {
                 delay(200) // 200ms debounce to run sync quickly after database transactions commit
                 repository.uploadLocalChanges()
+                enqueueBackgroundSync()
             }
         }
     }
@@ -412,7 +414,22 @@ class SyncManagerImpl(
                                                 if (!destFile.exists()) {
                                                     _downloadingFiles.update { it + fileName }
                                                     try {
-                                                        supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
+                                                        var success = false
+                                                        var attempt = 1
+                                                        val maxAttempts = 3
+                                                        var delayMs = 1000L
+                                                        while (!success && attempt <= maxAttempts) {
+                                                            success = supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
+                                                            if (!success) {
+                                                                if (attempt < maxAttempts) {
+                                                                    kotlinx.coroutines.delay(delayMs)
+                                                                    delayMs *= 2
+                                                                }
+                                                                attempt++
+                                                            }
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
                                                     } finally {
                                                         _downloadingFiles.update { it - fileName }
                                                     }

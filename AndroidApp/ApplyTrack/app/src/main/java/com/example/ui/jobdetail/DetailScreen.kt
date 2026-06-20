@@ -506,7 +506,9 @@ fun DetailScreen(
                                     "Additional Document" to job.additionalDocument
                                 ).forEach { (label, docAttachment) ->
                                     if (docAttachment != null) {
-                                        val exists = AttachmentHelper.fileExists(context, docAttachment.fileName)
+                                        val exists = remember(downloadingFiles, docAttachment.fileName) {
+                                            AttachmentHelper.fileExists(context, docAttachment.fileName)
+                                        }
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -570,8 +572,12 @@ fun DetailScreen(
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             job.screenshots.forEachIndexed { index, screenshot ->
-                                                val file = AttachmentHelper.getAttachmentFile(context, screenshot.fileName)
-                                                val exists = file.exists()
+                                                val file = remember(screenshot.fileName) {
+                                                    AttachmentHelper.getAttachmentFile(context, screenshot.fileName)
+                                                }
+                                                val exists = remember(downloadingFiles, screenshot.fileName) {
+                                                    file.exists()
+                                                }
                                                 
                                                 Box(
                                                     modifier = Modifier

@@ -782,26 +782,48 @@ fun AddEditScreen(
                                             }
                                         }
 
-                                        // 5. Clean up old deleted files on disk
+                                        // 5. Clean up old deleted files on disk & Supabase storage
                                         if (currentJobVal != null) {
-                                            val oldAttachments = listOfNotNull(
-                                                currentJobVal.resume,
-                                                currentJobVal.coverLetter,
-                                                currentJobVal.additionalDocument
-                                            ) + (currentJobVal.screenshots ?: emptyList())
+                                            val deletedAttachments = mutableListOf<Pair<String, Attachment>>()
                                             
-                                            val newAttachments = listOfNotNull(
-                                                finalResume,
-                                                finalCoverLetter,
-                                                finalAdditionalDoc
-                                            ) + finalScreenshots
-                                            
-                                            val deletedAttachments = oldAttachments.filter { old ->
-                                                newAttachments.none { new -> new.fileName == old.fileName }
+                                            // Check resume
+                                            if (currentJobVal.resume != null && (finalResume == null || finalResume?.fileName != currentJobVal.resume.fileName)) {
+                                                deletedAttachments.add("resumes" to currentJobVal.resume)
+                                            }
+                                            // Check coverLetter
+                                            if (currentJobVal.coverLetter != null && (finalCoverLetter == null || finalCoverLetter?.fileName != currentJobVal.coverLetter.fileName)) {
+                                                deletedAttachments.add("cover_letters" to currentJobVal.coverLetter)
+                                            }
+                                            // Check additionalDocument
+                                            if (currentJobVal.additionalDocument != null && (finalAdditionalDoc == null || finalAdditionalDoc?.fileName != currentJobVal.additionalDocument.fileName)) {
+                                                deletedAttachments.add("additional_documents" to currentJobVal.additionalDocument)
+                                            }
+                                            // Check screenshots
+                                            val currentScreenshots = currentJobVal.screenshots ?: emptyList()
+                                            for (oldScreenshot in currentScreenshots) {
+                                                if (finalScreenshots.none { it.fileName == oldScreenshot.fileName }) {
+                                                    deletedAttachments.add("screenshots" to oldScreenshot)
+                                                }
                                             }
                                             
-                                            deletedAttachments.forEach { attachment ->
-                                                AttachmentHelper.deleteFile(context, attachment.fileName)
+                                            if (deletedAttachments.isNotEmpty()) {
+                                                // Delete locally
+                                                deletedAttachments.forEach { (_, attachment) ->
+                                                    AttachmentHelper.deleteFile(context, attachment.fileName)
+                                                }
+                                                
+                                                // Delete from Supabase Storage
+                                                val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                                                if (userId != null) {
+                                                    val supabaseHelper = com.example.data.sync.SupabaseStorageHelper()
+                                                    deletedAttachments.forEach { (type, attachment) ->
+                                                        try {
+                                                            supabaseHelper.deleteFile(userId, type, attachment.fileName)
+                                                        } catch (e: Exception) {
+                                                            e.printStackTrace()
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }

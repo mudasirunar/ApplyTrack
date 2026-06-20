@@ -125,10 +125,50 @@ class JobRepositoryImpl(
             return@runCatching
         }
 
-        // Group operations into a Firestore WriteBatch
+        // 1. Upload attachments in parallel per job, and keep track of successful ones
+        val successfulJobs = mutableListOf<JobApplication>()
+        
+        kotlinx.coroutines.coroutineScope {
+            val jobTasks = dirtyJobs.map { job ->
+                async(Dispatchers.IO) {
+                    val jobUploads = listOfNotNull(
+                        job.resume?.let { "resumes" to it.fileName },
+                        job.coverLetter?.let { "cover_letters" to it.fileName },
+                        job.additionalDocument?.let { "additional_documents" to it.fileName }
+                    ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+
+                    var allUploadsSucceeded = true
+                    for ((type, fileName) in jobUploads) {
+                        try {
+                            val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
+                            if (localFile.exists()) {
+                                val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
+                                if (!existsOnCloud) {
+                                    val uploadResult = supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
+                                    if (!uploadResult) {
+                                        allUploadsSucceeded = false
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            allUploadsSucceeded = false
+                        }
+                    }
+                    if (allUploadsSucceeded) {
+                        synchronized(successfulJobs) {
+                            successfulJobs.add(job)
+                        }
+                    }
+                }
+            }
+            jobTasks.awaitAll()
+        }
+
+        // 2. Group operations into a Firestore WriteBatch
         val batch = fs.batch()
 
-        // 1. Process local deletions first
+        // 2a. Process local deletions
         for (deletedJob in deletedJobs) {
             val docRef = fs.collection("users")
                 .document(userId)
@@ -137,8 +177,8 @@ class JobRepositoryImpl(
             batch.delete(docRef)
         }
 
-        // 2. Upload local updates (Last-write-wins dirty tracking)
-        for (job in dirtyJobs) {
+        // 2b. Upload local updates that succeeded in uploading attachments (Last-write-wins dirty tracking)
+        for (job in successfulJobs) {
             val docRef = fs.collection("users")
                 .document(userId)
                 .collection("job_applications")
@@ -178,47 +218,20 @@ class JobRepositoryImpl(
             batch.set(docRef, data)
         }
 
-        // Commit batch atomically to Firestore
-        batch.commit().await()
+        // Commit batch atomically to Firestore ONLY if there are updates/deletes to commit
+        if (deletedJobs.isNotEmpty() || successfulJobs.isNotEmpty()) {
+            batch.commit().await()
+        }
 
-        // Commit local SQLite updates in a transaction
+        // Commit local SQLite updates in a transaction ONLY for successful job applications
         val db = com.example.data.local.AppDatabase.getDatabase(context)
         db.withTransaction {
-            for (job in dirtyJobs) {
+            for (job in successfulJobs) {
                 dao.updateLastSyncedAt(job.uuid, job.updatedAt)
             }
             for (deletedJob in deletedJobs) {
                 dao.removeDeletedJobTracking(deletedJob.uuid)
             }
-        }
-        // Upload attachments in parallel and await completion so background workers don't get terminated early
-        kotlinx.coroutines.coroutineScope {
-            val uploadTasks = mutableListOf<Deferred<Unit>>()
-            for (job in dirtyJobs) {
-                val jobUploads = listOfNotNull(
-                    job.resume?.let { "resumes" to it.fileName },
-                    job.coverLetter?.let { "cover_letters" to it.fileName },
-                    job.additionalDocument?.let { "additional_documents" to it.fileName }
-                ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
-
-                for ((type, fileName) in jobUploads) {
-                    val task = async(Dispatchers.IO) {
-                        try {
-                            val localFile = AttachmentHelper.getAttachmentFile(context, fileName)
-                            if (localFile.exists()) {
-                                val existsOnCloud = supabaseStorageHelper.checkFileExists(userId, type, fileName)
-                                if (!existsOnCloud) {
-                                    supabaseStorageHelper.uploadFile(userId, type, fileName, localFile)
-                                }
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                    uploadTasks.add(task)
-                }
-            }
-            uploadTasks.awaitAll()
         }
     }
 
