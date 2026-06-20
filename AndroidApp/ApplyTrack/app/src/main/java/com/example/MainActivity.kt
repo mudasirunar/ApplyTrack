@@ -86,7 +86,7 @@ class MainActivity : ComponentActivity() {
 
     // Manual clean dependency injection container setup following recommended guidelines
     private val database by lazy { AppDatabase.getDatabase(this) }
-    private val repository by lazy { JobRepositoryImpl(applicationContext, database.jobApplicationDao()) }
+    private val repository by lazy { JobRepositoryImpl(applicationContext, database.jobApplicationDao(), authManager) }
     private val preferencesHelper by lazy { PreferencesHelper(applicationContext) }
     private val authManager by lazy { AuthManager(applicationContext, preferencesHelper) }
     private val syncManager by lazy {
@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
     }
     
     private val viewModel: JobViewModel by viewModels {
-        JobViewModelFactory(repository, preferencesHelper, syncManager)
+        JobViewModelFactory(repository, preferencesHelper, syncManager, authManager)
     }
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")

@@ -813,7 +813,7 @@ fun AddEditScreen(
                                                 }
                                                 
                                                 // Delete from Supabase Storage
-                                                val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                                                val userId = viewModel.authManager.currentUser?.uid
                                                 if (userId != null) {
                                                     val supabaseHelper = com.example.data.sync.SupabaseStorageHelper()
                                                     deletedAttachments.forEach { (type, attachment) ->

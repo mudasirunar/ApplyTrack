@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import com.example.auth.AuthManager
 import com.example.data.local.JobApplicationDao
 import com.example.model.DeletedJob
 import com.example.model.JobApplication
@@ -38,7 +39,8 @@ suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { continuation 
 
 class JobRepositoryImpl(
     private val context: Context,
-    private val dao: JobApplicationDao
+    private val dao: JobApplicationDao,
+    private val authManager: AuthManager
 ) : JobRepository {
 
     private val supabaseStorageHelper = SupabaseStorageHelper()
@@ -74,7 +76,7 @@ class JobRepositoryImpl(
     override suspend fun deleteApplication(id: Long) {
         val app = dao.getApplicationById(id)
         if (app != null) {
-            val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            val userId = authManager.currentUser?.uid
             if (userId != null) {
                 val filesToDelete = listOfNotNull(
                     app.resume?.let { "resumes" to it.fileName },
@@ -105,11 +107,11 @@ class JobRepositoryImpl(
         val fs = firestore ?: throw IllegalStateException("Firebase Firestore is not configured or initialized.")
         
         // Await Firebase user session restoration (up to 3 seconds)
-        var firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        var firebaseUser = authManager.currentUser
         if (firebaseUser == null) {
             for (i in 1..30) {
                 kotlinx.coroutines.delay(100)
-                firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                firebaseUser = authManager.currentUser
                 if (firebaseUser != null) break
             }
         }
@@ -239,11 +241,11 @@ class JobRepositoryImpl(
         val fs = firestore ?: throw IllegalStateException("Firebase Firestore is not configured or initialized.")
         
         // Await Firebase user session restoration (up to 3 seconds)
-        var firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        var firebaseUser = authManager.currentUser
         if (firebaseUser == null) {
             for (i in 1..30) {
                 kotlinx.coroutines.delay(100)
-                firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                firebaseUser = authManager.currentUser
                 if (firebaseUser != null) break
             }
         }
@@ -420,7 +422,7 @@ class JobRepositoryImpl(
         dao.deleteAllApplications()
         
         // Clean up remote attachments asynchronously so it returns instantly and doesn't block UI thread
-        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        val userId = authManager.currentUser?.uid
         if (userId != null) {
             kotlin.runCatching {
                 val filesToDelete = allApps.flatMap { app ->

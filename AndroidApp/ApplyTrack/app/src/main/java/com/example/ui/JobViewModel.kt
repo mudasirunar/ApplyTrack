@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import com.example.model.StatusHistoryEntry
 import com.example.model.Attachment
 import com.example.utils.PreferencesHelper
+import com.example.auth.AuthManager
 import com.example.utils.AppTheme
 import com.example.utils.BackupHelper
 import com.example.utils.AttachmentHelper
@@ -36,7 +37,8 @@ enum class SyncState {
 class JobViewModel(
     private val repository: JobRepository,
     private val preferencesHelper: PreferencesHelper,
-    private val syncManager: com.example.data.sync.SyncManager
+    private val syncManager: com.example.data.sync.SyncManager,
+    val authManager: AuthManager
 ) : ViewModel() {
 
     // Theme & Preferences State
@@ -605,12 +607,13 @@ data class StatusSlice(val status: String, val count: Int, val color: Long)
 class JobViewModelFactory(
     private val repository: JobRepository,
     private val preferencesHelper: PreferencesHelper,
-    private val syncManager: com.example.data.sync.SyncManager
+    private val syncManager: com.example.data.sync.SyncManager,
+    private val authManager: AuthManager
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(JobViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return JobViewModel(repository, preferencesHelper, syncManager) as T
+            return JobViewModel(repository, preferencesHelper, syncManager, authManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class representation")
     }

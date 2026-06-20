@@ -10,7 +10,7 @@ import com.example.model.StatusHistoryEntry
 import com.example.ui.SyncState
 import com.example.utils.AppTheme
 import com.example.utils.PreferencesHelper
-import com.google.firebase.auth.FirebaseAuth
+
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -78,7 +78,7 @@ class SyncManagerImpl(
     }
 
     override fun startSync() {
-        val currentUser = FirebaseAuth.getInstance().currentUser
+        val currentUser = authManager.currentUser
         wasAuthenticatedAtStartup = currentUser != null && !currentUser.isAnonymous
 
         scope.launch {
@@ -229,7 +229,7 @@ class SyncManagerImpl(
     }
 
     override suspend fun migrateLocalDataToCloud(): Unit = withContext(Dispatchers.IO) {
-        val userId = activeUserId ?: FirebaseAuth.getInstance().currentUser?.uid ?: return@withContext
+        val userId = activeUserId ?: authManager.currentUser?.uid ?: return@withContext
         if (!repository.isFirebaseConfigured()) return@withContext
         
         try {

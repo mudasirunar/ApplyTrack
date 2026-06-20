@@ -3,10 +3,11 @@ package com.example.data.sync
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.auth.AuthManager
 import com.example.data.local.AppDatabase
 import com.example.data.repository.JobRepositoryImpl
-import com.google.firebase.auth.FirebaseAuth
 import com.example.utils.AttachmentHelper
+import com.example.utils.PreferencesHelper
 
 class SyncWorker(
     appContext: Context,
@@ -15,9 +16,10 @@ class SyncWorker(
 
     override suspend fun doWork(): Result {
         val database = AppDatabase.getDatabase(applicationContext)
-        val repository = JobRepositoryImpl(applicationContext, database.jobApplicationDao())
-        val auth = FirebaseAuth.getInstance()
-        val currentUser = auth.currentUser
+        val preferencesHelper = PreferencesHelper(applicationContext)
+        val authManager = AuthManager(applicationContext, preferencesHelper)
+        val repository = JobRepositoryImpl(applicationContext, database.jobApplicationDao(), authManager)
+        val currentUser = authManager.currentUser
 
         if (currentUser == null || currentUser.isAnonymous || !repository.isFirebaseConfigured()) {
             return Result.success()
