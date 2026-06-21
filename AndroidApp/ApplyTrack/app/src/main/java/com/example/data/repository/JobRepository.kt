@@ -15,6 +15,7 @@ interface JobRepository {
     suspend fun getApplicationByIdDirect(id: Long): JobApplication?
     suspend fun saveApplication(application: JobApplication): Long
     suspend fun deleteApplication(id: Long)
+    suspend fun deleteApplications(ids: List<Long>)
     
     // Sync Status check
     fun isFirebaseConfigured(): Boolean
@@ -25,4 +26,5 @@ interface JobRepository {
 
     suspend fun deleteAllApplications()
     suspend fun importBackup(applications: List<JobApplication>, overwriteConflicts: Boolean): ImportResult
+    suspend fun restoreApplication(application: JobApplication)
 }

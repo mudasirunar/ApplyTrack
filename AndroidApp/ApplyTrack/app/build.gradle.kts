@@ -105,3 +105,7 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
 }
+
+kotlin {
+    jvmToolchain(17)
+}

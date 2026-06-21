@@ -44,6 +44,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -61,6 +64,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -80,6 +88,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
+import com.example.R
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.JobApplication
@@ -118,6 +129,12 @@ fun ApplicationsScreen(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showSortBottomSheet by remember { mutableStateOf(false) }
 
+    var jobToDeleteList by remember { mutableStateOf<List<JobApplication>>(emptyList()) }
+    var showDeleteListConfirmDialog by remember { mutableStateOf(false) }
+
+    val selectedJobIds by viewModel.selectedJobIds.collectAsStateWithLifecycle()
+    val isSelectionModeActive by viewModel.isSelectionModeActive.collectAsStateWithLifecycle()
+
     val lazyListState = rememberLazyListState()
     val filterLazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -140,8 +157,12 @@ fun ApplicationsScreen(
     val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
 
-    BackHandler(enabled = isSearchFocused) {
-        focusManager.clearFocus()
+    BackHandler(enabled = isSearchFocused || isSelectionModeActive) {
+        if (isSelectionModeActive) {
+            viewModel.exitSelectionMode()
+        } else if (isSearchFocused) {
+            focusManager.clearFocus()
+        }
     }
 
     DisposableEffect(Unit) {
@@ -186,20 +207,129 @@ fun ApplicationsScreen(
         }
     }
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        topBar = {
+            AnimatedVisibility(
+                visible = isSelectionModeActive,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "${selectedJobIds.size} selected",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.exitSelectionMode() }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Cancel Selection"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            }
+        },
+        bottomBar = {
+            AnimatedVisibility(
+                visible = isSelectionModeActive,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+            ) {
+                Surface(
+                    tonalElevation = 8.dp,
+                    shadowElevation = 8.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                ) {
+                    val displayedIds = apps.map { it.id }
+                    val allSelected = displayedIds.isNotEmpty() && displayedIds.all { selectedJobIds.contains(it) }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = {
+                                if (allSelected) {
+                                    viewModel.deselectJobs(displayedIds)
+                                } else {
+                                    viewModel.selectJobs(displayedIds)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    id = if (allSelected) R.drawable.ic_deselect_all else R.drawable.ic_select_all
+                                ),
+                                contentDescription = if (allSelected) "Deselect All" else "Select All"
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (allSelected) "Deselect All" else "Select All")
+                        }
+
+                        val hasSelection = selectedJobIds.isNotEmpty()
+                        val selectedJobs = apps.filter { selectedJobIds.contains(it.id) }
+                        Button(
+                            onClick = {
+                                if (hasSelection) {
+                                    jobToDeleteList = selectedJobs
+                                    showDeleteListConfirmDialog = true
+                                }
+                            },
+                            enabled = hasSelection,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = Color.White,
+                                disabledContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                                disabledContentColor = Color.White.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = if (hasSelection) Color.White else Color.White.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Delete",
+                                color = if (hasSelection) Color.White else Color.White.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
                     .background(MaterialTheme.colorScheme.background)
-        ) {
-            // Search Bar & Filter Rows
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
+                AnimatedVisibility(
+                    visible = !isSelectionModeActive,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    // Search Bar & Filter Rows
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
                 // Search Field
                 OutlinedTextField(
                     value = searchQuery,
@@ -586,6 +716,7 @@ fun ApplicationsScreen(
                     }
                 }
             }
+            }
 
             // Job Applications List with Loader and Empty State Handler
             if (isInitialLoading) {
@@ -679,13 +810,29 @@ fun ApplicationsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(apps, key = { it.id }) { job ->
+                        val isSelected = selectedJobIds.contains(job.id)
                         JobCard(
                             job = job,
-                            onClick = { onNavigateToDetail(job.id) },
+                            onClick = {
+                                if (isSelectionModeActive) {
+                                    viewModel.toggleJobSelection(job.id)
+                                } else {
+                                    onNavigateToDetail(job.id)
+                                }
+                            },
                             onEditClick = { onNavigateToAddEdit(job.id) },
                             onDeleteClick = {
                                 jobToDelete = job
                                 showDeleteConfirmDialog = true
+                            },
+                            isSelectionModeActive = isSelectionModeActive,
+                            isSelected = isSelected,
+                            onLongClick = {
+                                if (isSelectionModeActive) {
+                                    viewModel.toggleJobSelection(job.id)
+                                } else {
+                                    viewModel.enterSelectionMode(job.id)
+                                }
                             },
                             modifier = Modifier.animateItem()
                         )
@@ -712,7 +859,7 @@ fun ApplicationsScreen(
                 jobToDelete = null
             },
             title = { Text(text = "Delete Application") },
-            text = { Text(text = "Are you sure you want to delete this job application? This action cannot be undone and will overwrite remote backups.") },
+            text = { Text(text = "Are you sure you want to delete this job application?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -730,6 +877,48 @@ fun ApplicationsScreen(
                     onClick = {
                         showDeleteConfirmDialog = false
                         jobToDelete = null
+                    },
+                    modifier = Modifier.testTag("delete_dialog_cancel")
+                ) {
+                    Text(text = "Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteListConfirmDialog && jobToDeleteList.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteListConfirmDialog = false
+                jobToDeleteList = emptyList()
+            },
+            title = { Text(text = "Delete Applications") },
+            text = { 
+                val textMsg = if (jobToDeleteList.size == 1) {
+                    "Are you sure you want to delete this job application?"
+                } else {
+                    "Are you sure you want to delete these ${jobToDeleteList.size} job applications?"
+                }
+                Text(text = textMsg) 
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.requestDeleteApplications(jobToDeleteList)
+                        viewModel.exitSelectionMode()
+                        showDeleteListConfirmDialog = false
+                        jobToDeleteList = emptyList()
+                    },
+                    modifier = Modifier.testTag("delete_dialog_confirm")
+                ) {
+                    Text(text = "Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteListConfirmDialog = false
+                        jobToDeleteList = emptyList()
                     },
                     modifier = Modifier.testTag("delete_dialog_cancel")
                 ) {

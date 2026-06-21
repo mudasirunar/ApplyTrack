@@ -1,7 +1,10 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,13 +30,17 @@ import com.example.ui.theme.SavedGray
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun JobCard(
     job: JobApplication,
     onClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSelectionModeActive: Boolean = false,
+    isSelected: Boolean = false,
+    onLongClick: () -> Unit = {}
 ) {
     val leftBarColor = when (job.status.lowercase()) {
         "applied" -> WarningAmber
@@ -69,15 +76,30 @@ fun JobCard(
         "${job.status} on $formatted"
     }
 
+    val containerColor = if (isSelected) {
+        MaterialTheme.colorScheme.surfaceVariant
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    val border = if (isSelected) {
+        BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+    } else {
+        CardDefaults.outlinedCardBorder()
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .testTag("job_card_${job.id}"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         shape = RoundedCornerShape(14.dp),
-        border = CardDefaults.outlinedCardBorder()
+        border = border
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             // Precise vertical timeline indicator
@@ -95,6 +117,13 @@ fun JobCard(
                     .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (isSelectionModeActive) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { _ -> onClick() },
+                        modifier = Modifier.padding(end = 8.dp).testTag("job_card_checkbox_${job.id}")
+                    )
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -161,31 +190,33 @@ fun JobCard(
                             )
                         }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            IconButton(
-                                onClick = onEditClick,
-                                modifier = Modifier.size(32.dp).testTag("edit_job_button_${job.id}")
+                        if (!isSelectionModeActive) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Job",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = onDeleteClick,
-                                modifier = Modifier.size(32.dp).testTag("delete_job_button_${job.id}")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete Job",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                IconButton(
+                                    onClick = onEditClick,
+                                    modifier = Modifier.size(32.dp).testTag("edit_job_button_${job.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Job",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = onDeleteClick,
+                                    modifier = Modifier.size(32.dp).testTag("delete_job_button_${job.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete Job",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }

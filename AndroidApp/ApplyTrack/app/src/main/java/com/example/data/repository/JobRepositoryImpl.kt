@@ -76,26 +76,53 @@ class JobRepositoryImpl(
     override suspend fun deleteApplication(id: Long) {
         val app = dao.getApplicationById(id)
         if (app != null) {
-            val userId = authManager.currentUser?.uid
-            if (userId != null) {
-                val filesToDelete = listOfNotNull(
-                    app.resume?.let { "resumes" to it.fileName },
-                    app.coverLetter?.let { "cover_letters" to it.fileName },
-                    app.additionalDocument?.let { "additional_documents" to it.fileName }
-                ) + (app.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
-                
-                kotlin.runCatching {
-                    filesToDelete.forEach { (type, fileName) ->
-                        supabaseStorageHelper.deleteFile(userId, type, fileName)
-                    }
-                }
-            }
-            
             // Track deletion for remote sync
             dao.insertDeletedJob(DeletedJob(uuid = app.uuid))
             // Delete from Room table
             dao.deleteApplication(app)
+
+            // Delete local attachment files
+            val localFilesToDelete = listOfNotNull(
+                app.resume?.fileName,
+                app.coverLetter?.fileName,
+                app.additionalDocument?.fileName
+            ) + (app.screenshots?.map { it.fileName } ?: emptyList())
+            
+            localFilesToDelete.forEach { fileName ->
+                AttachmentHelper.deleteFile(context, fileName)
+            }
         }
+    }
+
+    override suspend fun deleteApplications(ids: List<Long>) {
+        val db = com.example.data.local.AppDatabase.getDatabase(context)
+        db.withTransaction {
+            for (id in ids) {
+                val app = dao.getApplicationById(id)
+                if (app != null) {
+                    // Track deletion for remote sync
+                    dao.insertDeletedJob(DeletedJob(uuid = app.uuid))
+                    // Delete from Room table
+                    dao.deleteApplication(app)
+
+                    // Delete local attachment files
+                    val localFilesToDelete = listOfNotNull(
+                        app.resume?.fileName,
+                        app.coverLetter?.fileName,
+                        app.additionalDocument?.fileName
+                    ) + (app.screenshots?.map { it.fileName } ?: emptyList())
+                    
+                    localFilesToDelete.forEach { fileName ->
+                        AttachmentHelper.deleteFile(context, fileName)
+                    }
+                }
+            }
+        }
+    }
+
+    override suspend fun restoreApplication(application: JobApplication) {
+        dao.removeDeletedJobTracking(application.uuid)
+        dao.insertApplication(application)
     }
 
     override fun isFirebaseConfigured(): Boolean {
@@ -170,12 +197,52 @@ class JobRepositoryImpl(
         // 2. Group operations into a Firestore WriteBatch
         val batch = fs.batch()
 
-        // 2a. Process local deletions
-        for (deletedJob in deletedJobs) {
-            val docRef = fs.collection("users")
-                .document(userId)
-                .collection("job_applications")
-                .document(deletedJob.uuid)
+        // 2a. Process local deletions (and clean up remote storage attachments first)
+        val docRefsToDelete = kotlinx.coroutines.coroutineScope {
+            deletedJobs.map { deletedJob ->
+                async(Dispatchers.IO) {
+                    val docRef = fs.collection("users")
+                        .document(userId)
+                        .collection("job_applications")
+                        .document(deletedJob.uuid)
+                    try {
+                        val snapshot = docRef.get().await()
+                        if (snapshot.exists()) {
+                            val resumeMap = snapshot.get("resume") as? Map<*, *>
+                            val resumeFile = resumeMap?.get("fileName") as? String
+                            
+                            val coverLetterMap = snapshot.get("coverLetter") as? Map<*, *>
+                            val coverLetterFile = coverLetterMap?.get("fileName") as? String
+                            
+                            val additionalDocumentMap = snapshot.get("additionalDocument") as? Map<*, *>
+                            val additionalDocumentFile = additionalDocumentMap?.get("fileName") as? String
+                            
+                            val screenshotsList = snapshot.get("screenshots") as? List<*>
+                            val screenshotFiles = screenshotsList?.mapNotNull { item ->
+                                (item as? Map<*, *>)?.get("fileName") as? String
+                            } ?: emptyList()
+                            
+                            val filesToDelete = listOfNotNull(
+                                resumeFile?.let { "resumes" to it },
+                                coverLetterFile?.let { "cover_letters" to it },
+                                additionalDocumentFile?.let { "additional_documents" to it }
+                            ) + screenshotFiles.map { "screenshots" to it }
+                            
+                            filesToDelete.forEach { (type, fileName) ->
+                                supabaseStorageHelper.deleteFile(userId, type, fileName)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        // Re-throw to prevent batch execution and let WorkManager retry
+                        throw e
+                    }
+                    docRef
+                }
+            }.awaitAll()
+        }
+
+        for (docRef in docRefsToDelete) {
             batch.delete(docRef)
         }
 
@@ -421,26 +488,8 @@ class JobRepositoryImpl(
         // Wipes local database table instantly
         dao.deleteAllApplications()
         
-        // Clean up remote attachments asynchronously so it returns instantly and doesn't block UI thread
-        val userId = authManager.currentUser?.uid
-        if (userId != null) {
-            kotlin.runCatching {
-                val filesToDelete = allApps.flatMap { app ->
-                    listOfNotNull(
-                        app.resume?.let { "resumes" to it.fileName },
-                        app.coverLetter?.let { "cover_letters" to it.fileName },
-                        app.additionalDocument?.let { "additional_documents" to it.fileName }
-                    ) + (app.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
-                }
-                
-                // Launch background IO operations
-                CoroutineScope(Dispatchers.IO).launch {
-                    filesToDelete.forEach { (type, fileName) ->
-                        supabaseStorageHelper.deleteFile(userId, type, fileName)
-                    }
-                }
-            }
-        }
+        // Clean up local attachment files
+        AttachmentHelper.clearAllAttachments(context)
     }
 
     override suspend fun importBackup(

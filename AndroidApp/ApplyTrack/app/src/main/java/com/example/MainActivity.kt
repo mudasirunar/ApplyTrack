@@ -169,10 +169,11 @@ class MainActivity : ComponentActivity() {
                               showToast = false
                           }
                       }
+                    val isSelectionModeActive by viewModel.isSelectionModeActive.collectAsStateWithLifecycle()
                     val isFabVisible by viewModel.isFabVisible.collectAsStateWithLifecycle()
                     val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
-                    val isFabVisibleOnScreen = currentRoute == "applications" && isFabVisible && !isSearchFocused && !isInitialLoading
-                    val isBottomBarVisible = (currentRoute == "dashboard" || currentRoute == "applications" || currentRoute == "settings") && !isSearchFocused
+                    val isFabVisibleOnScreen = currentRoute == "applications" && isFabVisible && !isSearchFocused && !isInitialLoading && !isSelectionModeActive
+                    val isBottomBarVisible = (currentRoute == "dashboard" || currentRoute == "applications" || currentRoute == "settings") && !isSearchFocused && !isSelectionModeActive
                     
                     val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     val snackbarSpacing = 2.dp
@@ -191,15 +192,20 @@ class MainActivity : ComponentActivity() {
                         label = "SnackbarPaddingAnimation"
                     )
                     
-                    val pendingDeleteJob by viewModel.pendingDeleteJob.collectAsStateWithLifecycle()
+                    val pendingDeleteJobs by viewModel.pendingDeleteJobs.collectAsStateWithLifecycle()
                     val lifecycleOwner = LocalLifecycleOwner.current
 
                     // Observe pending delete for Snackbar
-                    LaunchedEffect(pendingDeleteJob) {
-                        pendingDeleteJob?.let { job ->
-                            val roleName = job.role.takeUnless { it.isNullOrBlank() } ?: "Application"
+                    LaunchedEffect(pendingDeleteJobs) {
+                        if (pendingDeleteJobs.isNotEmpty()) {
+                            val snackbarMessage = if (pendingDeleteJobs.size == 1) {
+                                val roleName = pendingDeleteJobs.first().role.takeUnless { it.isNullOrBlank() } ?: "Application"
+                                "'$roleName' deleted"
+                            } else {
+                                "${pendingDeleteJobs.size} applications deleted"
+                            }
                             val result = snackbarHostState.showSnackbar(
-                                message = "'$roleName' deleted",
+                                message = snackbarMessage,
                                 actionLabel = "Undo",
                                 duration = SnackbarDuration.Short
                             )

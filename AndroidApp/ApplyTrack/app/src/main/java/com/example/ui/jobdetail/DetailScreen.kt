@@ -706,7 +706,7 @@ fun DetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             title = { Text(text = "Delete Application") },
-            text = { Text(text = "Are you sure you want to delete this job application? This action cannot be undone and will overwrite remote backups.") },
+            text = { Text(text = "Are you sure you want to delete this job application?") },
             confirmButton = {
                 TextButton(
                     onClick = {

@@ -17,6 +17,9 @@ import com.example.auth.AuthManager
 import com.example.utils.AppTheme
 import com.example.utils.BackupHelper
 import com.example.utils.AttachmentHelper
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.net.Uri
@@ -38,7 +41,9 @@ class JobViewModel(
     private val repository: JobRepository,
     private val preferencesHelper: PreferencesHelper,
     private val syncManager: com.example.data.sync.SyncManager,
-    val authManager: AuthManager
+    val authManager: AuthManager,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
     // Theme & Preferences State
@@ -86,8 +91,49 @@ class JobViewModel(
     private val _isInitialLoading = MutableStateFlow(true)
     val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
 
-    private val _pendingDeleteJob = MutableStateFlow<JobApplication?>(null)
-    val pendingDeleteJob: StateFlow<JobApplication?> = _pendingDeleteJob.asStateFlow()
+    private val _pendingDeleteJobs = MutableStateFlow<List<JobApplication>>(emptyList())
+    val pendingDeleteJobs: StateFlow<List<JobApplication>> = _pendingDeleteJobs.asStateFlow()
+
+    private val applicationScope = CoroutineScope(ioDispatcher + SupervisorJob())
+    private val _inFlightDeleteIds = MutableStateFlow<Set<Long>>(emptySet())
+
+    val isSelectionModeActive = MutableStateFlow(false)
+    val selectedJobIds = MutableStateFlow<Set<Long>>(emptySet())
+
+    fun enterSelectionMode(id: Long) {
+        isSelectionModeActive.value = true
+        selectedJobIds.value = setOf(id)
+    }
+
+    fun exitSelectionMode() {
+        isSelectionModeActive.value = false
+        selectedJobIds.value = emptySet()
+    }
+
+    fun toggleJobSelection(id: Long) {
+        selectedJobIds.update { current ->
+            val isCurrentlySelected = current.contains(id)
+            val newSelection = if (isCurrentlySelected) current - id else current + id
+            if (isCurrentlySelected && newSelection.isEmpty()) {
+                isSelectionModeActive.value = false
+            } else if (!isCurrentlySelected && current.isEmpty()) {
+                isSelectionModeActive.value = true
+            }
+            newSelection
+        }
+    }
+
+    fun clearJobSelection() {
+        selectedJobIds.value = emptySet()
+    }
+
+    fun selectJobs(ids: List<Long>) {
+        selectedJobIds.value = selectedJobIds.value + ids
+    }
+
+    fun deselectJobs(ids: List<Long>) {
+        selectedJobIds.value = selectedJobIds.value - ids.toSet()
+    }
 
     private val permanentlyDeletedIds = MutableStateFlow<Set<Long>>(emptySet())
 
@@ -152,17 +198,11 @@ class JobViewModel(
     val filteredApplications: StateFlow<List<JobApplication>> = combine(
         repository.getAllApplications(),
         filterParamsFlow,
-        _pendingDeleteJob,
-        permanentlyDeletedIds
-    ) { apps, params, pendingDelete, permanentlyDeleted ->
-        val missingIds = permanentlyDeleted.filter { id -> apps.none { it.id == id } }
-        if (missingIds.isNotEmpty()) {
-            viewModelScope.launch {
-                permanentlyDeletedIds.value = permanentlyDeletedIds.value - missingIds.toSet()
-            }
-        }
-
-        var result = apps.filter { it.id != pendingDelete?.id && !permanentlyDeleted.contains(it.id) }
+        _pendingDeleteJobs,
+        _inFlightDeleteIds
+    ) { apps, params, pendingDelete, inFlightIds ->
+        val pendingIds = pendingDelete.map { it.id }.toSet()
+        var result = apps.filter { it.id !in pendingIds && it.id !in inFlightIds }
 
         // Apply Search (Search by company, role, job description, notes, attachment names, urls, or emails)
         if (params.query.isNotBlank()) {
@@ -235,7 +275,7 @@ class JobViewModel(
         }
 
         result
-    }.flowOn(Dispatchers.Default)
+    }.flowOn(defaultDispatcher)
     .onEach {
         _isInitialLoading.value = false
         stopCalculationTracking()
@@ -249,12 +289,13 @@ class JobViewModel(
     val dashboardAnalytics: StateFlow<DashboardAnalytics> = combine(
         repository.getAllApplications(),
         dashboardYear,
-        _pendingDeleteJob,
-        permanentlyDeletedIds
-    ) { apps, dbYear, pendingDelete, permanentlyDeleted ->
-        val filteredApps = apps.filter { it.id != pendingDelete?.id && !permanentlyDeleted.contains(it.id) }
+        _pendingDeleteJobs,
+        _inFlightDeleteIds
+    ) { apps, dbYear, pendingDelete, inFlightIds ->
+        val pendingIds = pendingDelete.map { it.id }.toSet()
+        val filteredApps = apps.filter { it.id !in pendingIds && it.id !in inFlightIds }
         computeDashboardAnalytics(filteredApps, dbYear)
-    }.flowOn(Dispatchers.Default)
+    }.flowOn(defaultDispatcher)
     .onEach {
         _isInitialLoading.value = false
     }.stateIn(
@@ -457,30 +498,36 @@ class JobViewModel(
     }
 
     fun requestDeleteApplication(job: JobApplication) {
-        viewModelScope.launch {
-            // Commit any existing pending delete first
-            _pendingDeleteJob.value?.let { commitDelete(it) }
-            _pendingDeleteJob.value = job
-        }
+        commitPendingDelete()
+        _pendingDeleteJobs.value = listOf(job)
+    }
+
+    fun requestDeleteApplications(jobs: List<JobApplication>) {
+        commitPendingDelete()
+        _pendingDeleteJobs.value = jobs
     }
 
     fun undoDelete() {
-        _pendingDeleteJob.value = null
+        _pendingDeleteJobs.value = emptyList()
     }
 
     fun commitPendingDelete() {
-        val jobToCommit = _pendingDeleteJob.value
-        if (jobToCommit != null) {
-            permanentlyDeletedIds.value = permanentlyDeletedIds.value + jobToCommit.id
-            _pendingDeleteJob.value = null
-            commitDelete(jobToCommit)
-        }
-    }
+        val jobsToDelete = _pendingDeleteJobs.value
+        if (jobsToDelete.isEmpty()) return
+        
+        val idsToDelete = jobsToDelete.map { it.id }.toSet()
+        _inFlightDeleteIds.update { it + idsToDelete }
+        _pendingDeleteJobs.value = emptyList()
 
-    private fun commitDelete(job: JobApplication) {
-        viewModelScope.launch {
-            repository.deleteApplication(job.id)
-            triggerUploadSync()
+        applicationScope.launch {
+            try {
+                repository.deleteApplications(idsToDelete.toList())
+                triggerUploadSync()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _inFlightDeleteIds.update { it - idsToDelete }
+            }
         }
     }
     // --- Dynamic Background Serialization Sync Layer ---
