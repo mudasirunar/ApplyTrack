@@ -270,6 +270,8 @@ class MainActivity : ComponentActivity() {
                                                     launchSingleTop = true
                                                     restoreState = true
                                                 }
+                                            } else {
+                                                viewModel.triggerScrollToTop("dashboard")
                                             }
                                         },
                                         colors = NavigationBarItemDefaults.colors(
@@ -294,6 +296,8 @@ class MainActivity : ComponentActivity() {
                                                     launchSingleTop = true
                                                     restoreState = true
                                                 }
+                                            } else {
+                                                viewModel.triggerScrollToTop("applications")
                                             }
                                         },
                                         colors = NavigationBarItemDefaults.colors(
@@ -318,6 +322,8 @@ class MainActivity : ComponentActivity() {
                                                     launchSingleTop = true
                                                     restoreState = true
                                                 }
+                                            } else {
+                                                viewModel.triggerScrollToTop("settings")
                                             }
                                         },
                                         colors = NavigationBarItemDefaults.colors(

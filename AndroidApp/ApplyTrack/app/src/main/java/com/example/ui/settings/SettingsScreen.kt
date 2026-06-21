@@ -56,6 +56,17 @@ fun SettingsScreen(
     val dashboardAnalytics by viewModel.dashboardAnalytics.collectAsStateWithLifecycle()
     val hasApplications = dashboardAnalytics.total > 0
 
+    val scrollState = rememberScrollState()
+    val scrollToTopEvent by viewModel.settingsScrollToTop.collectAsStateWithLifecycle()
+    var lastScrollTrigger by remember { mutableStateOf(scrollToTopEvent) }
+
+    LaunchedEffect(scrollToTopEvent) {
+        if (scrollToTopEvent > lastScrollTrigger) {
+            scrollState.animateScrollTo(0)
+        }
+        lastScrollTrigger = scrollToTopEvent
+    }
+
     val authState by authManager.authState.collectAsStateWithLifecycle()
     val currentUser by authManager.currentUserFlow.collectAsStateWithLifecycle()
 
@@ -222,7 +233,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

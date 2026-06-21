@@ -22,6 +22,17 @@ fun DashboardScreen(
     val analytics by viewModel.dashboardAnalytics.collectAsStateWithLifecycle()
     val dashboardYear by viewModel.dashboardYear.collectAsStateWithLifecycle()
 
+    val scrollState = rememberScrollState()
+    val scrollToTopEvent by viewModel.dashboardScrollToTop.collectAsStateWithLifecycle()
+    var lastScrollTrigger by remember { mutableStateOf(scrollToTopEvent) }
+
+    LaunchedEffect(scrollToTopEvent) {
+        if (scrollToTopEvent > lastScrollTrigger) {
+            scrollState.animateScrollTo(0)
+        }
+        lastScrollTrigger = scrollToTopEvent
+    }
+
     if (isInitialLoading) {
         DashboardShimmerScreen()
     } else {
@@ -31,7 +42,7 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .background(MaterialTheme.colorScheme.background)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {

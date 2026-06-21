@@ -67,6 +67,18 @@ class JobViewModel(
     val isFabVisible = MutableStateFlow(true)
     val shouldScrollToFilter = MutableStateFlow(false)
 
+    val dashboardScrollToTop = MutableStateFlow(0)
+    val applicationsScrollToTop = MutableStateFlow(0)
+    val settingsScrollToTop = MutableStateFlow(0)
+
+    fun triggerScrollToTop(route: String) {
+        when (route) {
+            "dashboard" -> dashboardScrollToTop.update { it + 1 }
+            "applications" -> applicationsScrollToTop.update { it + 1 }
+            "settings" -> settingsScrollToTop.update { it + 1 }
+        }
+    }
+
     // Detailed application state (for detail/edit view)
     private val _selectedApplication = MutableStateFlow<JobApplication?>(null)
     val selectedApplication: StateFlow<JobApplication?> = _selectedApplication.asStateFlow()

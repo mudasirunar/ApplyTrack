@@ -121,6 +121,19 @@ fun ApplicationsScreen(
     val lazyListState = rememberLazyListState()
     val filterLazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+
+    val scrollToTopEvent by viewModel.applicationsScrollToTop.collectAsStateWithLifecycle()
+    var lastScrollTrigger by remember { mutableStateOf(scrollToTopEvent) }
+
+    LaunchedEffect(scrollToTopEvent) {
+        if (scrollToTopEvent > lastScrollTrigger) {
+            if (lazyListState.firstVisibleItemIndex > 10) {
+                lazyListState.scrollToItem(10)
+            }
+            lazyListState.animateScrollToItem(0)
+        }
+        lastScrollTrigger = scrollToTopEvent
+    }
     var previousIndex by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemIndex) }
     var previousScrollOffset by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemScrollOffset) }
     val isFabVisible by viewModel.isFabVisible.collectAsStateWithLifecycle()
