@@ -156,11 +156,12 @@ class SyncManagerImpl(
 
     override fun triggerUpload() {
         if (preferencesHelper.isAutoSyncEnabled() && repository.isFirebaseConfigured() && activeUserAnonymous == false) {
+            enqueueBackgroundSync()
+            
             uploadJob?.cancel()
             uploadJob = scope.launch {
                 delay(200) // 200ms debounce to run sync quickly after database transactions commit
                 repository.uploadLocalChanges()
-                enqueueBackgroundSync()
             }
         }
     }

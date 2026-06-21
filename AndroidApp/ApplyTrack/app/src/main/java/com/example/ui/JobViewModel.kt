@@ -530,6 +530,26 @@ class JobViewModel(
             }
         }
     }
+
+    fun commitPendingDeleteBlocking() {
+        val jobsToDelete = _pendingDeleteJobs.value
+        if (jobsToDelete.isEmpty()) return
+        
+        val idsToDelete = jobsToDelete.map { it.id }.toSet()
+        _inFlightDeleteIds.update { it + idsToDelete }
+        _pendingDeleteJobs.value = emptyList()
+
+        kotlinx.coroutines.runBlocking(ioDispatcher) {
+            try {
+                repository.deleteApplications(idsToDelete.toList())
+                triggerUploadSync()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _inFlightDeleteIds.update { it - idsToDelete }
+            }
+        }
+    }
     // --- Dynamic Background Serialization Sync Layer ---
     private fun triggerUploadSync() {
         syncManager.triggerUpload()

@@ -19,7 +19,14 @@ class SyncWorker(
         val preferencesHelper = PreferencesHelper(applicationContext)
         val authManager = AuthManager(applicationContext, preferencesHelper)
         val repository = JobRepositoryImpl(applicationContext, database.jobApplicationDao(), authManager)
-        val currentUser = authManager.currentUser
+        var currentUser = authManager.currentUser
+        if (currentUser == null) {
+            for (i in 1..30) {
+                kotlinx.coroutines.delay(100)
+                currentUser = authManager.currentUser
+                if (currentUser != null) break
+            }
+        }
 
         if (currentUser == null || currentUser.isAnonymous || !repository.isFirebaseConfigured()) {
             return Result.success()

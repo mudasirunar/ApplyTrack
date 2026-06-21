@@ -229,7 +229,7 @@ class MainActivity : ComponentActivity() {
                     DisposableEffect(lifecycleOwner) {
                         val observer = LifecycleEventObserver { _, event ->
                             if (event == Lifecycle.Event.ON_STOP) {
-                                viewModel.commitPendingDelete()
+                                viewModel.commitPendingDeleteBlocking()
                             }
                         }
                         lifecycleOwner.lifecycle.addObserver(observer)
@@ -237,7 +237,6 @@ class MainActivity : ComponentActivity() {
                             lifecycleOwner.lifecycle.removeObserver(observer)
                         }
                     }
-
                     Box(modifier = Modifier.fillMaxSize()) {
                         Scaffold(
                             bottomBar = {
@@ -519,6 +518,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        viewModel.commitPendingDeleteBlocking()
         syncManager.stopSync()
     }
 }
