@@ -128,10 +128,6 @@ class JobViewModel(
         }
     }
 
-    fun clearJobSelection() {
-        selectedJobIds.value = emptySet()
-    }
-
     fun selectJobs(ids: List<Long>) {
         selectedJobIds.value = selectedJobIds.value + ids
     }
@@ -140,7 +136,7 @@ class JobViewModel(
         selectedJobIds.value = selectedJobIds.value - ids.toSet()
     }
 
-    private val permanentlyDeletedIds = MutableStateFlow<Set<Long>>(emptySet())
+
 
     // Helper data class to bypass Kotlin's 5-flow combine limitation in a type-safe manner
     private data class FilterParams(
@@ -181,6 +177,40 @@ class JobViewModel(
                 startCalculationTracking()
             }
         }
+
+        // Reset UI state when the user session changes (sign-in/sign-out/account switch)
+        viewModelScope.launch {
+            var lastUid: String? = authManager.currentUser?.uid
+            authManager.currentUserFlow.collect { user ->
+                val currentUid = user?.uid
+                if (currentUid != lastUid) {
+                    resetUIState()
+                    lastUid = currentUid
+                }
+            }
+        }
+    }
+
+    fun resetUIState() {
+        searchQuery.value = ""
+        statusFilter.value = "All"
+        dateFilterState.value = DateFilterState()
+        dashboardYear.value = Calendar.getInstance().get(Calendar.YEAR).toString()
+        selectedResume.value = "Select---"
+        resumeSearchQuery.value = ""
+        selectedPlatform.value = "LinkedIn"
+        sortOption.value = SortOption.STATUS_LATEST
+        isSearchFocused.value = false
+        isFabVisible.value = true
+        shouldScrollToFilter.value = false
+        dashboardScrollToTop.value = 0
+        applicationsScrollToTop.value = 0
+        settingsScrollToTop.value = 0
+        isSelectionModeActive.value = false
+        selectedJobIds.value = emptySet()
+        _selectedApplication.value = null
+        _pendingDeleteJobs.value = emptyList()
+        _inFlightDeleteIds.value = emptySet()
     }
 
     private fun startCalculationTracking() {

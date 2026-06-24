@@ -114,6 +114,7 @@ class DeletionFlowTest {
         // Mock AuthManager
         authManager = mock()
         whenever(authManager.authState).thenReturn(MutableStateFlow(AuthState.GUEST))
+        whenever(authManager.currentUserFlow).thenReturn(MutableStateFlow(null))
 
         // Setup mock database applications
         repository.applicationsFlow.value = mapOf(
