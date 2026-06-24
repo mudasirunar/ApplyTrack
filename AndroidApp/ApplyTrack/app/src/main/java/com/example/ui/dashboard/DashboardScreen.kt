@@ -1,17 +1,26 @@
 package com.example.ui.dashboard
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.JobViewModel
 import com.example.ui.applications.DateFilterMode
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,10 +57,8 @@ fun DashboardScreen(
                     .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Section A: Header & Motivational Message
                 DashboardHeader(totalCount = analytics.total)
 
-                // Section B: Overview Stats Row
                 OverviewStatsRow(
                     analytics = analytics,
                     onNavigateToAdd = onNavigateToAdd,
@@ -62,7 +69,6 @@ fun DashboardScreen(
                     }
                 )
 
-                // Section C: Status Cards Grid (3×2)
                 StatusCardsGrid(
                     analytics = analytics,
                     onStatusClick = { status ->
@@ -72,13 +78,10 @@ fun DashboardScreen(
                     }
                 )
 
-                // Section D: Conversion Funnel / Rate Cards
                 ConversionFunnelRow(analytics = analytics)
 
-                // Section H: Status Distribution Donut Chart
                 StatusDistributionSection(slices = analytics.statusDistribution)
 
-                // Section E: Monthly Activity Bar Chart
                 MonthlyActivitySection(
                     analytics = analytics,
                     year = dashboardYear,
@@ -97,7 +100,6 @@ fun DashboardScreen(
                     }
                 )
 
-                // Section F: Platform Breakdown
                 PlatformBreakdownSection(
                     platforms = analytics.platforms,
                     onPlatformClick = { platform ->
@@ -108,7 +110,6 @@ fun DashboardScreen(
                     }
                 )
 
-                // Section G: Resume/CV Effectiveness
                 ResumeEffectivenessSection(
                     resumeStats = analytics.resumeStats,
                     onResumeClick = { resumeName ->

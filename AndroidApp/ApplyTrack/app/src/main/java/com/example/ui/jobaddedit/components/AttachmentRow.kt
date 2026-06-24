@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.example.ui.jobaddedit
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement

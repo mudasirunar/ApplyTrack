@@ -3,103 +3,40 @@ package com.example.ui.dashboard
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.ui.MonthActivity
-import com.example.ui.StatusSlice
-import com.example.ui.theme.SavedGray
-import com.example.ui.theme.WarningAmber
-import com.example.ui.theme.AccentGreen
-import com.example.ui.theme.LinkBlue
-import com.example.ui.theme.ErrorRed
-
-@Composable
-fun CircularProgressRing(
-    percentage: Float,
-    color: Color,
-    size: Dp = 64.dp,
-    strokeWidth: Dp = 6.dp,
-    animationDuration: Int = 1000
-) {
-    val animatedProgress = remember { Animatable(0f) }
-    LaunchedEffect(percentage) {
-        animatedProgress.animateTo(
-            targetValue = percentage.coerceIn(0f, 100f),
-            animationSpec = tween(durationMillis = animationDuration, easing = FastOutSlowInEasing)
-        )
-    }
-
-    val trackColor = MaterialTheme.colorScheme.surfaceVariant
-
-    Box(
-        modifier = Modifier.size(size),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val stroke = strokeWidth.toPx()
-            val arcSize = this.size.minDimension - stroke
-            val topLeft = Offset(stroke / 2f, stroke / 2f)
-
-            // Background track
-            drawArc(
-                color = trackColor,
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = Size(arcSize, arcSize),
-                style = Stroke(width = stroke, cap = StrokeCap.Round)
-            )
-
-            // Foreground arc
-            drawArc(
-                color = color,
-                startAngle = -90f,
-                sweepAngle = animatedProgress.value / 100f * 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = Size(arcSize, arcSize),
-                style = Stroke(width = stroke, cap = StrokeCap.Round)
-            )
-        }
-
-        Text(
-            text = "${animatedProgress.value.toInt()}%",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = color,
-            textAlign = TextAlign.Center
-        )
-    }
-}
 
 @Composable
 fun BarChart(
@@ -123,10 +60,8 @@ fun BarChart(
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val labelStyle = MaterialTheme.typography.labelSmall
     val outlineColor = MaterialTheme.colorScheme.outline
-    val primaryColor = MaterialTheme.colorScheme.primary
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Non-scrollable Intensity Heatmap legend above bars
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -147,9 +82,9 @@ fun BarChart(
                     .background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
-                                Color(0xFFE53935), // Red
-                                Color(0xFFFFB300), // Yellow
-                                Color(0xFF4CAF50)  // Green
+                                Color(0xFFE53935),
+                                Color(0xFFFFB300),
+                                Color(0xFF4CAF50)
                             )
                         ),
                         shape = CircleShape
@@ -165,7 +100,6 @@ fun BarChart(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Horizontally scrollable bars area
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -256,7 +190,6 @@ fun BarChart(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Month labels
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -291,155 +224,6 @@ fun BarChart(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun DonutChart(
-    slices: List<StatusSlice>,
-    modifier: Modifier = Modifier,
-    size: Dp = 160.dp,
-    strokeWidth: Dp = 24.dp,
-    animationDuration: Int = 1000
-) {
-    val total = slices.sumOf { it.count }
-    val animatedProgress = remember { Animatable(0f) }
-
-    LaunchedEffect(slices) {
-        animatedProgress.snapTo(0f)
-        animatedProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = animationDuration, easing = FastOutSlowInEasing)
-        )
-    }
-
-    Box(
-        modifier = modifier.size(size),
-        contentAlignment = Alignment.Center
-    ) {
-        if (total > 0) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val stroke = strokeWidth.toPx()
-                val arcSize = this.size.minDimension - stroke
-                val topLeft = Offset(stroke / 2f, stroke / 2f)
-
-                var startAngle = -90f
-                slices.forEach { slice ->
-                    val sweepAngle = (slice.count.toFloat() / total) * 360f * animatedProgress.value
-                    drawArc(
-                        color = Color(slice.color),
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = Size(arcSize, arcSize),
-                        style = Stroke(width = stroke, cap = StrokeCap.Round)
-                    )
-                    startAngle += sweepAngle
-                }
-            }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = total.toString(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Total",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            val trackColor = MaterialTheme.colorScheme.surfaceVariant
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val stroke = strokeWidth.toPx()
-                val arcSize = this.size.minDimension - stroke
-                val topLeft = Offset(stroke / 2f, stroke / 2f)
-                drawArc(
-                    color = trackColor,
-                    startAngle = 0f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = Size(arcSize, arcSize),
-                    style = Stroke(width = stroke, cap = StrokeCap.Round)
-                )
-            }
-            Text(
-                text = "No data",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-fun HorizontalBarRow(
-    label: String,
-    count: Int,
-    maxCount: Int,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    val fraction = if (maxCount > 0) count.toFloat() / maxCount else 0f
-    val animatedFraction = remember { Animatable(0f) }
-
-    LaunchedEffect(fraction) {
-        animatedFraction.animateTo(
-            targetValue = fraction,
-            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
-        )
-    }
-
-    val trackColor = MaterialTheme.colorScheme.surfaceVariant
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = count.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-        ) {
-            // Track
-            drawRoundRect(
-                color = trackColor,
-                topLeft = Offset.Zero,
-                size = Size(size.width, size.height),
-                cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
-            )
-            // Fill
-            if (animatedFraction.value > 0f) {
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset.Zero,
-                    size = Size(size.width * animatedFraction.value, size.height),
-                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
-                )
             }
         }
     }

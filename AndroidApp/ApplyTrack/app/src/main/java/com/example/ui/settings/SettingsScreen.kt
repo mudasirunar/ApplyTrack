@@ -40,8 +40,8 @@ import com.example.utils.AppTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,7 +121,6 @@ fun SettingsScreen(
     var operationSuccess by remember { mutableStateOf(true) }
     var dialogOutcome by remember { mutableStateOf(DialogOutcome.INFO) }
 
-    // SAF CreateDocument Launcher for ZIP export
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
         onResult = { uri: Uri? ->
@@ -151,7 +150,6 @@ fun SettingsScreen(
         }
     )
 
-    // SAF OpenDocument Launcher for ZIP import
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri: Uri? ->
@@ -171,7 +169,6 @@ fun SettingsScreen(
                             importConflictsCount = conflictsCount
                             showConflictDialog = true
                         } else {
-                            // No conflicts, import with overwrite = false directly
                             dialogTitle = "Importing Backup"
                             isWorking = true
                             showProgressDialog = true
@@ -206,8 +203,6 @@ fun SettingsScreen(
             }
         }
     )
-
-
 
     Scaffold(
         topBar = {
@@ -266,8 +261,6 @@ fun SettingsScreen(
                 appTheme = appTheme,
                 onThemeSelect = { theme -> viewModel.setAppTheme(theme) }
             )
-
-
 
             BackupManagementCard(
                 hasApplications = hasApplications,

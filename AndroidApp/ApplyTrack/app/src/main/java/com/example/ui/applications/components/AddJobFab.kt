@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.example.ui.applications
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.shape.RoundedCornerShape

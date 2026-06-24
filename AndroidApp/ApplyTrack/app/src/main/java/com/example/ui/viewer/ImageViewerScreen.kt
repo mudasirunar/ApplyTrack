@@ -38,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.JobViewModel
-import com.example.ui.components.ZoomableImage
 import com.example.utils.AttachmentHelper
 
 @OptIn(ExperimentalMaterial3Api::class)

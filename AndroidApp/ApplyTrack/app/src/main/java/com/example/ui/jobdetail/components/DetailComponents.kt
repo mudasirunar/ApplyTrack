@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.example.ui.jobdetail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
