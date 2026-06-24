@@ -51,7 +51,7 @@ fun DetailScreen(
 ) {
     val selectedApp by viewModel.selectedApplication.collectAsStateWithLifecycle()
     val downloadingFiles by viewModel.downloadingFiles.collectAsStateWithLifecycle()
-    var isDescriptionExpanded by remember { mutableStateOf(true) }
+    var isDescriptionExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     
     var hasLoadedOnce by remember(jobId) { mutableStateOf(false) }
