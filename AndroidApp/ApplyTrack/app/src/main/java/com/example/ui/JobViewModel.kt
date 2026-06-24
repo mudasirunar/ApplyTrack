@@ -311,6 +311,7 @@ class JobViewModel(
         val interviews = apps.count { it.status.equals("Interview", ignoreCase = true) }
         val offers = apps.count { it.status.equals("Offer", ignoreCase = true) }
         val rejected = apps.count { it.status.equals("Rejected", ignoreCase = true) }
+        val responses = interviews + offers + rejected
 
         val successRate = if (total > 0) (offers.toFloat() / total * 100f) else 0f
         val rejectionRate = if (total > 0) (rejected.toFloat() / total * 100f) else 0f
@@ -405,6 +406,7 @@ class JobViewModel(
             interviews = interviews,
             offers = offers,
             rejected = rejected,
+            responses = responses,
             successRate = successRate,
             rejectionRate = rejectionRate,
             interviewRate = interviewRate,
@@ -653,6 +655,7 @@ data class DashboardAnalytics(
     val interviews: Int = 0,
     val offers: Int = 0,
     val rejected: Int = 0,
+    val responses: Int = 0,
     val successRate: Float = 0f,
     val rejectionRate: Float = 0f,
     val interviewRate: Float = 0f,

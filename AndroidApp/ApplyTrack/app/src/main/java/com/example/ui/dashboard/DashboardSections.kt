@@ -267,7 +267,7 @@ fun StatusCardsGrid(
             )
             StatusStatCard(
                 title = "Response",
-                count = "${analytics.responseRate.toInt()}%",
+                count = analytics.responses.toString(),
                 textColor = MaterialTheme.colorScheme.primary,
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
                 modifier = Modifier.weight(1f),

@@ -25,7 +25,10 @@ class ExampleUnitTest {
       saved = apps.count { it.status.equals("Saved", ignoreCase = true) },
       interviews = apps.count { it.status.equals("Interview", ignoreCase = true) },
       rejected = apps.count { it.status.equals("Rejected", ignoreCase = true) },
-      offers = apps.count { it.status.equals("Offer", ignoreCase = true) }
+      offers = apps.count { it.status.equals("Offer", ignoreCase = true) },
+      responses = apps.count { it.status.equals("Interview", ignoreCase = true) } +
+          apps.count { it.status.equals("Offer", ignoreCase = true) } +
+          apps.count { it.status.equals("Rejected", ignoreCase = true) }
     )
 
     assertEquals(6, stats.total)
@@ -34,6 +37,7 @@ class ExampleUnitTest {
     assertEquals(2, stats.interviews)
     assertEquals(1, stats.rejected)
     assertEquals(1, stats.offers)
+    assertEquals(4, stats.responses)
   }
 
   @Test
@@ -46,5 +50,6 @@ class ExampleUnitTest {
     assertEquals(0, stats.interviews)
     assertEquals(0, stats.rejected)
     assertEquals(0, stats.offers)
+    assertEquals(0, stats.responses)
   }
 }
