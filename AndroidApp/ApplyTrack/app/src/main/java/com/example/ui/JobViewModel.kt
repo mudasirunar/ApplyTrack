@@ -25,6 +25,9 @@ import kotlinx.coroutines.withContext
 import android.net.Uri
 import android.content.Context
 import java.util.Calendar
+import com.example.ui.applications.DateFilterState
+import com.example.ui.applications.DateFilterMode
+
 
 enum class SortOption {
     STATUS_LATEST,
@@ -55,9 +58,11 @@ class JobViewModel(
 
     // Current Search & Filter states
     val searchQuery = MutableStateFlow("")
-    val statusFilter = MutableStateFlow("All") // "All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Month"
-    val selectedMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH) + 1) // 1..12
-    val selectedYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
+    val statusFilter = MutableStateFlow("All") // "All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Date"
+    val dateFilterState = MutableStateFlow(DateFilterState())
+    fun updateDateFilter(update: DateFilterState.() -> DateFilterState) {
+        dateFilterState.value = dateFilterState.value.update()
+    }
     val dashboardYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR).toString()) // e.g. "2026"
     val selectedResume = MutableStateFlow("Select---")
     val resumeSearchQuery = MutableStateFlow("")
@@ -141,8 +146,7 @@ class JobViewModel(
     private data class FilterParams(
         val query: String,
         val status: String,
-        val month: Int,
-        val year: String,
+        val dateFilterState: DateFilterState,
         val sortOption: SortOption,
         val selectedResume: String,
         val selectedPlatform: String
@@ -152,8 +156,7 @@ class JobViewModel(
         listOf<Flow<Any>>(
             searchQuery,
             statusFilter,
-            selectedMonth,
-            selectedYear,
+            dateFilterState,
             sortOption,
             selectedResume,
             selectedPlatform
@@ -162,11 +165,10 @@ class JobViewModel(
         FilterParams(
             query = array[0] as String,
             status = array[1] as String,
-            month = array[2] as Int,
-            year = array[3] as String,
-            sortOption = array[4] as SortOption,
-            selectedResume = array[5] as String,
-            selectedPlatform = array[6] as String
+            dateFilterState = array[2] as DateFilterState,
+            sortOption = array[3] as SortOption,
+            selectedResume = array[4] as String,
+            selectedPlatform = array[5] as String
         )
     }
 
@@ -219,18 +221,47 @@ class JobViewModel(
             }
         }
 
-        // Apply Status, Month/Year, Resume, or Platform Filter
+        // Apply Status, Date, Resume, or Platform Filter
         when (params.status) {
-            "Month" -> {
-                val targetYear = params.year.toIntOrNull()
-                if (targetYear != null) {
-                    val cal = Calendar.getInstance()
-                    result = result.filter { app ->
-                        val statusTimestamp = app.statusHistory?.lastOrNull()?.timestamp ?: app.createdAt
-                        cal.timeInMillis = statusTimestamp
-                        val appMonth = cal.get(Calendar.MONTH) + 1 // 1..12
-                        val appYear = cal.get(Calendar.YEAR)
-                        appMonth == params.month && appYear == targetYear
+            "Date" -> {
+                val dateState = params.dateFilterState
+                val cal = Calendar.getInstance()
+                result = result.filter { app ->
+                    val statusTimestamp = app.statusHistory?.lastOrNull()?.timestamp ?: app.createdAt
+                    cal.timeInMillis = statusTimestamp
+                    when (dateState.mode) {
+                        DateFilterMode.MONTH -> {
+                            val targetYear = dateState.year.toIntOrNull()
+                            if (targetYear != null) {
+                                val appMonth = cal.get(Calendar.MONTH) + 1 // 1..12
+                                val appYear = cal.get(Calendar.YEAR)
+                                appMonth == dateState.month && appYear == targetYear
+                            } else {
+                                true
+                            }
+                        }
+                        DateFilterMode.DAY -> {
+                            val filterCal = Calendar.getInstance().apply { timeInMillis = dateState.specificDate }
+                            cal.get(Calendar.YEAR) == filterCal.get(Calendar.YEAR) &&
+                                    cal.get(Calendar.DAY_OF_YEAR) == filterCal.get(Calendar.DAY_OF_YEAR)
+                        }
+                        DateFilterMode.RANGE -> {
+                            val startCal = Calendar.getInstance().apply {
+                                timeInMillis = dateState.startDate
+                                set(Calendar.HOUR_OF_DAY, 0)
+                                set(Calendar.MINUTE, 0)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            val endCal = Calendar.getInstance().apply {
+                                timeInMillis = dateState.endDate
+                                set(Calendar.HOUR_OF_DAY, 23)
+                                set(Calendar.MINUTE, 59)
+                                set(Calendar.SECOND, 59)
+                                set(Calendar.MILLISECOND, 999)
+                            }
+                            statusTimestamp >= startCal.timeInMillis && statusTimestamp <= endCal.timeInMillis
+                        }
                     }
                 }
             }

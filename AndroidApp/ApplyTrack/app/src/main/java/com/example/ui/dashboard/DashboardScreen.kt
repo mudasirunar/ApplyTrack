@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.JobViewModel
+import com.example.ui.applications.DateFilterMode
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,9 +84,14 @@ fun DashboardScreen(
                     year = dashboardYear,
                     onYearChange = { viewModel.setDashboardYear(it) },
                     onMonthClick = { month ->
-                        viewModel.statusFilter.value = "Month"
-                        viewModel.selectedMonth.value = month
-                        viewModel.selectedYear.value = dashboardYear
+                        viewModel.statusFilter.value = "Date"
+                        viewModel.updateDateFilter {
+                            copy(
+                                mode = DateFilterMode.MONTH,
+                                month = month,
+                                year = dashboardYear
+                            )
+                        }
                         viewModel.shouldScrollToFilter.value = true
                         onNavigateToApplications()
                     }
