@@ -160,8 +160,11 @@ export default function Login() {
         <div className="modal-overlay" style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}>
           <div className="modal-content-card animate-scale-in" style={{ maxWidth: '240px', textAlign: 'center', padding: '32px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-              <div className="login-logo-wrapper" style={{ width: '48px', height: '48px', margin: 0 }}>
-                <AppIcon size={32} className="login-logo" style={{ animationDuration: '1.5s' }} />
+              <div className="signin-spinner-container">
+                <div className="signin-spinner-ring"></div>
+                <div className="login-logo-wrapper" style={{ width: '48px', height: '48px', margin: 0 }}>
+                  <AppIcon size={32} className="login-logo" style={{ animationDuration: '1.5s' }} />
+                </div>
               </div>
               <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-primary)' }}>
                 Signing in...

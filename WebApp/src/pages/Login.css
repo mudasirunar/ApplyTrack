@@ -94,6 +94,8 @@
   transition: background-color var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
   background-color: transparent;
   color: var(--brand-primary);
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 .google-login-btn:hover:not(:disabled) {
@@ -248,4 +250,29 @@
 
 .google-popup-btn.secondary:hover {
   background-color: rgba(26, 115, 232, 0.04);
+}
+
+/* Signing-in circular loader around app icon */
+.signin-spinner-container {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signin-spinner-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--brand-outline);
+  border-top-color: var(--brand-primary);
+  animation: signin-spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes signin-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
