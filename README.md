@@ -5,6 +5,7 @@
 [![Room DB](https://img.shields.io/badge/Room-Local--First-3DDC84.svg?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/training/data-storage/room)
 [![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28.svg?style=flat-square&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-File%20Storage-3ECF8E.svg?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/144b3c83-190f-495c-b4bd-89361a339345/deploy-status)](https://app.netlify.com/projects/apply-track/deploys)
 
 **ApplyTrack** is an offline-first, local-priority career companion and job application tracking platform. Designed to provide job seekers with sub-millisecond interface responsiveness and absolute data integrity, the system consists of a native Android application and a responsive web companion.
 
