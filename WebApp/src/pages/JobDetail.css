@@ -1,0 +1,242 @@
+/* JOB DETAIL SCREEN STYLING */
+.detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detail-header-card {
+  padding: 24px;
+}
+
+.detail-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.detail-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-company {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+}
+
+.detail-role {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.detail-status-select {
+  padding: 6px 12px;
+  border-radius: var(--border-radius-full);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  background-color: var(--bg-surface-variant);
+  border: 1px solid currentColor;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+
+@media (min-width: 768px) {
+  .metadata-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.metadata-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metadata-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.metadata-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metadata-value a {
+  color: var(--link-blue);
+  text-decoration: none;
+}
+
+.metadata-value a:hover {
+  text-decoration: underline;
+}
+
+.metadata-value svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* Collapsible text block */
+.collapsible-card {
+  padding: 24px;
+}
+
+.collapsible-content {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: pre-line;
+  transition: max-height var(--transition-normal);
+  overflow: hidden;
+}
+
+.collapsible-content.collapsed {
+  max-height: 120px;
+  position: relative;
+}
+
+.collapsible-content.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: linear-gradient(transparent, var(--bg-surface));
+}
+
+.collapsible-toggle-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--link-blue);
+  cursor: pointer;
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Personal notes card with inline edit */
+.notes-card {
+  padding: 24px;
+}
+
+.notes-display-area {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  min-height: 48px;
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  padding: 8px;
+  transition: background-color var(--transition-fast);
+}
+
+.notes-display-area:hover {
+  background-color: var(--bg-surface-variant);
+}
+
+.notes-placeholder {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.notes-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Timeline/History vertical card */
+.timeline-card {
+  padding: 24px;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  padding-left: 8px;
+  margin-top: 12px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 24px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-item::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 16px;
+  bottom: -8px;
+  width: 2px;
+  background-color: var(--brand-outline);
+  z-index: 1;
+}
+
+.timeline-item:last-child::after {
+  display: none;
+}
+
+.timeline-node {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--border-radius-full);
+  background-color: var(--bg-surface);
+  border: 3px solid var(--brand-primary);
+  z-index: 2;
+  margin-top: 4px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timeline-status {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.timeline-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}

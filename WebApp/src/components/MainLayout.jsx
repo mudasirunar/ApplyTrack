@@ -7,10 +7,12 @@ import {
   SettingsIcon, 
   LogoutIcon 
 } from './Icons';
+import './MainLayout.css';
 
 export default function MainLayout({ activeTab, setActiveTab, children }) {
   const [user, setUser] = useState(db.getCurrentUser());
   const [toast, setToast] = useState(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const handleAuthChange = () => {
@@ -60,13 +62,30 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
   ];
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {/* DESKTOP SIDEBAR */}
       <aside className="app-sidebar">
         <div className="app-sidebar-top">
-          <div className="app-sidebar-logo-container">
-            <AppIcon className="app-sidebar-logo" />
+          <div 
+            className="app-sidebar-logo-container"
+            onClick={() => isSidebarCollapsed && setIsSidebarCollapsed(false)}
+            style={{ cursor: isSidebarCollapsed ? 'pointer' : 'default' }}
+          >
+            <AppIcon className="app-sidebar-logo" style={{ cursor: isSidebarCollapsed ? 'pointer' : 'default' }} />
             <span className="app-sidebar-title">ApplyTrack</span>
+            <button 
+              type="button" 
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsSidebarCollapsed(true);
+              }} 
+              className="sidebar-toggle-btn" 
+              title="Collapse Sidebar"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z" />
+              </svg>
+            </button>
           </div>
           
           <nav className="app-sidebar-nav">
@@ -75,6 +94,7 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`app-sidebar-link ${activeTab === item.id ? 'active' : ''}`}
+                title={isSidebarCollapsed ? item.label : undefined}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -89,6 +109,9 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
               src={user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
               alt={user.displayName} 
               className="user-avatar"
+              onClick={() => isSidebarCollapsed && setActiveTab('settings')}
+              style={{ cursor: isSidebarCollapsed ? 'pointer' : 'default' }}
+              title={isSidebarCollapsed ? `${user.displayName} (Click for Settings)` : undefined}
               onError={(e) => {
                 e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
               }}

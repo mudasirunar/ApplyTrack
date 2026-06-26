@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../utils/db';
 import { ChevronIcon, FileIcon, DeleteIcon } from '../components/Icons';
+import './JobAddEdit.css';
 
 export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
   const isEditMode = !!jobId;

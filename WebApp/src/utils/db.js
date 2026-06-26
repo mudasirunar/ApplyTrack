@@ -391,6 +391,10 @@ export const db = {
         offers: 0,
         rejected: 0,
         responses: 0,
+        successRate: 0,
+        rejectionRate: 0,
+        interviewRate: 0,
+        responseRate: 0,
         applicationsThisWeek: 0,
         applicationsThisMonth: 0,
         statusDistribution: [],
@@ -406,12 +410,14 @@ export const db = {
     const offers = apps.filter(a => a.status === 'Offer').length;
     const rejected = apps.filter(a => a.status === 'Rejected').length;
     
-    // Response rate = (Interviews + Offers + Rejections) / (Total - Saved)
-    const activeAuditableApps = apps.filter(a => a.status !== 'Saved');
-    const responsesCount = apps.filter(a => ['Interview', 'Offer', 'Rejected'].includes(a.status)).length;
-    const responses = activeAuditableApps.length > 0 
-      ? Math.round((responsesCount / activeAuditableApps.length) * 100) 
-      : 0;
+    // In Android app, responses represents the COUNT of responded applications
+    const responses = interviews + offers + rejected;
+
+    // Conversion Rates based on total applications
+    const successRate = total > 0 ? Math.round((offers / total) * 100) : 0;
+    const rejectionRate = total > 0 ? Math.round((rejected / total) * 100) : 0;
+    const interviewRate = total > 0 ? Math.round((interviews / total) * 100) : 0;
+    const responseRate = total > 0 ? Math.round(((interviews + offers + rejected) / total) * 100) : 0;
 
     // Time calculations
     const now = Date.now();
@@ -442,36 +448,32 @@ export const db = {
       .sort((a, b) => b.count - a.count);
 
     // 3. Resume Effectiveness stats
-    // We group by resume filename and calculate conversion rates
-    // Conversion rate = (Interviews + Offers) / Total applications sent with this resume
+    // We group by resume filename and calculate statistics
     const resumeMap = {};
     apps.forEach(a => {
-      if (a.status === 'Saved' || !a.resume || !a.resume.originalName) return;
+      if (!a.resume || !a.resume.originalName) return;
       const resName = a.resume.originalName;
       if (!resumeMap[resName]) {
-        resumeMap[resName] = { name: resName, total: 0, positives: 0, offers: 0 };
+        resumeMap[resName] = { 
+          resumeName: resName, 
+          totalUsed: 0, 
+          interviewCount: 0, 
+          offerCount: 0, 
+          rejectedCount: 0 
+        };
       }
-      resumeMap[resName].total += 1;
-      if (['Interview', 'Offer'].includes(a.status)) {
-        resumeMap[resName].positives += 1;
-      }
-      if (a.status === 'Offer') {
-        resumeMap[resName].offers += 1;
+      resumeMap[resName].totalUsed += 1;
+      if (a.status === 'Interview') {
+        resumeMap[resName].interviewCount += 1;
+      } else if (a.status === 'Offer') {
+        resumeMap[resName].offerCount += 1;
+      } else if (a.status === 'Rejected') {
+        resumeMap[resName].rejectedCount += 1;
       }
     });
 
     const resumeStats = Object.values(resumeMap)
-      .map(r => {
-        const rate = r.total > 0 ? Math.round((r.positives / r.total) * 100) : 0;
-        return {
-          resumeName: r.name,
-          totalCount: r.total,
-          positiveCount: r.positives,
-          successRate: rate,
-          offers: r.offers
-        };
-      })
-      .sort((a, b) => b.successRate - a.successRate || b.totalCount - a.totalCount);
+      .sort((a, b) => b.totalUsed - a.totalUsed);
 
     // 4. Monthly Activity bar chart data (group by year & month)
     const monthlyActivity = {};
@@ -495,6 +497,10 @@ export const db = {
       offers,
       rejected,
       responses,
+      successRate,
+      rejectionRate,
+      interviewRate,
+      responseRate,
       applicationsThisWeek,
       applicationsThisMonth,
       statusDistribution,

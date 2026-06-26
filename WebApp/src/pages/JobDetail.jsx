@@ -11,6 +11,7 @@ import {
 } from '../components/Icons';
 import ImageViewer from '../components/ImageViewer';
 import PDFViewer from '../components/PDFViewer';
+import './JobDetail.css';
 
 export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   const [app, setApp] = useState(null);

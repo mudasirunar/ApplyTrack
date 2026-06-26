@@ -1,0 +1,147 @@
+/* JOB ADD/EDIT FORM STYLING */
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.form-card {
+  padding: 24px;
+}
+
+.form-card-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--brand-outline);
+  padding-bottom: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 480px) {
+  .form-grid.grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.form-input, .form-select, .form-textarea {
+  padding: 10px 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--brand-outline);
+  background-color: var(--bg-surface);
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(47, 58, 74, 0.08);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* File attachments uploader */
+.file-upload-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: var(--border-radius-sm);
+  border: 1px dashed var(--brand-outline);
+  background-color: var(--bg-surface-variant);
+  transition: background-color var(--transition-fast);
+}
+
+.file-slot:hover {
+  background-color: rgba(47, 58, 74, 0.04);
+}
+
+.file-slot-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.file-slot-info svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-secondary);
+}
+
+.file-slot-filename {
+  font-weight: 700;
+  color: var(--brand-primary);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-upload-btn {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--link-blue);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.file-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--error-red);
+  cursor: pointer;
+}
+
+.file-delete-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.form-actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  padding-bottom: 24px;
+}

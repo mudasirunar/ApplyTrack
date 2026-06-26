@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../utils/db';
 import { AppIcon, GoogleIcon } from '../components/Icons';
+import './Login.css';
 
 
 export default function Login() {

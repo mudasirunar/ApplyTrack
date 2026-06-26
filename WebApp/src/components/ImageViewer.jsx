@@ -1,5 +1,6 @@
 import React from 'react';
 import { CloseIcon } from './Icons';
+import './ViewerModal.css';
 
 export default function ImageViewer({ file, onClose }) {
   if (!file) return null;

@@ -1,0 +1,444 @@
+/* APPLICATIONS LIST PAGE STYLING */
+.apps-header-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+  .apps-header-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.search-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-xl);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-bar-container:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(47, 58, 74, 0.1);
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+/* Filter chips */
+.filter-chips-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 0 12px;
+  scrollbar-width: none; /* Firefox */
+}
+
+.filter-chips-scroll::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.filter-chip {
+  padding: 8px 16px;
+  border-radius: var(--border-radius-xl);
+  border: 1px solid var(--brand-outline);
+  background-color: var(--bg-surface);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  color: var(--text-secondary);
+}
+
+.filter-chip:hover {
+  background-color: var(--bg-surface-variant);
+}
+
+.filter-chip.active {
+  background-color: var(--brand-primary);
+  color: var(--text-on-primary);
+  border-color: var(--brand-primary);
+}
+
+/* Sub-filter panel */
+.sub-filter-panel {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-md);
+  padding: 16px;
+  margin-top: -4px;
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 600px) {
+  .sub-filter-panel {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sub-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sub-filter-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.sub-filter-select {
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--brand-outline);
+  background-color: var(--bg-surface-variant);
+  font-size: 0.85rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Date filter options */
+.date-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 480px) {
+  .date-filter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Sort Row */
+.sort-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  margin-bottom: 12px;
+}
+
+.sort-info-text {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.sort-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.sort-trigger-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* Job Cards Layout */
+.job-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Job Card Component */
+.job-card {
+  padding: 18px;
+  display: flex;
+  gap: 16px;
+  position: relative;
+  user-select: none;
+}
+
+.job-card-select-checkbox {
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.job-card-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.job-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.job-card-company {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+}
+
+.job-card-role {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: var(--border-radius-full);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: capitalize;
+  border: 1px solid currentColor;
+}
+
+.job-card-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.job-card-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.job-card-detail-item svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.job-card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.job-card-action-btn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.job-card-action-btn:hover {
+  background-color: var(--bg-surface-variant);
+  color: var(--brand-primary);
+}
+
+.job-card-action-btn.delete:hover {
+  background-color: var(--error-red-tint);
+  color: var(--error-red);
+}
+
+.job-card-action-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+/* FLOATING ACTION BUTTON (FAB) */
+.fab-btn {
+  position: fixed;
+  bottom: 96px; /* Sticky above bottom navigation */
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--border-radius-full);
+  background-color: var(--brand-primary);
+  color: var(--text-on-primary);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  z-index: 99;
+  transition: transform var(--transition-fast), background-color var(--transition-fast), opacity var(--transition-normal);
+}
+
+@media (min-width: 1025px) {
+  .fab-btn {
+    bottom: 32px;
+    right: 40px;
+  }
+}
+
+.fab-btn:hover {
+  transform: scale(1.06);
+  background-color: var(--brand-primary-hover);
+}
+
+.fab-btn:active {
+  transform: scale(0.98);
+}
+
+.fab-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.fab-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.8) translateY(10px);
+}
+
+/* SELECTION MODE TOP BAR */
+.selection-mode-bar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background-color: var(--brand-primary);
+  color: var(--text-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 101;
+  box-shadow: var(--shadow-md);
+  margin-top: -24px;
+  margin-left: -16px;
+  margin-right: -16px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 768px) {
+  .selection-mode-bar {
+    margin-top: -32px;
+    margin-left: -32px;
+    margin-right: -32px;
+    padding: 0 32px;
+  }
+}
+
+.selection-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-weight: 700;
+}
+
+.selection-bar-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--border-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast);
+}
+
+.selection-bar-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.selection-bar-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.selection-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selection-action-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Empty State Styling */
+.empty-state-card {
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  fill: var(--text-secondary);
+  opacity: 0.4;
+}
+
+.empty-state-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+}
+
+.empty-state-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}

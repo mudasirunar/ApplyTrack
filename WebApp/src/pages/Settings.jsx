@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../utils/db';
 import { SunIcon, MoonIcon, DeviceIcon, LogoutIcon } from '../components/Icons';
+import './Settings.css';
 
 export default function Settings() {
   const [user, setUser] = useState(db.getCurrentUser());

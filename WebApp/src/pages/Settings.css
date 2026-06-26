@@ -1,0 +1,128 @@
+/* SETTINGS SCREEN STYLING */
+.settings-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.settings-card {
+  padding: 24px;
+}
+
+.profile-settings-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.profile-avatar-large {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--border-radius-full);
+  border: 3px solid var(--brand-primary);
+  object-fit: cover;
+}
+
+.profile-details-large {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-name-large {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+}
+
+.profile-email-large {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.theme-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.theme-option-btn {
+  padding: 12px 8px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--brand-outline);
+  background-color: var(--bg-surface);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.theme-option-btn:hover {
+  background-color: var(--bg-surface-variant);
+}
+
+.theme-option-btn.active {
+  border-color: var(--brand-primary);
+  background-color: var(--nav-selected-indicator);
+  color: var(--nav-selected-text);
+}
+
+.theme-option-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.backup-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 480px) {
+  .backup-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.backup-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--brand-outline);
+  background-color: var(--bg-surface);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.backup-btn:hover {
+  background-color: var(--bg-surface-variant);
+}
+
+.backup-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.backup-btn.reset {
+  color: var(--error-red);
+  border-color: var(--error-red);
+}
+
+.backup-btn.reset:hover {
+  background-color: var(--error-red-tint);
+}

@@ -1,0 +1,783 @@
+/* DASHBOARD COMPONENTS */
+.dashboard-header {
+  margin-bottom: 24px;
+}
+
+.dashboard-greeting {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+  margin-bottom: 4px;
+}
+
+.dashboard-subtext {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Overview card */
+.overview-card {
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(47, 58, 74, 0.05) 0%, rgba(237, 238, 240, 0.25) 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 600px) {
+  .overview-card {
+    padding: 24px;
+  }
+}
+
+[data-theme='dark'] .overview-card {
+  background: linear-gradient(135deg, rgba(182, 201, 217, 0.08) 0%, rgba(47, 53, 62, 0.2) 100%);
+}
+
+.overview-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.overview-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.overview-count {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+  line-height: 1;
+}
+
+@media (min-width: 600px) {
+  .overview-count {
+    font-size: 3rem;
+  }
+}
+
+.overview-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.activity-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: var(--border-radius-full);
+  background-color: var(--bg-surface-variant);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  border: 1px solid var(--brand-outline);
+}
+
+.activity-badge-count {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--border-radius-full);
+  background-color: rgba(47, 58, 74, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+[data-theme='dark'] .activity-badge-count {
+  background-color: rgba(255,255,255,0.15);
+}
+
+.overview-empty-action {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+  border-top: 1px dashed var(--brand-outline);
+}
+
+/* Status Cards Grid */
+.status-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columns, which fits 6 cards as a 3x2 grid */
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 600px) {
+  .status-cards-grid {
+    gap: 12px;
+  }
+}
+
+.status-stat-card {
+  padding: 12px;
+  height: 84px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+@media (min-width: 600px) {
+  .status-stat-card {
+    padding: 16px;
+    height: 94px;
+  }
+}
+
+.status-card-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+@media (min-width: 600px) {
+  .status-card-header {
+    font-size: 0.8rem;
+  }
+}
+
+.status-card-count {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+@media (min-width: 600px) {
+  .status-card-count {
+    font-size: 1.8rem;
+  }
+}
+
+/* Section Title */
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+  margin-bottom: 18px;
+}
+
+@media (min-width: 600px) {
+  .section-title {
+    font-size: 1.1rem;
+  }
+}
+
+.conversion-rates-card {
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 600px) {
+  .conversion-rates-card {
+    padding: 24px;
+  }
+}
+
+.rates-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 20px;
+  justify-items: center;
+  width: 100%;
+}
+
+.rate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0; /* Clear min-width to prevent overflow on narrow screens */
+  transition: transform 0.2s ease;
+}
+
+@media (min-width: 600px) {
+  .rates-container {
+    gap: 16px;
+  }
+  .rate-card {
+    min-width: 80px;
+  }
+}
+
+.rate-card:hover {
+  transform: translateY(-2px);
+}
+
+.rate-card-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (min-width: 600px) {
+  .rate-card-label {
+    font-size: 0.8rem;
+  }
+}
+
+.circular-progress-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
+}
+
+.circular-progress-svg {
+  display: block;
+}
+
+.circular-progress-text {
+  font-family: inherit;
+  transition: color 0.3s ease;
+}
+
+/* Charts and Breakdown Grid */
+.dashboard-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+  .dashboard-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.donut-chart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+@media (min-width: 600px) {
+  .donut-chart-container {
+    gap: 24px;
+    padding: 24px;
+  }
+}
+
+.donut-chart-svg {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  overflow: visible; /* Prevents stroke clipping of the bolder segments */
+}
+
+@media (min-width: 600px) {
+  .donut-chart-svg {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+.donut-chart-center-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.donut-center-num {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+@media (min-width: 600px) {
+  .donut-center-num {
+    font-size: 1.6rem;
+  }
+}
+
+.donut-center-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start; /* Start from left to prevent scroll cutoff on mobile */
+  gap: 16px;
+  width: 100%;
+  overflow-x: auto;
+  padding: 8px 16px; /* Increased padding to prevent clipping of the first yellow box on the left */
+  margin-top: 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: default;
+  /* Prevent text selection during drag-to-scroll */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.donut-legend::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .donut-legend {
+    justify-content: safe center; /* Center on desktop when it fits, align start if overflowing to prevent cutoff */
+  }
+}
+
+@media (max-width: 599px) {
+  .donut-legend {
+    cursor: grab; /* Show grab cursor on mobile where it is draggable */
+  }
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%; /* Circle shape matching mobile app's CircleShape! */
+  flex-shrink: 0;
+}
+
+/* Card Header with Divider */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--brand-outline);
+  margin-bottom: 20px;
+}
+
+/* Year selector container matching Android App */
+.year-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--bg-surface-variant);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-sm);
+  padding: 4px 8px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.year-selector-container:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(30, 136, 229, 0.15);
+}
+
+.year-selector-btn {
+  background: transparent;
+  border: none;
+  color: var(--brand-primary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.year-selector-btn:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.year-selector-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.year-selector-input {
+  width: 42px;
+  background: transparent;
+  border: none;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  outline: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+/* Activity spectrum legend matching Android App */
+.activity-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px; /* Reduced from 24px to tighten spacing and give more height to bars */
+}
+
+.legend-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.legend-gradient-bar {
+  width: 120px;
+  height: 6px;
+  background: linear-gradient(to right, #E53935, #FFB300, #4CAF50);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Scrollable Chart wrapper for click and drag scrolling */
+.activity-chart-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  user-select: none;
+  scrollbar-width: none; /* Firefox: hide scrollbar */
+  padding: 8px 0;
+  cursor: default;
+}
+
+.activity-chart-scroll-container::-webkit-scrollbar {
+  display: none; /* Chrome/Safari: hide scrollbar */
+}
+
+.activity-chart-inner {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  height: 180px; /* Increased from 160px to make bars taller without changing card size */
+  align-items: flex-end;
+  padding: 4px 10px; /* Reduced top padding to tighten spacing */
+}
+
+@media (max-width: 1024px) {
+  .activity-chart-scroll-container {
+    cursor: grab;
+  }
+  .activity-chart-inner {
+    min-width: 480px; /* Compact horizontal scrolling on tablets and mobiles */
+  }
+}
+
+.chart-bar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.chart-bar-container {
+  flex: 1;
+  width: 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100px;
+  margin-bottom: 8px;
+}
+
+.chart-bar {
+  width: 20px;
+  border-radius: 0; /* Flat and edged top corners matching the native mobile app design */
+  cursor: pointer;
+  position: relative;
+  transform-origin: bottom;
+  animation: growY 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chart-bar:hover {
+  filter: brightness(1.1);
+}
+
+
+
+.chart-bar-count {
+  font-size: 0.65rem; /* Resized to match compact layout */
+  font-weight: 800;
+  margin-bottom: 2px;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+.chart-label {
+  font-size: 0.65rem; /* Decreased size for a cleaner look */
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Platforms Breakdown */
+.platform-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--brand-outline);
+  margin-bottom: 20px;
+}
+
+.platform-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 0;
+}
+
+.platform-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.platform-row-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.platform-bar-container {
+  height: 8px;
+  background-color: var(--bg-surface-variant);
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
+}
+
+.platform-bar-fill {
+  height: 100%;
+  background-color: var(--brand-primary);
+  border-radius: var(--border-radius-full);
+  transform-origin: left;
+  animation: growX 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition: width 0.6s ease;
+}
+
+/* Resume Effectiveness Leaderboard */
+.resume-leaderboard-card {
+  padding: 16px;
+  margin-bottom: 8px; /* Reduced to tighten mobile bottom spacing */
+  align-self: start; /* Fit content height, don't stretch to match sibling */
+}
+
+.resume-leaderboard-card .chart-header {
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.resume-leaderboard-card .resume-table th {
+  padding-top: 6px;
+}
+
+@media (min-width: 600px) {
+  .resume-leaderboard-card {
+    padding: 24px;
+    margin-bottom: 24px; /* Restored on desktop */
+  }
+}
+
+.resume-table-wrapper {
+  overflow-x: auto;
+}
+
+.resume-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.resume-table th {
+  font-size: 0.68rem; /* Increased to match cell text size */
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--brand-outline);
+  letter-spacing: 0.5px;
+}
+
+.resume-table td {
+  font-size: 0.68rem;
+  font-weight: 400;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--brand-outline);
+}
+
+@media (min-width: 600px) {
+  .resume-table th {
+    font-size: 0.75rem; /* Increased to match cell text size */
+    padding: 12px 12px;
+  }
+  .resume-table td {
+    font-size: 0.75rem;
+    padding: 12px 12px;
+  }
+}
+
+.resume-table tr:last-child td {
+  border-bottom: none;
+}
+
+.resume-table tr {
+  transition: background-color var(--transition-fast);
+}
+
+.resume-table tr:hover td {
+  background-color: var(--bg-primary);
+}
+
+.resume-tag-name {
+  max-width: 140px; /* Increased from 90px to prevent early truncation on mobile */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+  font-weight: 400;
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 0.68rem;
+  transition: color var(--transition-fast), text-decoration var(--transition-fast);
+}
+
+.resume-tag-name:hover {
+  text-decoration: underline;
+  color: var(--link-blue);
+}
+
+@media (min-width: 600px) {
+  .resume-tag-name {
+    max-width: 380px; /* Increased from 200px to maximize visibility on desktop */
+    font-size: 0.75rem;
+  }
+}
+
+.success-rate-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--border-radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Monthly Activity alignment and empty states */
+.monthly-activity-card {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.monthly-activity-card.empty {
+  height: auto;
+  align-self: start;
+}
+
+.monthly-activity-card.empty .card-empty-text {
+  padding: 6px 4px;
+  font-size: 0.7rem;
+}
+
+@media (min-width: 600px) {
+  .monthly-activity-card {
+    padding: 24px;
+  }
+}
+
+@media (min-width: 768px) {
+  .monthly-activity-card.empty {
+    /* On desktop, maintain the grid row height so sibling doesn't shift */
+    align-self: start;
+  }
+}
+
+.monthly-activity-card .activity-chart-scroll-container {
+  margin-top: auto;
+}
+
+.card-empty-text {
+  font-size: 0.75rem; /* Smaller size matching bodySmall */
+  font-style: italic;
+  font-weight: 500;
+  color: var(--text-secondary);
+  opacity: 0.65; /* Muted color to look like a placeholder/message */
+  text-align: center;
+  padding: 32px 16px;
+  line-height: 1.5;
+  width: 100%;
+}
+
+.platform-breakdown-card {
+  padding: 16px;
+}
+
+@media (min-width: 600px) {
+  .platform-breakdown-card {
+    padding: 24px;
+  }
+}
+
+/* Specific Dashboard Container bottom padding reduction on mobile */
+.dashboard-container {
+  padding-bottom: 0px !important;
+}
+
+@media (min-width: 768px) {
+  .dashboard-container {
+    padding-bottom: 32px !important; /* Restored on desktop viewports */
+  }
+}
+
+/* Entrance animations for dashboard bar charts */
+@keyframes growY {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes growX {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

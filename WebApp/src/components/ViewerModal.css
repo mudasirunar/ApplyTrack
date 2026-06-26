@@ -1,0 +1,116 @@
+/* FILE VIEWERS AND MODAL DIALOGS */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s forwards;
+}
+
+.modal-content-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  max-width: 460px;
+  width: 100%;
+  padding: 24px;
+  animation: scaleIn 0.2s forwards;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+}
+
+.modal-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* File Previews Modals (Image and PDF) */
+.viewer-modal-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 900px;
+  width: 100%;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: scaleIn 0.2s forwards;
+}
+
+.viewer-header {
+  height: 60px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--brand-outline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.viewer-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.viewer-content {
+  flex: 1;
+  background-color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 16px;
+  position: relative;
+}
+
+.viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.viewer-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background-color: #FFFFFF;
+}
+
+.viewer-fallback-text {
+  text-align: center;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}

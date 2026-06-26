@@ -1,5 +1,6 @@
 import React from 'react';
 import { CloseIcon, FileIcon } from './Icons';
+import './ViewerModal.css';
 
 export default function PDFViewer({ file, onClose }) {
   if (!file) return null;

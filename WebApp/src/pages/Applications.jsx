@@ -13,6 +13,7 @@ import {
   FileIcon,
   CheckIcon
 } from '../components/Icons';
+import './Applications.css';
 
 export default function Applications({ filters, setFilters, setActiveTab, setSelectedJobId }) {
   const [applications, setApplications] = useState(db.getApplications());
