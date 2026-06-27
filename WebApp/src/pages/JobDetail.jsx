@@ -7,11 +7,43 @@ import {
   EmailIcon, 
   FileIcon,
   EditIcon,
-  DeleteIcon
+  DeleteIcon,
+  WorkIcon
 } from '../components/Icons';
 import ImageViewer from '../components/ImageViewer';
 import PDFViewer from '../components/PDFViewer';
 import './JobDetail.css';
+
+function InfoRow({ label, value, isLink, href }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--brand-outline-light, rgba(0,0,0,0.03))' }}>
+      <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>{label}</span>
+      {isLink ? (
+        <a 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          style={{ 
+            color: 'var(--link-blue)', 
+            fontSize: '0.85rem', 
+            fontWeight: 600, 
+            textDecoration: 'underline',
+            maxWidth: '65%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {value}
+        </a>
+      ) : (
+        <span style={{ color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600, maxWidth: '65%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {value}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   const [app, setApp] = useState(null);
@@ -108,6 +140,26 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
     }
   };
 
+  const getHrefUrl = (rawUrl) => {
+    if (!rawUrl) return '';
+    if (!/^https?:\/\//i.test(rawUrl)) {
+      return `https://${rawUrl}`;
+    }
+    return rawUrl;
+  };
+
+  const formatMetadataDate = (timestamp) => {
+    if (!timestamp) return 'Unrecorded';
+    return new Date(timestamp).toLocaleString(undefined, {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   return (
     <div className="content-container animate-fade-in">
       <div className="detail-container">
@@ -138,62 +190,50 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
           </div>
         </div>
 
-        {/* Card 1: Header Info & Dropdown Status */}
-        <div className="card-base detail-header-card">
-          <div className="detail-header-row">
-            <div className="detail-title-group">
-              <h2 className="detail-company">{app.companyName}</h2>
-              <span className="detail-role">{app.role}</span>
-            </div>
-            
-            <span
-              className="detail-status-badge"
-              style={{ 
-                color: getStatusColor(app.status),
-                borderColor: getStatusColor(app.status),
-                backgroundColor: `${getStatusColor(app.status)}10` // 10% alpha tint
-              }}
-            >
-              {app.status}
-            </span>
+        {/* Card 1: Detail Header Card */}
+        <div className="card-base detail-header-card" style={{ padding: '16px', display: 'flex', alignItems: 'center' }}>
+          <div 
+            style={{ 
+              width: '60px', 
+              height: '60px', 
+              borderRadius: '12px', 
+              backgroundColor: 'rgba(47, 58, 74, 0.08)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+          >
+            <WorkIcon style={{ width: '28px', height: '28px', color: 'var(--brand-primary)' }} />
           </div>
 
-          <div className="metadata-grid">
-            <div className="metadata-item">
-              <span className="metadata-label">Date Tracked</span>
-              <span className="metadata-value">
-                <CalendarIcon style={{ width: '16px', height: '16px' }} />
-                <span>{new Date(app.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          <div style={{ marginLeft: '16px', flex: 1, minWidth: 0 }}>
+            <h2 
+              style={{ 
+                margin: 0, 
+                fontSize: '1.25rem', 
+                fontWeight: 800, 
+                color: 'var(--brand-primary)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {app.role || "Position unassigned"}
+            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '60%' }}>
+                {app.companyName || "Unknown Company"}
               </span>
-            </div>
-            <div className="metadata-item">
-              <span className="metadata-label">Platform Source</span>
-              <span className="metadata-value">
-                <LinkIcon style={{ width: '16px', height: '16px' }} />
-                <span>{app.platform || 'Direct'}</span>
-              </span>
-            </div>
-            <div className="metadata-item">
-              <span className="metadata-label">Job Post URL</span>
-              <span className="metadata-value">
-                {app.url ? (
-                  <a href={app.url} target="_blank" rel="noopener noreferrer">Visit Website</a>
-                ) : (
-                  <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>None provided</span>
-                )}
-              </span>
-            </div>
-            <div className="metadata-item">
-              <span className="metadata-label">Contact Email</span>
-              <span className="metadata-value">
-                {app.email ? (
-                  <a href={`mailto:${app.email}`}>
-                    <EmailIcon style={{ width: '14px', height: '14px', marginRight: '4px', display: 'inline' }} />
-                    Email
-                  </a>
-                ) : (
-                  <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>None provided</span>
-                )}
+              <span
+                className="detail-status-badge"
+                style={{ 
+                  color: getStatusColor(app.status),
+                  borderColor: getStatusColor(app.status),
+                  backgroundColor: `${getStatusColor(app.status)}10` // 10% alpha tint
+                }}
+              >
+                {app.status}
               </span>
             </div>
           </div>
@@ -249,7 +289,31 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
               )}
         </div>
 
-        {/* Card 4: Documents & Attachments */}
+        {/* Card 4: Platform Details Card */}
+        <div className="card-base platform-details-card" style={{ padding: '24px' }}>
+          <h3 className="section-title" style={{ marginBottom: '12px' }}>Platform Details</h3>
+          <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '12px' }}></div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <InfoRow label="Platform" value={app.platform || "Unrecorded (Direct)"} />
+            <InfoRow 
+              label="URL" 
+              value={app.url ? app.url : "Not specified"} 
+              isLink={!!app.url} 
+              href={app.url ? getHrefUrl(app.url) : undefined} 
+            />
+            {app.email && (
+              <InfoRow 
+                label="Contact Email" 
+                value={app.email} 
+                isLink={true} 
+                href={`mailto:${app.email}`} 
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Card 5: Documents & Attachments */}
         {((app.resume) || (app.coverLetter) || (app.additionalDocument) || (app.screenshots && app.screenshots.length > 0)) && (
           <div className="card-base" style={{ padding: '24px' }}>
             <h3 className="section-title" style={{ marginBottom: '16px' }}>Documents & Attachments</h3>
@@ -361,8 +425,12 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
         <div className="card-base timeline-card">
           <h3 className="section-title">Status History Timeline</h3>
           <div className="timeline-list">
-            {app.statusHistory && app.statusHistory.length > 0 ? (
-              app.statusHistory.map((history, idx) => (
+            {(() => {
+              const historyEntries = app.statusHistory && app.statusHistory.length > 0
+                ? app.statusHistory
+                : [{ status: app.status, timestamp: app.createdAt }];
+              
+              return [...historyEntries].reverse().map((history, idx) => (
                 <div key={idx} className="timeline-item">
                   <div className="timeline-node" style={{ borderColor: getStatusColor(history.status) }}></div>
                   <div className="timeline-content">
@@ -378,16 +446,19 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
                     </span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="timeline-item">
-                <div className="timeline-node" style={{ borderColor: 'var(--warning-amber)' }}></div>
-                <div className="timeline-content">
-                  <span className="timeline-status">{app.status}</span>
-                  <span className="timeline-time">{new Date(app.createdAt).toLocaleString()}</span>
-                </div>
-              </div>
-            )}
+              ));
+            })()}
+          </div>
+        </div>
+
+        {/* Card 7: Metadata Card */}
+        <div className="card-base metadata-card" style={{ padding: '24px' }}>
+          <h3 className="section-title" style={{ marginBottom: '12px' }}>Metadata</h3>
+          <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '12px' }}></div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <InfoRow label="Created Time" value={formatMetadataDate(app.createdAt)} />
+            <InfoRow label="Last Updated" value={formatMetadataDate(app.updatedAt || app.createdAt)} />
           </div>
         </div>
 

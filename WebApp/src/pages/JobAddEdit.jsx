@@ -9,7 +9,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
   // Form Fields State
   const [companyName, setCompanyName] = useState('');
   const [role, setRole] = useState('');
-  const [platform, setPlatform] = useState('');
+  const [platformSelect, setPlatformSelect] = useState('LinkedIn');
+  const [customPlatformName, setCustomPlatformName] = useState('');
   const [status, setStatus] = useState('Applied');
   const [createdAt, setCreatedAt] = useState(new Date().toISOString().split('T')[0]);
   const [jobDescription, setJobDescription] = useState('');
@@ -30,7 +31,17 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       if (app) {
         setCompanyName(app.companyName || '');
         setRole(app.role || '');
-        setPlatform(app.platform || '');
+        
+        const plat = app.platform || '';
+        const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
+        if (standardPlatforms.includes(plat)) {
+          setPlatformSelect(plat);
+          setCustomPlatformName('');
+        } else {
+          setPlatformSelect('Other');
+          setCustomPlatformName(plat || 'Direct');
+        }
+
         setStatus(app.status || 'Applied');
         setCreatedAt(new Date(app.createdAt).toISOString().split('T')[0]);
         setJobDescription(app.jobDescription || '');
@@ -87,16 +98,19 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       return;
     }
 
+    const finalPlatform = platformSelect === 'Other' ? customPlatformName.trim() : platformSelect;
+    const finalEmail = platformSelect === 'Email' ? email.trim() : '';
+
     const appData = {
       companyName: companyName.trim(),
       role: role.trim(),
-      platform: platform.trim() || 'Direct',
+      platform: finalPlatform || 'Direct',
       status,
       createdAt: new Date(createdAt).getTime(),
       jobDescription: jobDescription.trim(),
       notes: notes.trim(),
       url: url.trim(),
-      email: email.trim(),
+      email: finalEmail,
       resume,
       coverLetter,
       additionalDocument,
@@ -189,12 +203,28 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
             </div>
           </div>
 
-          {/* Card 2: Platform & Date */}
+          {/* Card 2: Platform & Date Details */}
           <div className="card-base form-card">
             <h3 className="form-card-title">Platform & Date Details</h3>
+            
             <div className="form-grid grid-2">
               <div className="form-group">
-                <label className="form-label">Date Applied / Tracked</label>
+                <label className="form-label">Application Platform</label>
+                <select
+                  value={platformSelect}
+                  onChange={(e) => setPlatformSelect(e.target.value)}
+                  className="form-select"
+                >
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="Indeed">Indeed</option>
+                  <option value="Email">Email</option>
+                  <option value="Website">Website</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Status Date</label>
                 <input 
                   type="date" 
                   value={createdAt}
@@ -202,39 +232,43 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                   className="form-input"
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Platform / Source</label>
+            </div>
+
+            {platformSelect === 'Other' && (
+              <div className="form-group" style={{ marginTop: '16px' }}>
+                <label className="form-label">Platform Name</label>
                 <input 
                   type="text" 
-                  value={platform}
-                  onChange={(e) => setPlatform(e.target.value)}
+                  value={customPlatformName}
+                  onChange={(e) => setCustomPlatformName(e.target.value)}
                   className="form-input"
-                  placeholder="e.g. LinkedIn, Referral, Indeed"
+                  placeholder="e.g. Glassdoor, CareerBuilder"
                 />
               </div>
-            </div>
-            
-            <div className="form-grid grid-2" style={{ marginTop: '16px' }}>
-              <div className="form-group">
-                <label className="form-label">Job Post URL</label>
-                <input 
-                  type="url" 
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="form-input"
-                  placeholder="https://..."
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Contact Email</label>
+            )}
+
+            {platformSelect === 'Email' && (
+              <div className="form-group" style={{ marginTop: '16px' }}>
+                <label className="form-label">Email Address</label>
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="form-input"
-                  placeholder="recruiter@company.com"
+                  placeholder="e.g. recruiter@company.com"
                 />
               </div>
+            )}
+
+            <div className="form-group" style={{ marginTop: '16px' }}>
+              <label className="form-label">URL</label>
+              <input 
+                type="text" 
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="form-input"
+                placeholder="e.g. company.com/careers or posting link"
+              />
             </div>
           </div>
 
