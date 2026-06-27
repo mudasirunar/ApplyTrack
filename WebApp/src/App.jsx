@@ -75,11 +75,14 @@ export default function App() {
   const [filters, setFilters] = useState({
     searchQuery: '',
     statusFilter: 'All',
-    selectedResume: 'All',
-    selectedPlatform: 'All',
-    dateFilterMode: 'All',
-    dateMonth: '',
-    dateYear: ''
+    selectedResume: 'Select---',
+    selectedPlatform: 'LinkedIn',
+    dateFilterMode: 'Month',
+    dateMonth: (new Date().getMonth() + 1).toString(),
+    dateYear: new Date().getFullYear().toString(),
+    dateSpecificDay: new Date().toISOString().split('T')[0],
+    dateStartRange: (() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; })(),
+    dateEndRange: new Date().toISOString().split('T')[0]
   });
 
   const loaderIntervalRef = useRef(null);

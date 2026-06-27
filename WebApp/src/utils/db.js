@@ -38,7 +38,7 @@ const INITIAL_MOCK_APPLICATIONS = [
     uuid: 'uuid-mock-2',
     companyName: 'Meta',
     role: 'Product Engineer',
-    platform: 'Referral',
+    platform: 'Other',
     status: 'Interview',
     jobDescription: 'Collaborate with cross-functional teams to build interactive features for millions of users worldwide.',
     notes: 'Referred by John. System design round scheduled for next Tuesday. Need to study caching and CDN details.',
@@ -60,7 +60,7 @@ const INITIAL_MOCK_APPLICATIONS = [
     uuid: 'uuid-mock-3',
     companyName: 'Netflix',
     role: 'Senior UI Developer',
-    platform: 'Company Website',
+    platform: 'Website',
     status: 'Rejected',
     jobDescription: 'Optimize streaming dashboard performance and build sleek, premium design systems for international users.',
     notes: 'Resume selected, but rejected after the hiring manager round. Feedback: Looking for more low-level video streaming protocol experience.',
@@ -189,13 +189,32 @@ export const db = {
 
   // --- JOB APPLICATIONS CRUD ---
   getApplications() {
-    let apps = localStorage.getItem(KEYS.APPLICATIONS);
-    if (!apps) {
+    let appsStr = localStorage.getItem(KEYS.APPLICATIONS);
+    if (!appsStr) {
       // Pre-populate mock data on first visit
       localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(INITIAL_MOCK_APPLICATIONS));
       return INITIAL_MOCK_APPLICATIONS;
     }
-    return JSON.parse(apps);
+    let apps = JSON.parse(appsStr);
+    
+    // Automatically migrate old platform names to standard ones for consistency
+    let migrated = false;
+    apps = apps.map(a => {
+      if (a.platform === 'Referral') {
+        a.platform = 'Other';
+        migrated = true;
+      }
+      if (a.platform === 'Company Website') {
+        a.platform = 'Website';
+        migrated = true;
+      }
+      return a;
+    });
+    if (migrated) {
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(apps));
+    }
+
+    return apps;
   },
 
   saveApplications(apps) {
@@ -437,11 +456,13 @@ export const db = {
     ].filter(s => s.count > 0);
 
     // 2. Platforms breakdown
+    const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
     const platformMap = {};
     apps.forEach(a => {
       if (a.status === 'Saved') return; // Only count active applications
-      const plat = a.platform || 'Other';
-      platformMap[plat] = (platformMap[plat] || 0) + 1;
+      const plat = a.platform ? a.platform.trim() : '';
+      const matched = standardPlatforms.find(sp => sp.toLowerCase() === plat.toLowerCase()) || 'Other';
+      platformMap[matched] = (platformMap[matched] || 0) + 1;
     });
     const platforms = Object.entries(platformMap)
       .map(([name, count]) => ({ name, count }))
