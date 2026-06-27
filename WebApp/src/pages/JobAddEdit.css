@@ -62,6 +62,17 @@
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3e%3cpath d='M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+  padding-right: 38px;
+}
+
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 3px rgba(47, 58, 74, 0.08);

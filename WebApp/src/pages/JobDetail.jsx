@@ -8,7 +8,9 @@ import {
   FileIcon,
   EditIcon,
   DeleteIcon,
-  WorkIcon
+  WorkIcon,
+  InfoIcon,
+  NotesIcon
 } from '../components/Icons';
 import ImageViewer from '../components/ImageViewer';
 import PDFViewer from '../components/PDFViewer';
@@ -240,29 +242,54 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
         </div>
 
         {/* Card 2: Collapsible Job Description */}
-        {app.jobDescription && (
-          <div className="card-base collapsible-card">
-            <h3 className="section-title">Job Description</h3>
-            <div 
-              ref={descRef}
-              className={`collapsible-content ${isCollapsed ? 'collapsed' : ''}`}
-            >
-              {app.jobDescription}
-            </div>
-            {isDescCollapsible && (
-              <button onClick={() => setIsCollapsed(!isCollapsed)} className="collapsible-toggle-btn">
-                <span>{isCollapsed ? 'Show More' : 'Show Less'}</span>
-                <ChevronIcon direction={isCollapsed ? 'down' : 'up'} style={{ width: '16px', height: '16px' }} />
-              </button>
+        <div className="card-base collapsible-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <InfoIcon style={{ width: '20px', height: '20px', color: 'var(--brand-primary)' }} />
+              <span>Job Description</span>
+            </h3>
+          </div>
+          <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '12px' }}></div>
+          <div 
+            ref={descRef}
+            className={`collapsible-content ${isCollapsed ? 'collapsed' : ''}`}
+          >
+            {app.jobDescription ? (
+              app.jobDescription.trim().toLowerCase().startsWith('http://') || app.jobDescription.trim().toLowerCase().startsWith('https://') ? (
+                <a 
+                  href={app.jobDescription.trim()} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: 'underline', color: 'var(--link-blue)', wordBreak: 'break-all' }}
+                >
+                  {app.jobDescription}
+                </a>
+              ) : (
+                app.jobDescription
+              )
+            ) : (
+              <span style={{ fontStyle: 'italic', color: 'var(--text-secondary)', opacity: 0.8 }}>
+                No job description has been recorded. You can add one by editing this application.
+              </span>
             )}
           </div>
-        )}
+          {isDescCollapsible && app.jobDescription && (
+            <button onClick={() => setIsCollapsed(!isCollapsed)} className="collapsible-toggle-btn">
+              <span>{isCollapsed ? 'Show More' : 'Show Less'}</span>
+              <ChevronIcon direction={isCollapsed ? 'down' : 'up'} style={{ width: '16px', height: '16px' }} />
+            </button>
+          )}
+        </div>
 
         {/* Card 3: Personal Notes */}
         <div className="card-base notes-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h3 className="section-title" style={{ margin: 0 }}>Personal Notes</h3>
+            <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <NotesIcon style={{ width: '20px', height: '20px', color: 'var(--brand-primary)' }} />
+              <span>Personal Notes</span>
+            </h3>
           </div>
+          <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '12px' }}></div>
 
           <div 
             ref={notesRef}
@@ -316,24 +343,54 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
         {/* Card 5: Documents & Attachments */}
         {((app.resume) || (app.coverLetter) || (app.additionalDocument) || (app.screenshots && app.screenshots.length > 0)) && (
           <div className="card-base" style={{ padding: '24px' }}>
-            <h3 className="section-title" style={{ marginBottom: '16px' }}>Documents & Attachments</h3>
+            <h3 className="section-title" style={{ marginBottom: '12px' }}>Documents & Attachments</h3>
+            <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '12px' }}></div>
             <div className="file-upload-slots" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
               {/* Resume */}
               {app.resume && (
                 <div 
                   className="file-slot" 
-                  style={{ cursor: 'pointer' }}
+                  style={{ 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: 'var(--border-radius-sm)',
+                    border: '1px dashed var(--brand-outline)',
+                    backgroundColor: 'var(--bg-surface-variant)',
+                    gap: '12px'
+                  }}
                   onClick={() => handleAttachmentClick(app.resume, 'pdf')}
                 >
-                  <div className="file-slot-info">
-                    <FileIcon />
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Resume / CV</div>
-                      <span className="file-slot-filename" style={{ color: 'var(--link-blue)' }}>{app.resume.originalName}</span>
-                    </div>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Resume / CV</div>
+                    <span style={{ 
+                      fontSize: '0.75rem', 
+                      color: 'var(--brand-primary)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'block',
+                      maxWidth: '100%'
+                    }}>
+                      {app.resume.originalName}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>View PDF</span>
+                  <div 
+                    style={{ 
+                      padding: '6px 12px', 
+                      borderRadius: '8px', 
+                      backgroundColor: 'rgba(47, 58, 74, 0.08)', 
+                      color: 'var(--brand-primary)', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700,
+                      flexShrink: 0
+                    }}
+                  >
+                    View
+                  </div>
                 </div>
               )}
 
@@ -345,17 +402,46 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
               {app.coverLetter && (
                 <div 
                   className="file-slot" 
-                  style={{ cursor: 'pointer' }}
+                  style={{ 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: 'var(--border-radius-sm)',
+                    border: '1px dashed var(--brand-outline)',
+                    backgroundColor: 'var(--bg-surface-variant)',
+                    gap: '12px'
+                  }}
                   onClick={() => handleAttachmentClick(app.coverLetter, 'pdf')}
                 >
-                  <div className="file-slot-info">
-                    <FileIcon />
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Cover Letter</div>
-                      <span className="file-slot-filename" style={{ color: 'var(--link-blue)' }}>{app.coverLetter.originalName}</span>
-                    </div>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Cover Letter</div>
+                    <span style={{ 
+                      fontSize: '0.75rem', 
+                      color: 'var(--brand-primary)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'block',
+                      maxWidth: '100%'
+                    }}>
+                      {app.coverLetter.originalName}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>View PDF</span>
+                  <div 
+                    style={{ 
+                      padding: '6px 12px', 
+                      borderRadius: '8px', 
+                      backgroundColor: 'rgba(47, 58, 74, 0.08)', 
+                      color: 'var(--brand-primary)', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700,
+                      flexShrink: 0
+                    }}
+                  >
+                    View
+                  </div>
                 </div>
               )}
 
@@ -367,17 +453,46 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
               {app.additionalDocument && (
                 <div 
                   className="file-slot" 
-                  style={{ cursor: 'pointer' }}
+                  style={{ 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: 'var(--border-radius-sm)',
+                    border: '1px dashed var(--brand-outline)',
+                    backgroundColor: 'var(--bg-surface-variant)',
+                    gap: '12px'
+                  }}
                   onClick={() => handleAttachmentClick(app.additionalDocument, 'pdf')}
                 >
-                  <div className="file-slot-info">
-                    <FileIcon />
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Additional Document</div>
-                      <span className="file-slot-filename" style={{ color: 'var(--link-blue)' }}>{app.additionalDocument.originalName}</span>
-                    </div>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Additional Document</div>
+                    <span style={{ 
+                      fontSize: '0.75rem', 
+                      color: 'var(--brand-primary)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: 'block',
+                      maxWidth: '100%'
+                    }}>
+                      {app.additionalDocument.originalName}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>View PDF</span>
+                  <div 
+                    style={{ 
+                      padding: '6px 12px', 
+                      borderRadius: '8px', 
+                      backgroundColor: 'rgba(47, 58, 74, 0.08)', 
+                      color: 'var(--brand-primary)', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700,
+                      flexShrink: 0
+                    }}
+                  >
+                    View
+                  </div>
                 </div>
               )}
 
@@ -396,8 +511,8 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
                           setActiveImageIndex(index);
                         }}
                         style={{
-                          width: '80px',
-                          height: '80px',
+                          width: '70px',
+                          height: '70px',
                           borderRadius: '8px',
                           border: '1px solid var(--brand-outline)',
                           overflow: 'hidden',
@@ -423,7 +538,8 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
 
         {/* Card 5: Stepper Timeline */}
         <div className="card-base timeline-card">
-          <h3 className="section-title">Status History Timeline</h3>
+          <h3 className="section-title" style={{ marginBottom: '12px' }}>Status History Timeline</h3>
+          <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '12px' }}></div>
           <div className="timeline-list">
             {(() => {
               const historyEntries = app.statusHistory && app.statusHistory.length > 0

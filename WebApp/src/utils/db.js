@@ -254,20 +254,26 @@ export const db = {
     if (index === -1) return null;
 
     const originalApp = apps[index];
-    let newStatusHistory = [...(originalApp.statusHistory || [])];
+    let oldHistory = originalApp.statusHistory || [];
+    let newHistory = [];
 
-    // If status changed, record it in history
-    if (updatedData.status && updatedData.status !== originalApp.status) {
-      newStatusHistory.push({
-        status: updatedData.status,
-        timestamp: Date.now()
-      });
+    const timeApplied = updatedData.createdAt || Date.now();
+
+    if (originalApp.status !== updatedData.status) {
+      newHistory = [...oldHistory, { status: updatedData.status, timestamp: timeApplied }];
+    } else {
+      if (oldHistory.length > 0) {
+        const updatedLast = { ...oldHistory[oldHistory.length - 1], timestamp: timeApplied };
+        newHistory = [...oldHistory.slice(0, -1), updatedLast];
+      } else {
+        newHistory = [{ status: updatedData.status, timestamp: timeApplied }];
+      }
     }
 
     const updatedApp = {
       ...originalApp,
       ...updatedData,
-      statusHistory: newStatusHistory,
+      statusHistory: newHistory,
       updatedAt: Date.now()
     };
 

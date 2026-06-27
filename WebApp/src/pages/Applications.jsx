@@ -32,10 +32,10 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
   // Sorting options
   const SORT_OPTIONS = {
-    STATUS_LATEST: 'Status Date: Latest first',
-    STATUS_OLDEST: 'Status Date: Oldest first',
-    CREATION_LATEST: 'Creation Date: Latest first',
-    CREATION_OLDEST: 'Creation Date: Oldest first'
+    STATUS_LATEST: 'Latest Status',
+    STATUS_OLDEST: 'Oldest Status',
+    CREATION_LATEST: 'Latest Added',
+    CREATION_OLDEST: 'Oldest Added'
   };
   const [sortOption, setSortOption] = useState('STATUS_LATEST');
 
@@ -546,7 +546,7 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
       {/* SORTING INFO ROW */}
       <div className="sort-info-row">
         <span className="sort-info-text">
-          Showing {filteredApps.length} of {applications.length} applications
+          Showing {filteredApps.length} of {applications.length}
         </span>
         <div style={{ position: 'relative' }}>
           <button onClick={() => setShowSortMenu(!showSortMenu)} className="sort-trigger-btn">

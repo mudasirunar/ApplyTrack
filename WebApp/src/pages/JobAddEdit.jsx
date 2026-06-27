@@ -56,30 +56,74 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
     }
   }, [jobId, isEditMode]);
 
+  const compressImage = (file, callback) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1000;
+        const MAX_HEIGHT = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        callback(compressedDataUrl);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFileUpload = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const attachment = {
-        fileName: Math.random().toString(36).substring(2, 11) + '_' + file.name,
-        originalName: file.name,
-        dataUrl: event.target.result // Base64 Data URL
-      };
-
-      if (type === 'resume') setResume(attachment);
-      if (type === 'coverLetter') setCoverLetter(attachment);
-      if (type === 'additionalDocument') setAdditionalDocument(attachment);
-      if (type === 'screenshot') {
-        if (screenshots.length >= 3) {
-          alert('You can upload a maximum of 3 screenshots/images.');
-          return;
-        }
-        setScreenshots(prev => [...prev, attachment]);
+    if (type === 'screenshot') {
+      if (screenshots.length >= 3) {
+        alert('You can upload a maximum of 3 screenshots/images.');
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+      compressImage(file, (compressedDataUrl) => {
+        const attachment = {
+          fileName: Math.random().toString(36).substring(2, 11) + '_' + file.name.replace(/\.[^/.]+$/, "") + ".jpg",
+          originalName: file.name.replace(/\.[^/.]+$/, "") + ".jpg",
+          dataUrl: compressedDataUrl
+        };
+        setScreenshots(prev => [...prev, attachment]);
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const attachment = {
+          fileName: Math.random().toString(36).substring(2, 11) + '_' + file.name,
+          originalName: file.name,
+          dataUrl: event.target.result // Base64 Data URL
+        };
+
+        if (type === 'resume') setResume(attachment);
+        if (type === 'coverLetter') setCoverLetter(attachment);
+        if (type === 'additionalDocument') setAdditionalDocument(attachment);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDeleteAttachment = (type, index = null) => {
@@ -117,21 +161,20 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       screenshots
     };
 
-    if (isEditMode) {
-      db.updateApplication(jobId, appData);
-      window.dispatchEvent(new CustomEvent('applytrack_toast', {
-        detail: { message: `Successfully updated ${companyName}` }
-      }));
-      // Navigate to previous view
-      setActiveTab(editSource || 'job-detail');
-    } else {
-      const newApp = db.addApplication(appData);
-      window.dispatchEvent(new CustomEvent('applytrack_toast', {
-        detail: { message: `Successfully added ${companyName}` }
-      }));
-      // Reset selected job and go to Applications
-      setSelectedJobId(null);
-      setActiveTab('applications');
+    try {
+      if (isEditMode) {
+        db.updateApplication(jobId, appData);
+        // Navigate to previous view
+        setActiveTab(editSource || 'job-detail');
+      } else {
+        const newApp = db.addApplication(appData);
+        // Reset selected job and go to Applications
+        setSelectedJobId(null);
+        setActiveTab('applications');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save application. The files you attached might be too large for browser LocalStorage. Please try using smaller files or screenshots.');
     }
   };
 
@@ -162,44 +205,27 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           {/* Card 1: Job Details */}
           <div className="card-base form-card">
             <h3 className="form-card-title">Job Details</h3>
-            <div className="form-grid grid-2">
-              <div className="form-group">
-                <label className="form-label">Company Name *</label>
-                <input 
-                  type="text" 
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="form-input"
-                  placeholder="e.g. Google"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Role / Position *</label>
-                <input 
-                  type="text" 
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="form-input"
-                  placeholder="e.g. Frontend Engineer"
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label className="form-label">Role / Position *</label>
+              <input 
+                type="text" 
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="form-input"
+                placeholder="e.g. Senior Frontend Engineer"
+                required
+              />
             </div>
-            
             <div className="form-group" style={{ marginTop: '16px' }}>
-              <label className="form-label">Application Status</label>
-              <select 
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="form-select"
-              >
-                <option value="Applied">Applied</option>
-                <option value="Interview">Interview</option>
-                <option value="Offer">Offer</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Saved">Saved</option>
-              </select>
+              <label className="form-label">Company Name *</label>
+              <input 
+                type="text" 
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="form-input"
+                placeholder="e.g. Acme Corp"
+                required
+              />
             </div>
           </div>
 
@@ -207,31 +233,19 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           <div className="card-base form-card">
             <h3 className="form-card-title">Platform & Date Details</h3>
             
-            <div className="form-grid grid-2">
-              <div className="form-group">
-                <label className="form-label">Application Platform</label>
-                <select
-                  value={platformSelect}
-                  onChange={(e) => setPlatformSelect(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="LinkedIn">LinkedIn</option>
-                  <option value="Indeed">Indeed</option>
-                  <option value="Email">Email</option>
-                  <option value="Website">Website</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Status Date</label>
-                <input 
-                  type="date" 
-                  value={createdAt}
-                  onChange={(e) => setCreatedAt(e.target.value)}
-                  className="form-input"
-                />
-              </div>
+            <div className="form-group">
+              <label className="form-label">Application Platform</label>
+              <select
+                value={platformSelect}
+                onChange={(e) => setPlatformSelect(e.target.value)}
+                className="form-select"
+              >
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Indeed">Indeed</option>
+                <option value="Email">Email</option>
+                <option value="Website">Website</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             {platformSelect === 'Other' && (
@@ -270,18 +284,43 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                 placeholder="e.g. company.com/careers or posting link"
               />
             </div>
+
+            <div className="form-group" style={{ marginTop: '16px' }}>
+              <label className="form-label">Current Status</label>
+              <select 
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="form-select"
+              >
+                <option value="Applied">Applied</option>
+                <option value="Interview">Interview</option>
+                <option value="Offer">Offer</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Saved">Saved</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginTop: '16px' }}>
+              <label className="form-label">Status Date</label>
+              <input 
+                type="date" 
+                value={createdAt}
+                onChange={(e) => setCreatedAt(e.target.value)}
+                className="form-input"
+              />
+            </div>
           </div>
 
           {/* Card 3: Notes & Description */}
           <div className="card-base form-card">
             <h3 className="form-card-title">Description & Notes</h3>
             <div className="form-group">
-              <label className="form-label">Job Description</label>
+              <label className="form-label">Job Description / Posting Link</label>
               <textarea 
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 className="form-textarea"
-                placeholder="Paste the job description details here..."
+                placeholder="Paste the job description or link here..."
               />
             </div>
             
@@ -291,7 +330,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="form-textarea"
-                placeholder="Record interview notes, salary info, prep plans, etc..."
+                placeholder="Any thoughts, recruiter names, or specific things to remember..."
               />
             </div>
           </div>
@@ -302,24 +341,24 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
             <div className="file-upload-slots" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
               {/* Resume slot */}
-              <div className="file-slot">
-                <div className="file-slot-info">
+              <div className="file-slot" style={{ gap: '12px', minWidth: 0 }}>
+                <div className="file-slot-info" style={{ flex: 1, minWidth: 0 }}>
                   <FileIcon />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Resume / CV</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>Resume / CV</div>
                     {resume ? (
-                      <span className="file-slot-filename">{resume.originalName}</span>
+                      <span className="file-slot-filename" style={{ display: 'block', maxWidth: '100%' }}>{resume.originalName}</span>
                     ) : (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>No file attached</span>
                     )}
                   </div>
                 </div>
                 {resume ? (
-                  <button type="button" onClick={() => handleDeleteAttachment('resume')} className="file-delete-btn" title="Delete attachment">
+                  <button type="button" onClick={() => handleDeleteAttachment('resume')} className="file-delete-btn" title="Delete attachment" style={{ flexShrink: 0 }}>
                     <DeleteIcon />
                   </button>
                 ) : (
-                  <label className="file-upload-btn">
+                  <label className="file-upload-btn" style={{ flexShrink: 0 }}>
                     Upload
                     <input 
                       type="file" 
@@ -334,24 +373,24 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
               <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%' }}></div>
 
               {/* Cover Letter slot */}
-              <div className="file-slot">
-                <div className="file-slot-info">
+              <div className="file-slot" style={{ gap: '12px', minWidth: 0 }}>
+                <div className="file-slot-info" style={{ flex: 1, minWidth: 0 }}>
                   <FileIcon />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Cover Letter</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>Cover Letter</div>
                     {coverLetter ? (
-                      <span className="file-slot-filename">{coverLetter.originalName}</span>
+                      <span className="file-slot-filename" style={{ display: 'block', maxWidth: '100%' }}>{coverLetter.originalName}</span>
                     ) : (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>No file attached</span>
                     )}
                   </div>
                 </div>
                 {coverLetter ? (
-                  <button type="button" onClick={() => handleDeleteAttachment('coverLetter')} className="file-delete-btn" title="Delete attachment">
+                  <button type="button" onClick={() => handleDeleteAttachment('coverLetter')} className="file-delete-btn" title="Delete attachment" style={{ flexShrink: 0 }}>
                     <DeleteIcon />
                   </button>
                 ) : (
-                  <label className="file-upload-btn">
+                  <label className="file-upload-btn" style={{ flexShrink: 0 }}>
                     Upload
                     <input 
                       type="file" 
@@ -366,24 +405,24 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
               <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%' }}></div>
 
               {/* Additional Document slot */}
-              <div className="file-slot">
-                <div className="file-slot-info">
+              <div className="file-slot" style={{ gap: '12px', minWidth: 0 }}>
+                <div className="file-slot-info" style={{ flex: 1, minWidth: 0 }}>
                   <FileIcon />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Additional Document</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>Additional Document</div>
                     {additionalDocument ? (
-                      <span className="file-slot-filename">{additionalDocument.originalName}</span>
+                      <span className="file-slot-filename" style={{ display: 'block', maxWidth: '100%' }}>{additionalDocument.originalName}</span>
                     ) : (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>No file attached</span>
                     )}
                   </div>
                 </div>
                 {additionalDocument ? (
-                  <button type="button" onClick={() => handleDeleteAttachment('additionalDocument')} className="file-delete-btn" title="Delete attachment">
+                  <button type="button" onClick={() => handleDeleteAttachment('additionalDocument')} className="file-delete-btn" title="Delete attachment" style={{ flexShrink: 0 }}>
                     <DeleteIcon />
                   </button>
                 ) : (
-                  <label className="file-upload-btn">
+                  <label className="file-upload-btn" style={{ flexShrink: 0 }}>
                     Upload
                     <input 
                       type="file" 
@@ -408,8 +447,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                       key={index}
                       style={{
                         position: 'relative',
-                        width: '80px',
-                        height: '80px',
+                        width: '70px',
+                        height: '70px',
                         borderRadius: '8px',
                         border: '1px solid var(--brand-outline)',
                         overflow: 'hidden'
@@ -449,8 +488,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                   {screenshots.length < 3 && (
                     <label 
                       style={{
-                        width: '80px',
-                        height: '80px',
+                        width: '70px',
+                        height: '70px',
                         borderRadius: '8px',
                         border: '1px dashed var(--brand-primary)',
                         backgroundColor: 'var(--bg-surface-variant)',
@@ -461,13 +500,13 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                         gap: '4px',
                         cursor: 'pointer',
                         color: 'var(--brand-primary)',
-                        fontSize: '0.65rem',
+                        fontSize: '0.62rem',
                         fontWeight: 700,
                         textAlign: 'center',
                         padding: '4px'
                       }}
                     >
-                      <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>+</span>
+                      <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span>
                       <span>Add ({screenshots.length}/3)</span>
                       <input 
                         type="file" 

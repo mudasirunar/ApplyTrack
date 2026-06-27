@@ -152,3 +152,15 @@ export const WorkIcon = (props) => (
     <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
   </svg>
 );
+
+export const InfoIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+  </svg>
+);
+
+export const NotesIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M3 18h12v-2H3v2zM3 6v2h18V6H3zm0 7h18v-2H3v2z" />
+  </svg>
+);
