@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { 
   SearchIcon, 
@@ -768,8 +769,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
     </div>
 
     {/* Date Filtering Info Dialog Modal */}
-    {showDateInfoModal && (
-      <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '10vh', zIndex: 2000 }} onClick={() => setShowDateInfoModal(false)}>
+    {showDateInfoModal && createPortal(
+      <div className="modal-overlay" style={{ zIndex: 2000 }} onClick={() => setShowDateInfoModal(false)}>
         <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
           <h3 className="modal-title" style={{ margin: 0 }}>How Date Filtering Works</h3>
           <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '4px 0' }}></div>
@@ -791,7 +792,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
 
     {/* FLOATING ACTION BUTTON (FAB) */}

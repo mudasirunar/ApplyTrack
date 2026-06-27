@@ -215,3 +215,43 @@ button, input, textarea, select {
   z-index: 99999;
   pointer-events: none;
 }
+
+/* Global Dialog Overlay and Modal Content Cards (centered vertically and horizontally) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center; /* Vertical center alignment */
+  justify-content: center; /* Horizontal center alignment */
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.modal-content-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+  animation: scaleInGlobalModal 0.2s ease-out;
+}
+
+@keyframes scaleInGlobalModal {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
