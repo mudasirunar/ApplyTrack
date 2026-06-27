@@ -16,6 +16,40 @@ import {
 } from '../components/Icons';
 import './Applications.css';
 
+function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title" style={{ margin: 0, color: isDestructive ? 'var(--error-red)' : 'var(--brand-primary)' }}>
+          {title}
+        </h3>
+        <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '8px 0' }}></div>
+        <p className="modal-text" style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-primary)', margin: '12px 0 20px' }}>
+          {message}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button onClick={onCancel} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+            Cancel
+          </button>
+          <button 
+            onClick={onConfirm} 
+            className="btn-primary" 
+            style={{ 
+              padding: '8px 16px', 
+              fontSize: '0.85rem', 
+              backgroundColor: isDestructive ? 'var(--error-red)' : undefined,
+              borderColor: isDestructive ? 'var(--error-red)' : undefined,
+              color: '#FFFFFF'
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Applications({ filters, setFilters, setActiveTab, setSelectedJobId }) {
   const [applications, setApplications] = useState(db.getApplications());
   const [analytics, setAnalytics] = useState(db.getAnalytics());
@@ -27,6 +61,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showDateInfoModal, setShowDateInfoModal] = useState(false);
+  const [appToDelete, setAppToDelete] = useState(null);
+  const [appsToDeleteList, setAppsToDeleteList] = useState([]);
 
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef(null);
@@ -226,43 +262,50 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
   const handleDeleteSingle = (e, app) => {
     e.stopPropagation();
-    if (window.confirm(`Delete job application for ${app.companyName}?`)) {
-      db.deleteApplication(app.id);
-      
-      // Trigger toast with undo
-      window.dispatchEvent(new CustomEvent('applytrack_toast', {
-        detail: {
-          message: `'${app.role || 'Application'}' deleted`,
-          action: 'Undo',
-          onAction: () => {
-            db.undoDelete();
-            window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored application' } }));
-          }
+    setAppToDelete(app);
+  };
+
+  const handleConfirmDeleteSingle = (app) => {
+    db.deleteApplication(app.id);
+    setAppToDelete(null);
+    
+    // Trigger toast with undo
+    window.dispatchEvent(new CustomEvent('applytrack_toast', {
+      detail: {
+        message: `'${app.role || 'Application'}' deleted`,
+        action: 'Undo',
+        onAction: () => {
+          db.undoDelete();
+          window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored application' } }));
         }
-      }));
-    }
+      }
+    }));
   };
 
   const handleDeleteSelected = () => {
     if (selectedIds.length === 0) return;
+    const appsList = applications.filter(a => selectedIds.includes(a.id));
+    setAppsToDeleteList(appsList);
+  };
 
-    if (window.confirm(`Delete ${selectedIds.length} selected applications?`)) {
-      const count = selectedIds.length;
-      db.deleteMultipleApplications(selectedIds);
-      handleExitSelectionMode();
+  const handleConfirmDeleteList = (appsList) => {
+    const ids = appsList.map(a => a.id);
+    const count = ids.length;
+    db.deleteMultipleApplications(ids);
+    setAppsToDeleteList([]);
+    handleExitSelectionMode();
 
-      // Trigger toast with undo
-      window.dispatchEvent(new CustomEvent('applytrack_toast', {
-        detail: {
-          message: `${count} applications deleted`,
-          action: 'Undo',
-          onAction: () => {
-            db.undoDelete();
-            window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored applications' } }));
-          }
+    // Trigger toast with undo
+    window.dispatchEvent(new CustomEvent('applytrack_toast', {
+      detail: {
+        message: `${count} applications deleted`,
+        action: 'Undo',
+        onAction: () => {
+          db.undoDelete();
+          window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored applications' } }));
         }
-      }));
-    }
+      }
+    }));
   };
 
   const handleJobCardClick = (app) => {
@@ -793,6 +836,36 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
           </div>
         </div>
       </div>,
+      document.body
+    )}
+
+    {/* Delete Single Application Modal */}
+    {appToDelete && createPortal(
+      <ConfirmationModal 
+        title="Delete Application"
+        message="Are you sure you want to delete this job application?"
+        confirmLabel="Delete"
+        isDestructive={true}
+        onConfirm={() => handleConfirmDeleteSingle(appToDelete)}
+        onCancel={() => setAppToDelete(null)}
+      />,
+      document.body
+    )}
+
+    {/* Delete Multiple Applications Modal */}
+    {appsToDeleteList.length > 0 && createPortal(
+      <ConfirmationModal 
+        title="Delete Applications"
+        message={
+          appsToDeleteList.length === 1 
+            ? "Are you sure you want to delete this job application?" 
+            : `Are you sure you want to delete these ${appsToDeleteList.length} job applications?`
+        }
+        confirmLabel="Delete"
+        isDestructive={true}
+        onConfirm={() => handleConfirmDeleteList(appsToDeleteList)}
+        onCancel={() => setAppsToDeleteList([])}
+      />,
       document.body
     )}
 

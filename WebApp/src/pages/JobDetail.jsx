@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { 
   ChevronIcon, 
@@ -15,6 +16,40 @@ import {
 import ImageViewer from '../components/ImageViewer';
 import PDFViewer from '../components/PDFViewer';
 import './JobDetail.css';
+
+function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title" style={{ margin: 0, color: isDestructive ? 'var(--error-red)' : 'var(--brand-primary)' }}>
+          {title}
+        </h3>
+        <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '8px 0' }}></div>
+        <p className="modal-text" style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-primary)', margin: '12px 0 20px' }}>
+          {message}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button onClick={onCancel} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+            Cancel
+          </button>
+          <button 
+            onClick={onConfirm} 
+            className="btn-primary" 
+            style={{ 
+              padding: '8px 16px', 
+              fontSize: '0.85rem', 
+              backgroundColor: isDestructive ? 'var(--error-red)' : undefined,
+              borderColor: isDestructive ? 'var(--error-red)' : undefined,
+              color: '#FFFFFF'
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function InfoRow({ label, value, isLink, href }) {
   return (
@@ -63,6 +98,7 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   // Attachments overlay states
   const [activeImageIndex, setActiveImageIndex] = useState(null);
   const [activePdfFile, setActivePdfFile] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Load app data
   useEffect(() => {
@@ -102,26 +138,28 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   }
 
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete this application for ${app.companyName}?`)) {
-      db.deleteApplication(app.id);
-      
-      // Navigate away
-      setActiveTab('applications');
-      setSelectedJobId(null);
+    setShowDeleteModal(true);
+  };
 
-      // Trigger undo toast
-      window.dispatchEvent(new CustomEvent('applytrack_toast', {
-        detail: {
-          message: `'${app.role || 'Application'}' deleted`,
-          action: 'Undo',
-          onAction: () => {
-            db.undoDelete();
-            // Try to reload
-            window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored application' } }));
-          }
+  const handleConfirmDelete = () => {
+    db.deleteApplication(app.id);
+    setShowDeleteModal(false);
+    
+    // Navigate away
+    setActiveTab('applications');
+    setSelectedJobId(null);
+
+    // Trigger undo toast
+    window.dispatchEvent(new CustomEvent('applytrack_toast', {
+      detail: {
+        message: `'${app.role || 'Application'}' deleted`,
+        action: 'Undo',
+        onAction: () => {
+          db.undoDelete();
+          window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored application' } }));
         }
-      }));
-    }
+      }
+    }));
   };
 
   const handleAttachmentClick = (file, type) => {
@@ -590,6 +628,17 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
       )}
       {activePdfFile && (
         <PDFViewer file={activePdfFile} onClose={() => setActivePdfFile(null)} />
+      )}
+      {showDeleteModal && createPortal(
+        <ConfirmationModal
+          title="Delete Application"
+          message="Are you sure you want to delete this job application?"
+          confirmLabel="Delete"
+          isDestructive={true}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setShowDeleteModal(false)}
+        />,
+        document.body
       )}
     </div>
   );

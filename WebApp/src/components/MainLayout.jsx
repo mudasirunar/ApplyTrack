@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { 
   AppIcon, 
@@ -9,10 +10,45 @@ import {
 } from './Icons';
 import './MainLayout.css';
 
+function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title" style={{ margin: 0, color: isDestructive ? 'var(--error-red)' : 'var(--brand-primary)' }}>
+          {title}
+        </h3>
+        <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '8px 0' }}></div>
+        <p className="modal-text" style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-primary)', margin: '12px 0 20px' }}>
+          {message}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button onClick={onCancel} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+            Cancel
+          </button>
+          <button 
+            onClick={onConfirm} 
+            className="btn-primary" 
+            style={{ 
+              padding: '8px 16px', 
+              fontSize: '0.85rem', 
+              backgroundColor: isDestructive ? 'var(--error-red)' : undefined,
+              borderColor: isDestructive ? 'var(--error-red)' : undefined,
+              color: '#FFFFFF'
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MainLayout({ activeTab, setActiveTab, children }) {
   const [user, setUser] = useState(db.getCurrentUser());
   const [toast, setToast] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const handleAuthChange = () => {
@@ -40,9 +76,12 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
   }, []);
 
   const handleLogout = () => {
-    if (window.confirm('Are you sure you want to sign out?')) {
-      db.logout();
-    }
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    db.logout();
+    setShowLogoutModal(false);
   };
 
   const handleToastAction = () => {
@@ -171,6 +210,17 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
             )}
           </div>
         </div>
+      )}
+      {showLogoutModal && createPortal(
+        <ConfirmationModal
+          title="Sign Out"
+          message="Are you sure you want to sign out of your Google account?"
+          confirmLabel="Sign Out"
+          isDestructive={true}
+          onConfirm={handleConfirmLogout}
+          onCancel={() => setShowLogoutModal(false)}
+        />,
+        document.body
       )}
     </div>
   );
