@@ -65,6 +65,7 @@ export default function App() {
   const [user, setUser] = useState(initialUser);
   const [activeTab, setActiveTabState] = useState(initialTab);
   const [selectedJobId, setSelectedJobIdState] = useState(initialJobId);
+  const [editSource, setEditSource] = useState('applications');
   
   // Ref to bypass React state-batching delays in synchronous navigation clicks
   const selectedJobIdRef = useRef(initialJobId);
@@ -115,6 +116,12 @@ export default function App() {
   // Custom setActiveTab wrapper to push URL path to browser history
   const setActiveTab = (tab) => {
     const jobId = selectedJobIdRef.current;
+    
+    if (tab === 'edit-job') {
+      if (activeTab === 'applications' || activeTab === 'job-detail') {
+        setEditSource(activeTab);
+      }
+    }
     
     let path = '/dashboard';
     if (tab === 'login') path = '/login';
@@ -271,6 +278,7 @@ export default function App() {
             jobId={selectedJobId} 
             setActiveTab={setActiveTab} 
             setSelectedJobId={setSelectedJobId} 
+            editSource={editSource}
           />
         );
       case 'settings':

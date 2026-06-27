@@ -18,13 +18,16 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   
   // Description collapse state
   const [isCollapsed, setIsCollapsed] = useState(true);
-  
-  // Inline Notes editor state
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [editedNotes, setEditedNotes] = useState('');
+  const [isDescCollapsible, setIsDescCollapsible] = useState(false);
+  const descRef = React.useRef(null);
+
+  // Notes collapse state
+  const [isNotesCollapsed, setIsNotesCollapsed] = useState(true);
+  const [isNotesCollapsible, setIsNotesCollapsible] = useState(false);
+  const notesRef = React.useRef(null);
 
   // Attachments overlay states
-  const [activeImageFile, setActiveImageFile] = useState(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(null);
   const [activePdfFile, setActivePdfFile] = useState(null);
 
   // Load app data
@@ -33,10 +36,25 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
       const data = db.getApplicationById(jobId);
       if (data) {
         setApp(data);
-        setEditedNotes(data.notes || '');
       }
     }
   }, [jobId]);
+
+  // Check if job description overflows 3 lines
+  useEffect(() => {
+    if (descRef.current && app?.jobDescription && isCollapsed) {
+      const hasOverflow = descRef.current.scrollHeight > descRef.current.clientHeight;
+      setIsDescCollapsible(hasOverflow);
+    }
+  }, [app?.jobDescription, isCollapsed]);
+
+  // Check if personal notes overflow 3 lines
+  useEffect(() => {
+    if (notesRef.current && app?.notes && isNotesCollapsed) {
+      const hasOverflow = notesRef.current.scrollHeight > notesRef.current.clientHeight;
+      setIsNotesCollapsible(hasOverflow);
+    }
+  }, [app?.notes, isNotesCollapsed]);
 
   if (!app) {
     return (
@@ -48,33 +66,6 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
       </div>
     );
   }
-
-  const handleStatusChange = (e) => {
-    const nextStatus = e.target.value;
-    const updated = db.updateApplication(app.id, { status: nextStatus });
-    if (updated) {
-      setApp(updated);
-      window.dispatchEvent(new CustomEvent('applytrack_toast', {
-        detail: { message: `Status updated to ${nextStatus}` }
-      }));
-    }
-  };
-
-  const handleSaveNotes = () => {
-    const updated = db.updateApplication(app.id, { notes: editedNotes.trim() });
-    if (updated) {
-      setApp(updated);
-      setIsEditingNotes(false);
-      window.dispatchEvent(new CustomEvent('applytrack_toast', {
-        detail: { message: 'Personal notes updated successfully' }
-      }));
-    }
-  };
-
-  const handleCancelNotesEdit = () => {
-    setEditedNotes(app.notes || '');
-    setIsEditingNotes(false);
-  };
 
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete this application for ${app.companyName}?`)) {
@@ -100,9 +91,7 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   };
 
   const handleAttachmentClick = (file, type) => {
-    if (type === 'image') {
-      setActiveImageFile(file);
-    } else if (type === 'pdf') {
+    if (type === 'pdf') {
       setActivePdfFile(file);
     }
   };
@@ -157,22 +146,16 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
               <span className="detail-role">{app.role}</span>
             </div>
             
-            <select
-              value={app.status}
-              onChange={handleStatusChange}
-              className="detail-status-select"
+            <span
+              className="detail-status-badge"
               style={{ 
                 color: getStatusColor(app.status),
                 borderColor: getStatusColor(app.status),
                 backgroundColor: `${getStatusColor(app.status)}10` // 10% alpha tint
               }}
             >
-              <option value="Applied">Applied</option>
-              <option value="Interview">Interview</option>
-              <option value="Offer">Offer</option>
-              <option value="Rejected">Rejected</option>
-              <option value="Saved">Saved</option>
-            </select>
+              {app.status}
+            </span>
           </div>
 
           <div className="metadata-grid">
@@ -220,69 +203,57 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
         {app.jobDescription && (
           <div className="card-base collapsible-card">
             <h3 className="section-title">Job Description</h3>
-            <div className={`collapsible-content ${isCollapsed ? 'collapsed' : ''}`}>
+            <div 
+              ref={descRef}
+              className={`collapsible-content ${isCollapsed ? 'collapsed' : ''}`}
+            >
               {app.jobDescription}
             </div>
-            <button onClick={() => setIsCollapsed(!isCollapsed)} className="collapsible-toggle-btn">
-              <span>{isCollapsed ? 'Show More' : 'Show Less'}</span>
-              <ChevronIcon direction={isCollapsed ? 'down' : 'up'} style={{ width: '16px', height: '16px' }} />
-            </button>
-          </div>
-        )}
-
-        {/* Card 3: Inline Editable Personal Notes */}
-        <div className="card-base notes-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h3 className="section-title" style={{ margin: 0 }}>Personal Notes</h3>
-            {!isEditingNotes && (
-              <button 
-                onClick={() => setIsEditingNotes(true)} 
-                className="job-card-action-btn" 
-                title="Edit notes"
-                style={{ padding: '4px' }}
-              >
-                <EditIcon style={{ width: '16px', height: '16px' }} />
+            {isDescCollapsible && (
+              <button onClick={() => setIsCollapsed(!isCollapsed)} className="collapsible-toggle-btn">
+                <span>{isCollapsed ? 'Show More' : 'Show Less'}</span>
+                <ChevronIcon direction={isCollapsed ? 'down' : 'up'} style={{ width: '16px', height: '16px' }} />
               </button>
             )}
           </div>
+        )}
 
-          {isEditingNotes ? (
-            <div className="animate-fade-in">
-              <textarea
-                value={editedNotes}
-                onChange={(e) => setEditedNotes(e.target.value)}
-                className="form-textarea"
-                style={{ width: '100%', minHeight: '120px' }}
-                placeholder="Write interview notes, preparation plans, or key details..."
-              />
-              <div className="notes-editor-actions">
-                <button onClick={handleCancelNotesEdit} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-                  Cancel
+        {/* Card 3: Personal Notes */}
+        <div className="card-base notes-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 className="section-title" style={{ margin: 0 }}>Personal Notes</h3>
+          </div>
+
+          <div 
+            ref={notesRef}
+            className={`notes-display-area ${isNotesCollapsed ? 'collapsed' : ''}`}
+            style={{ cursor: 'default' }}
+          >
+            {app.notes ? (
+              app.notes
+            ) : (
+              <span className="notes-placeholder" style={{ fontStyle: 'italic' }}>
+                No personal notes have been recorded. You can add notes by editing this application.
+              </span>
+            )}
+          </div>
+              {isNotesCollapsible && app.notes && (
+                <button 
+                  onClick={() => setIsNotesCollapsed(!isNotesCollapsed)} 
+                  className="collapsible-toggle-btn"
+                  style={{ padding: '4px 8px', marginTop: '4px' }}
+                >
+                  <span>{isNotesCollapsed ? 'Show More' : 'Show Less'}</span>
+                  <ChevronIcon direction={isNotesCollapsed ? 'down' : 'up'} style={{ width: '16px', height: '16px' }} />
                 </button>
-                <button onClick={handleSaveNotes} className="btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-                  Save Notes
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div 
-              className="notes-display-area"
-              onClick={() => setIsEditingNotes(true)}
-            >
-              {app.notes ? (
-                app.notes
-              ) : (
-                <span className="notes-placeholder">Click here to add personal notes, preparation strategies, or salary range details...</span>
               )}
-            </div>
-          )}
         </div>
 
-        {/* Card 4: Attachments */}
-        {((app.resume) || (app.coverLetter) || (app.screenshots && app.screenshots.length > 0)) && (
+        {/* Card 4: Documents & Attachments */}
+        {((app.resume) || (app.coverLetter) || (app.additionalDocument) || (app.screenshots && app.screenshots.length > 0)) && (
           <div className="card-base" style={{ padding: '24px' }}>
-            <h3 className="section-title">Attachments & Documents</h3>
-            <div className="file-upload-slots">
+            <h3 className="section-title" style={{ marginBottom: '16px' }}>Documents & Attachments</h3>
+            <div className="file-upload-slots" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
               {/* Resume */}
               {app.resume && (
@@ -294,12 +265,16 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
                   <div className="file-slot-info">
                     <FileIcon />
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Resume</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Resume / CV</div>
                       <span className="file-slot-filename" style={{ color: 'var(--link-blue)' }}>{app.resume.originalName}</span>
                     </div>
                   </div>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>View PDF</span>
                 </div>
+              )}
+
+              {app.resume && ((app.coverLetter) || (app.additionalDocument)) && (
+                <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%' }}></div>
               )}
 
               {/* Cover Letter */}
@@ -320,24 +295,63 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
                 </div>
               )}
 
-              {/* Screenshots list */}
-              {app.screenshots && app.screenshots.map((shot, idx) => (
+              {app.coverLetter && app.additionalDocument && (
+                <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%' }}></div>
+              )}
+
+              {/* Additional Document */}
+              {app.additionalDocument && (
                 <div 
-                  key={idx}
                   className="file-slot" 
                   style={{ cursor: 'pointer' }}
-                  onClick={() => handleAttachmentClick(shot, 'image')}
+                  onClick={() => handleAttachmentClick(app.additionalDocument, 'pdf')}
                 >
                   <div className="file-slot-info">
                     <FileIcon />
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Screenshot {idx + 1}</div>
-                      <span className="file-slot-filename" style={{ color: 'var(--link-blue)' }}>{shot.originalName}</span>
+                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Additional Document</div>
+                      <span className="file-slot-filename" style={{ color: 'var(--link-blue)' }}>{app.additionalDocument.originalName}</span>
                     </div>
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>View Image</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>View PDF</span>
                 </div>
-              ))}
+              )}
+
+              {/* Screenshots list in Android-style grid */}
+              {app.screenshots && app.screenshots.length > 0 && (
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '8px' }}></div>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Screenshots / Additional Images
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {app.screenshots.map((shot, index) => (
+                      <div 
+                        key={index}
+                        onClick={() => {
+                          setActiveImageIndex(index);
+                        }}
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--brand-outline)',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          transition: 'transform var(--transition-fast)'
+                        }}
+                        className="screenshot-thumbnail-hover"
+                      >
+                        <img 
+                          src={shot.url || shot.dataUrl} 
+                          alt={`Screenshot ${index + 1}`} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>
@@ -380,8 +394,12 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
       </div>
 
       {/* OVERLAY VIEWERS */}
-      {activeImageFile && (
-        <ImageViewer file={activeImageFile} onClose={() => setActiveImageFile(null)} />
+      {activeImageIndex !== null && app.screenshots && (
+        <ImageViewer 
+          files={app.screenshots} 
+          initialIndex={activeImageIndex} 
+          onClose={() => setActiveImageIndex(null)} 
+        />
       )}
       {activePdfFile && (
         <PDFViewer file={activePdfFile} onClose={() => setActivePdfFile(null)} />

@@ -72,7 +72,7 @@ export const CloseIcon = (props) => (
   </svg>
 );
 
-export const ChevronIcon = ({ direction = 'down', ...props }) => {
+export const ChevronIcon = ({ direction = 'down', style, ...props }) => {
   const rotation = {
     down: 'rotate(0deg)',
     up: 'rotate(180deg)',
@@ -81,7 +81,12 @@ export const ChevronIcon = ({ direction = 'down', ...props }) => {
   }[direction];
 
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" style={{ transform: rotation, transition: 'transform 0.2s' }} {...props}>
+    <svg 
+      viewBox="0 0 24 24" 
+      fill="currentColor" 
+      style={{ transform: rotation, transition: 'transform 0.2s', ...style }} 
+      {...props}
+    >
       <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
     </svg>
   );

@@ -35,16 +35,14 @@
   margin-top: 2px;
 }
 
-.detail-status-select {
-  padding: 6px 12px;
+.detail-status-badge {
+  padding: 6px 14px;
   border-radius: var(--border-radius-full);
   font-size: 0.8rem;
   font-weight: 800;
   text-transform: uppercase;
-  cursor: pointer;
-  outline: none;
-  background-color: var(--bg-surface-variant);
   border: 1px solid currentColor;
+  display: inline-block;
 }
 
 .metadata-grid {
@@ -113,18 +111,17 @@
 }
 
 .collapsible-content.collapsed {
-  max-height: 120px;
-  position: relative;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.collapsible-content.collapsed::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 48px;
-  background: linear-gradient(transparent, var(--bg-surface));
+.notes-display-area.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .collapsible-toggle-btn {
@@ -151,14 +148,9 @@
   color: var(--text-primary);
   white-space: pre-wrap;
   min-height: 48px;
-  cursor: pointer;
+  cursor: default;
   border-radius: var(--border-radius-sm);
   padding: 8px;
-  transition: background-color var(--transition-fast);
-}
-
-.notes-display-area:hover {
-  background-color: var(--bg-surface-variant);
 }
 
 .notes-placeholder {
@@ -239,4 +231,18 @@
 .timeline-time {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+/* Hover effect on screenshot thumbnails */
+.screenshot-thumbnail-hover {
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.screenshot-thumbnail-hover:hover {
+  transform: scale(1.05);
+  border-color: var(--brand-primary) !important;
+}
+
+.screenshot-thumbnail-hover:active {
+  transform: scale(0.95);
 }

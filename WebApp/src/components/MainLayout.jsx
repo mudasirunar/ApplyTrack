@@ -61,10 +61,13 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
     { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
   ];
 
+  const isEditing = activeTab === 'edit-job' || activeTab === 'add-job';
+
   return (
-    <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isEditing ? 'layout-fullscreen' : ''}`}>
       {/* DESKTOP SIDEBAR */}
-      <aside className="app-sidebar">
+      {!isEditing && (
+        <aside className="app-sidebar">
         <div className="app-sidebar-top">
           <div 
             className="app-sidebar-logo-container"
@@ -131,6 +134,7 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
           </div>
         </div>
       </aside>
+      )}
 
       {/* MAIN BODY */}
       <main className="app-main">
@@ -138,20 +142,22 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      <nav className="app-mobile-nav">
-        {navItems.map(item => (
-          <div
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`mobile-nav-item ${activeTab === item.id ? 'active' : ''}`}
-          >
-            <div className="mobile-nav-icon-container">
-              {item.icon}
+      {!isEditing && (
+        <nav className="app-mobile-nav">
+          {navItems.map(item => (
+            <div
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`mobile-nav-item ${activeTab === item.id ? 'active' : ''}`}
+            >
+              <div className="mobile-nav-icon-container">
+                {item.icon}
+              </div>
+              <span className="mobile-nav-label">{item.label}</span>
             </div>
-            <span className="mobile-nav-label">{item.label}</span>
-          </div>
-        ))}
-      </nav>
+          ))}
+        </nav>
+      )}
 
       {/* GLOBAL TOAST NOTIFICATION */}
       {toast && (

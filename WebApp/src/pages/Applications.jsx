@@ -20,6 +20,7 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
   const [analytics, setAnalytics] = useState(db.getAnalytics());
   const [isFabVisible, setIsFabVisible] = useState(true);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   
   // Selection mode state
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -30,14 +31,12 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
   // Sorting options
   const SORT_OPTIONS = {
-    LATEST: 'Latest Applied Date',
-    OLDEST: 'Oldest Applied Date',
-    COMPANY_ASC: 'Company (A-Z)',
-    COMPANY_DESC: 'Company (Z-A)',
-    ROLE_ASC: 'Role (A-Z)',
-    STATUS: 'Application Status'
+    STATUS_LATEST: 'Status Date: Latest first',
+    STATUS_OLDEST: 'Status Date: Oldest first',
+    CREATION_LATEST: 'Creation Date: Latest first',
+    CREATION_OLDEST: 'Creation Date: Oldest first'
   };
-  const [sortOption, setSortOption] = useState('LATEST');
+  const [sortOption, setSortOption] = useState('STATUS_LATEST');
 
   useEffect(() => {
     const handleDataChange = () => {
@@ -75,8 +74,13 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
       list = list.filter(a => 
         (a.companyName && a.companyName.toLowerCase().includes(query)) ||
         (a.role && a.role.toLowerCase().includes(query)) ||
+        (a.jobDescription && a.jobDescription.toLowerCase().includes(query)) ||
         (a.notes && a.notes.toLowerCase().includes(query)) ||
-        (a.platform && a.platform.toLowerCase().includes(query))
+        (a.resume && a.resume.originalName && a.resume.originalName.toLowerCase().includes(query)) ||
+        (a.coverLetter && a.coverLetter.originalName && a.coverLetter.originalName.toLowerCase().includes(query)) ||
+        (a.additionalDocument && a.additionalDocument.originalName && a.additionalDocument.originalName.toLowerCase().includes(query)) ||
+        (a.url && a.url.toLowerCase().includes(query)) ||
+        (a.email && a.email.toLowerCase().includes(query))
       );
     }
 
@@ -109,24 +113,32 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
     // Sort list
     switch (sortOption) {
-      case 'OLDEST':
+      case 'STATUS_LATEST':
+        list.sort((a, b) => {
+          const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
+          const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
+          return tB - tA;
+        });
+        break;
+      case 'STATUS_OLDEST':
+        list.sort((a, b) => {
+          const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
+          const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
+          return tA - tB;
+        });
+        break;
+      case 'CREATION_LATEST':
+        list.sort((a, b) => b.createdAt - a.createdAt);
+        break;
+      case 'CREATION_OLDEST':
         list.sort((a, b) => a.createdAt - b.createdAt);
         break;
-      case 'COMPANY_ASC':
-        list.sort((a, b) => (a.companyName || '').localeCompare(b.companyName || ''));
-        break;
-      case 'COMPANY_DESC':
-        list.sort((a, b) => (b.companyName || '').localeCompare(a.companyName || ''));
-        break;
-      case 'ROLE_ASC':
-        list.sort((a, b) => (a.role || '').localeCompare(b.role || ''));
-        break;
-      case 'STATUS':
-        list.sort((a, b) => a.status.localeCompare(b.status));
-        break;
-      case 'LATEST':
       default:
-        list.sort((a, b) => b.createdAt - a.createdAt);
+        list.sort((a, b) => {
+          const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
+          const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
+          return tB - tA;
+        });
         break;
     }
 
@@ -142,6 +154,9 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
       ...prev,
       statusFilter: status
     }));
+    if (status === 'All') {
+      setSortOption('STATUS_LATEST');
+    }
   };
 
   const handleToggleSelect = (id) => {
@@ -249,7 +264,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
   });
 
   return (
-    <div className="content-container animate-fade-in" style={{ position: 'relative' }}>
+    <>
+      <div className="content-container animate-fade-in" style={{ position: 'relative' }}>
       
       {/* SELECTION MODE TOP BAR */}
       {isSelectionMode ? (
@@ -276,9 +292,11 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
             <SearchIcon className="search-icon" />
             <input 
               type="text" 
-              placeholder="Search by company, role, platform..." 
+              placeholder="Search..." 
               value={filters.searchQuery}
               onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
               className="search-input"
             />
             {filters.searchQuery && (
@@ -552,19 +570,21 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
         </div>
       )}
 
-      {/* FLOATING ACTION BUTTON (FAB) */}
-      {!isSelectionMode && (
-        <button 
-          onClick={() => {
-            setSelectedJobId(null);
-            setActiveTab('add-job');
-          }} 
-          className={`fab-btn ${isFabVisible ? '' : 'fab-hidden'}`}
-          title="Add Job Application"
-        >
-          <AddIcon />
-        </button>
-      )}
     </div>
-  );
+
+    {/* FLOATING ACTION BUTTON (FAB) */}
+    {!isSelectionMode && (
+      <button 
+        onClick={() => {
+          setSelectedJobId(null);
+          setActiveTab('add-job');
+        }} 
+        className={`fab-btn ${(isFabVisible && !isSearchFocused) ? '' : 'fab-hidden'}`}
+        title="Add Job Application"
+      >
+        <AddIcon />
+      </button>
+    )}
+  </>
+);
 }

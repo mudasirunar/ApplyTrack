@@ -3,7 +3,7 @@ import { db } from '../utils/db';
 import { ChevronIcon, FileIcon, DeleteIcon } from '../components/Icons';
 import './JobAddEdit.css';
 
-export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
+export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, editSource }) {
   const isEditMode = !!jobId;
 
   // Form Fields State
@@ -20,6 +20,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
   // Attachments State
   const [resume, setResume] = useState(null);
   const [coverLetter, setCoverLetter] = useState(null);
+  const [additionalDocument, setAdditionalDocument] = useState(null);
   const [screenshots, setScreenshots] = useState([]); // Array of attachment objects
 
   // Load existing data if in edit mode
@@ -38,6 +39,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
         setEmail(app.email || '');
         setResume(app.resume);
         setCoverLetter(app.coverLetter);
+        setAdditionalDocument(app.additionalDocument || null);
         setScreenshots(app.screenshots || []);
       }
     }
@@ -57,7 +59,12 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
 
       if (type === 'resume') setResume(attachment);
       if (type === 'coverLetter') setCoverLetter(attachment);
+      if (type === 'additionalDocument') setAdditionalDocument(attachment);
       if (type === 'screenshot') {
+        if (screenshots.length >= 3) {
+          alert('You can upload a maximum of 3 screenshots/images.');
+          return;
+        }
         setScreenshots(prev => [...prev, attachment]);
       }
     };
@@ -67,6 +74,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
   const handleDeleteAttachment = (type, index = null) => {
     if (type === 'resume') setResume(null);
     if (type === 'coverLetter') setCoverLetter(null);
+    if (type === 'additionalDocument') setAdditionalDocument(null);
     if (type === 'screenshot' && index !== null) {
       setScreenshots(prev => prev.filter((_, idx) => idx !== index));
     }
@@ -91,6 +99,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
       email: email.trim(),
       resume,
       coverLetter,
+      additionalDocument,
       screenshots
     };
 
@@ -99,8 +108,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
       window.dispatchEvent(new CustomEvent('applytrack_toast', {
         detail: { message: `Successfully updated ${companyName}` }
       }));
-      // Navigate to detail view
-      setActiveTab('job-detail');
+      // Navigate to previous view
+      setActiveTab(editSource || 'job-detail');
     } else {
       const newApp = db.addApplication(appData);
       window.dispatchEvent(new CustomEvent('applytrack_toast', {
@@ -114,7 +123,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
 
   const handleCancel = () => {
     if (isEditMode) {
-      setActiveTab('job-detail');
+      setActiveTab(editSource || 'job-detail');
     } else {
       setActiveTab('applications');
     }
@@ -253,17 +262,17 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
             </div>
           </div>
 
-          {/* Card 4: Attachments */}
+          {/* Card 4: Documents & Attachments */}
           <div className="card-base form-card">
-            <h3 className="form-card-title">Attachments & Files</h3>
-            <div className="file-upload-slots">
+            <h3 className="form-card-title">Documents & Attachments</h3>
+            <div className="file-upload-slots" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
               {/* Resume slot */}
               <div className="file-slot">
                 <div className="file-slot-info">
                   <FileIcon />
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Resume</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Resume / CV</div>
                     {resume ? (
                       <span className="file-slot-filename">{resume.originalName}</span>
                     ) : (
@@ -287,6 +296,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
                   </label>
                 )}
               </div>
+
+              <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%' }}></div>
 
               {/* Cover Letter slot */}
               <div className="file-slot">
@@ -318,43 +329,121 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId }) {
                 )}
               </div>
 
-              {/* Screenshots list */}
-              <div className="file-slot" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div className="file-slot-info">
-                    <FileIcon />
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Screenshots / Images</div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {screenshots.length} file(s) uploaded
-                      </span>
-                    </div>
+              <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%' }}></div>
+
+              {/* Additional Document slot */}
+              <div className="file-slot">
+                <div className="file-slot-info">
+                  <FileIcon />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Additional Document</div>
+                    {additionalDocument ? (
+                      <span className="file-slot-filename">{additionalDocument.originalName}</span>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>No file attached</span>
+                    )}
                   </div>
+                </div>
+                {additionalDocument ? (
+                  <button type="button" onClick={() => handleDeleteAttachment('additionalDocument')} className="file-delete-btn" title="Delete attachment">
+                    <DeleteIcon />
+                  </button>
+                ) : (
                   <label className="file-upload-btn">
-                    Add Screenshot
+                    Upload
                     <input 
                       type="file" 
-                      accept="image/*" 
-                      onChange={(e) => handleFileUpload(e, 'screenshot')}
+                      accept=".pdf,.doc,.docx" 
+                      onChange={(e) => handleFileUpload(e, 'additionalDocument')}
                       style={{ display: 'none' }}
                     />
                   </label>
-                </div>
-
-                {screenshots.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px', borderTop: '1px solid var(--brand-outline)', paddingTop: '8px' }}>
-                    {screenshots.map((shot, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '4px 8px', backgroundColor: 'var(--bg-surface)', borderRadius: '4px', border: '1px solid var(--brand-outline)' }}>
-                        <span style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                          {shot.originalName}
-                        </span>
-                        <button type="button" onClick={() => handleDeleteAttachment('screenshot', idx)} className="file-delete-btn" style={{ padding: '2px' }}>
-                          <DeleteIcon style={{ width: '16px', height: '16px' }} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
                 )}
+              </div>
+
+              <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%' }}></div>
+
+              {/* Screenshots list in Android-style grid */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  Screenshots / Additional Images
+                </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {screenshots.map((shot, index) => (
+                    <div 
+                      key={index}
+                      style={{
+                        position: 'relative',
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--brand-outline)',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <img 
+                        src={shot.url || shot.dataUrl} 
+                        alt="screenshot" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAttachment('screenshot', index)}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          padding: '3px'
+                        }}
+                        title="Delete image"
+                      >
+                        <DeleteIcon style={{ width: '14px', height: '14px', fill: 'currentColor' }} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {screenshots.length < 3 && (
+                    <label 
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '8px',
+                        border: '1px dashed var(--brand-primary)',
+                        backgroundColor: 'var(--bg-surface-variant)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        cursor: 'pointer',
+                        color: 'var(--brand-primary)',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        textAlign: 'center',
+                        padding: '4px'
+                      }}
+                    >
+                      <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>+</span>
+                      <span>Add ({screenshots.length}/3)</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => handleFileUpload(e, 'screenshot')}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
 
             </div>

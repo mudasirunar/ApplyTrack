@@ -114,3 +114,45 @@
   align-items: center;
   gap: 16px;
 }
+
+/* Image viewer navigation buttons */
+.viewer-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: #FFFFFF;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.viewer-nav-btn:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.viewer-nav-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.viewer-nav-btn.prev {
+  left: 16px;
+}
+
+.viewer-nav-btn.next {
+  right: 16px;
+}
+
+.viewer-nav-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
