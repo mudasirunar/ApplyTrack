@@ -3,7 +3,14 @@ import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { LogoutIcon } from '../components/Icons';
 import packageJson from '../../package.json';
+import { exportBackupToZip, checkBackupConflicts, importBackup } from '../utils/backup';
 import './Settings.css';
+
+const DialogOutcome = {
+  SUCCESS: 'SUCCESS',
+  FAILURE: 'FAILURE',
+  INFO: 'INFO'
+};
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
   const modalContent = (
@@ -28,7 +35,7 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
               fontSize: '0.85rem', 
               backgroundColor: isDestructive ? 'var(--error-red)' : undefined,
               borderColor: isDestructive ? 'var(--error-red)' : undefined,
-              color: '#FFFFFF'
+              color: isDestructive ? '#FFFFFF' : 'var(--text-on-primary)'
             }}
           >
             {confirmLabel}
@@ -41,6 +48,116 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
   return createPortal(modalContent, document.body);
 }
 
+function ConflictDialog({ importConflictsCount, onOverwriteClick, onKeepClick, onDismiss }) {
+  const modalContent = (
+    <div className="modal-overlay" onClick={onDismiss}>
+      <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title" style={{ margin: 0, color: 'var(--brand-primary)' }}>
+          Conflict Detected
+        </h3>
+        <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '8px 0' }}></div>
+        <p className="modal-text" style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-primary)', margin: '12px 0 20px' }}>
+          {importConflictsCount === 1
+            ? "1 of your saved applications has different details in the backup. Do you want to update it with the backup version or keep your current version?"
+            : `${importConflictsCount} of your saved applications have different details in the backup. Do you want to update them with the backup version or keep your current version?`}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button onClick={onKeepClick} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+            Keep
+          </button>
+          <button onClick={onOverwriteClick} className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem', color: 'var(--text-on-primary)' }}>
+            Overwrite
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+  return createPortal(modalContent, document.body);
+}
+
+function BackupProgressDialog({ dialogTitle, dialogMessage, isWorking, dialogOutcome, onDismiss }) {
+  const modalContent = (
+    <div className="modal-overlay" onClick={() => { if (!isWorking) onDismiss(); }}>
+      <div className="modal-content-card" style={{ maxWidth: '320px', textAlign: 'center', padding: '24px' }} onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title" style={{ margin: '0 0 12px 0', color: 'var(--text-primary)', fontWeight: 800 }}>
+          {dialogTitle}
+        </h3>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', margin: '20px 0' }}>
+          {isWorking ? (
+            <div className="signin-spinner-container" style={{ width: '48px', height: '48px' }}>
+              <div className="signin-spinner-ring" style={{ borderWidth: '2px' }}></div>
+            </div>
+          ) : (
+            <div>
+              {dialogOutcome === 'SUCCESS' && (
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: '#4CAF50',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '2rem'
+                }}>
+                  ✓
+                </div>
+              )}
+              {dialogOutcome === 'FAILURE' && (
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: '#F44336',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '2rem',
+                  fontWeight: 'bold'
+                }}>
+                  ✕
+                </div>
+              )}
+              {dialogOutcome === 'INFO' && (
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: '#FFC107',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '2rem',
+                  fontWeight: 'bold'
+                }}>
+                  !
+                </div>
+              )}
+            </div>
+          )}
+          
+          <p className="modal-text" style={{ fontSize: '0.85rem', lineHeight: '1.5', color: 'var(--text-secondary)', margin: 0 }}>
+            {dialogMessage}
+          </p>
+        </div>
+
+        {!isWorking && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
+            <button onClick={onDismiss} className="btn-primary" style={{ padding: '8px 32px', fontSize: '0.85rem', color: 'var(--text-on-primary)' }}>
+              OK
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+  return createPortal(modalContent, document.body);
+}
+
 export default function Settings() {
   const [user, setUser] = useState(db.getCurrentUser());
   const [activeTheme, setActiveTheme] = useState(db.getTheme());
@@ -50,6 +167,17 @@ export default function Settings() {
   const [showSignOutModal, setShowSignOutModal] = useState(false);
 
   const appVersion = packageJson.version;
+
+  const [showProgressDialog, setShowProgressDialog] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogMessage, setDialogMessage] = useState('');
+  const [isWorking, setIsWorking] = useState(false);
+  const [dialogOutcome, setDialogOutcome] = useState(DialogOutcome.INFO);
+
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [importConflictsCount, setImportConflictsCount] = useState(0);
+  const [importedApps, setImportedApps] = useState([]);
+  const [unzippedFiles, setUnzippedFiles] = useState(null);
 
   useEffect(() => {
     const handleAuthChange = () => {
@@ -73,25 +201,111 @@ export default function Settings() {
     setActiveTheme(theme);
   };
 
+  const formatImportMessage = (importedCount, updatedCount, ignoredCount) => {
+    if (importedCount > 0 || updatedCount > 0) {
+      const mainParts = [];
+      if (importedCount > 0) {
+        mainParts.push(importedCount === 1 ? "1 new record" : `${importedCount} new records`);
+      }
+      if (updatedCount > 0) {
+        mainParts.push(updatedCount === 1 ? "1 updated record" : `${updatedCount} updated records`);
+      }
+      const importText = "Successfully imported " + mainParts.join(" and ");
+      if (ignoredCount > 0) {
+        const ignoreText = ignoredCount === 1 ? "1 duplicate record was ignored" : `${ignoredCount} duplicate records were ignored`;
+        return `${importText}. ${ignoreText}.`;
+      } else {
+        return `${importText}.`;
+      }
+    } else if (ignoredCount > 0) {
+      const ignoreText = ignoredCount === 1 ? "1 duplicate record was ignored" : `${ignoredCount} duplicate records were ignored`;
+      return `No new records were imported. ${ignoreText}.`;
+    } else {
+      return "All records in the backup file are already up to date. No new records were imported.";
+    }
+  };
+
+  const handleExportBackup = () => {
+    setDialogTitle("Exporting Backup");
+    setDialogMessage("Creating backup file...");
+    setIsWorking(true);
+    setDialogOutcome(DialogOutcome.INFO);
+    setShowProgressDialog(true);
+
+    const apps = db.getApplications();
+    exportBackupToZip(
+      apps,
+      () => {
+        setIsWorking(false);
+        setDialogOutcome(DialogOutcome.SUCCESS);
+        setDialogMessage("Successfully exported records and attachments to backup file!");
+      },
+      (error) => {
+        setIsWorking(false);
+        setDialogOutcome(DialogOutcome.FAILURE);
+        setDialogMessage(`Failed to export backup: ${error}`);
+      }
+    );
+  };
+
   const handleImportClick = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = db.importData(event.target.result);
-      if (result.success) {
-        window.dispatchEvent(new CustomEvent('applytrack_toast', {
-          detail: { message: `Import successful! Restored ${result.count} job applications.` }
-        }));
-      } else {
-        window.dispatchEvent(new CustomEvent('applytrack_toast', {
-          detail: { message: `Import failed: ${result.error}` }
-        }));
-      }
-    };
-    reader.readAsText(file);
+    // Reset target value so identical files can be uploaded consecutively
     e.target.value = '';
+
+    setDialogTitle("Analyzing Backup");
+    setDialogMessage("Scanning for changes...");
+    setIsWorking(true);
+    setDialogOutcome(DialogOutcome.INFO);
+    setShowProgressDialog(true);
+
+    checkBackupConflicts(
+      file,
+      (conflictsCount, apps, unzipped) => {
+        setShowProgressDialog(false);
+        setImportedApps(apps);
+        setUnzippedFiles(unzipped);
+        if (conflictsCount > 0) {
+          setImportConflictsCount(conflictsCount);
+          setShowConflictDialog(true);
+        } else {
+          runImport(apps, unzipped, false);
+        }
+      },
+      (error) => {
+        setIsWorking(false);
+        setDialogOutcome(DialogOutcome.FAILURE);
+        setDialogMessage(`Failed to analyze backup: ${error}`);
+      }
+    );
+  };
+
+  const runImport = (apps, unzipped, overwrite) => {
+    setDialogTitle("Importing Backup");
+    setDialogMessage("Restoring records...");
+    setIsWorking(true);
+    setDialogOutcome(DialogOutcome.INFO);
+    setShowProgressDialog(true);
+
+    importBackup(
+      apps,
+      unzipped,
+      overwrite,
+      (msg) => setDialogMessage(msg),
+      (imported, updated, ignored) => {
+        setIsWorking(false);
+        setDialogOutcome(DialogOutcome.SUCCESS);
+        setDialogMessage(formatImportMessage(imported, updated, ignored));
+        setAppsCount(db.getApplications().length);
+      },
+      (error) => {
+        setIsWorking(false);
+        setDialogOutcome(DialogOutcome.FAILURE);
+        setDialogMessage(`Failed to import backup: ${error}`);
+      }
+    );
   };
 
   return (
@@ -168,7 +382,7 @@ export default function Settings() {
 
           <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
             <button 
-              onClick={() => db.exportData()} 
+              onClick={handleExportBackup} 
               className="btn-secondary" 
               style={{ flex: 1, padding: '10px', fontSize: '0.85rem', fontWeight: 700 }}
               disabled={appsCount === 0}
@@ -186,18 +400,16 @@ export default function Settings() {
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
-                cursor: appsCount === 0 ? 'not-allowed' : 'pointer', 
-                margin: 0,
-                opacity: appsCount === 0 ? 0.5 : 1
+                cursor: 'pointer', 
+                margin: 0
               }}
             >
               <span>Import Backup</span>
               <input 
                 type="file" 
-                accept=".json" 
+                accept=".zip,application/zip" 
                 onChange={handleImportClick} 
                 style={{ display: 'none' }} 
-                disabled={appsCount === 0}
               />
             </label>
           </div>
@@ -219,6 +431,31 @@ export default function Settings() {
             </button>
           </div>
         </div>
+
+        {showConflictDialog && (
+          <ConflictDialog 
+            importConflictsCount={importConflictsCount}
+            onOverwriteClick={() => {
+              setShowConflictDialog(false);
+              runImport(importedApps, unzippedFiles, true);
+            }}
+            onKeepClick={() => {
+              setShowConflictDialog(false);
+              runImport(importedApps, unzippedFiles, false);
+            }}
+            onDismiss={() => setShowConflictDialog(false)}
+          />
+        )}
+
+        {showProgressDialog && (
+          <BackupProgressDialog 
+            dialogTitle={dialogTitle}
+            dialogMessage={dialogMessage}
+            isWorking={isWorking}
+            dialogOutcome={dialogOutcome}
+            onDismiss={() => setShowProgressDialog(false)}
+          />
+        )}
 
         {/* 4. About Application Card */}
         <div className="card-base settings-card">
