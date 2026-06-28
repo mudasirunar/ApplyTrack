@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
-import { SunIcon, MoonIcon, DeviceIcon, LogoutIcon } from '../components/Icons';
+import { LogoutIcon } from '../components/Icons';
 import packageJson from '../../package.json';
 import './Settings.css';
 
@@ -100,77 +100,34 @@ export default function Settings() {
         <h2 className="dashboard-greeting" style={{ marginBottom: '8px' }}>Settings</h2>
 
         {/* 1. Account Settings Card */}
-        {user ? (
-          <div className="card-base settings-card">
-            <h3 className="section-title" style={{ fontWeight: 800, color: 'var(--brand-primary)', marginBottom: '12px' }}>Account</h3>
-            <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '16px' }}></div>
-            
-            <div className="profile-settings-content" style={{ marginBottom: '16px' }}>
-              <img 
-                src={user.photoURL} 
-                alt={user.displayName} 
-                className="profile-avatar-large"
-                onError={(e) => {
-                  e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
-                }}
-              />
-              <div className="profile-details-large">
-                <span className="profile-name-large">{user.displayName}</span>
-                <span className="profile-email-large">{user.email}</span>
-              </div>
+        <div className="card-base settings-card">
+          <h3 className="section-title" style={{ fontWeight: 800, color: 'var(--brand-primary)', marginBottom: '12px' }}>Account</h3>
+          <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '16px' }}></div>
+          
+          <div className="profile-settings-content" style={{ marginBottom: '16px' }}>
+            <img 
+              src={user?.photoURL} 
+              alt={user?.displayName} 
+              className="profile-avatar-large"
+              onError={(e) => {
+                e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+              }}
+            />
+            <div className="profile-details-large">
+              <span className="profile-name-large">{user?.displayName}</span>
+              <span className="profile-email-large">{user?.email}</span>
             </div>
-
-            <button 
-              onClick={() => setShowSignOutModal(true)} 
-              className="btn-primary"
-              style={{ width: '100%', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: 'var(--error-red)', borderColor: 'var(--error-red)', color: '#FFFFFF' }}
-            >
-              <LogoutIcon style={{ width: '20px', height: '20px', fill: 'currentColor' }} />
-              <span>Sign Out</span>
-            </button>
           </div>
-        ) : (
-          <div className="card-base settings-card">
-            <h3 className="section-title" style={{ fontWeight: 800, color: 'var(--brand-primary)', marginBottom: '12px' }}>Account</h3>
-            <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '16px' }}></div>
-            
-            <div className="profile-settings-content" style={{ marginBottom: '16px' }}>
-              <div 
-                style={{ 
-                  width: '60px', 
-                  height: '60px', 
-                  borderRadius: '50%', 
-                  backgroundColor: 'rgba(47, 58, 74, 0.08)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '36px', height: '36px', color: 'var(--text-secondary)' }}>
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-4h-2V7h2v2z" />
-                </svg>
-              </div>
-              <div className="profile-details-large">
-                <span className="profile-name-large" style={{ fontSize: '1.05rem' }}>Guest Account</span>
-                <span className="profile-email-large" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                  Log in with Google to back up your data to the cloud.
-                </span>
-              </div>
-            </div>
 
-            <button 
-              onClick={() => {
-                db.loginWithGoogle();
-                setUser(db.getCurrentUser());
-              }} 
-              className="btn-primary"
-              style={{ width: '100%', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#FFFFFF' }}
-            >
-              <span>Link Google Account</span>
-            </button>
-          </div>
-        )}
+          <button 
+            onClick={() => setShowSignOutModal(true)} 
+            className="btn-primary"
+            style={{ width: '100%', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: 'var(--error-red)', borderColor: 'var(--error-red)', color: '#FFFFFF' }}
+          >
+            <LogoutIcon style={{ width: '20px', height: '20px', fill: 'currentColor' }} />
+            <span>Sign Out</span>
+          </button>
+        </div>
 
         {/* 2. Theme Settings Card */}
         <div className="card-base settings-card">
@@ -184,21 +141,18 @@ export default function Settings() {
               onClick={() => handleThemeChange('system')}
               className={`theme-option-btn ${activeTheme === 'system' ? 'active' : ''}`}
             >
-              <DeviceIcon />
               <span>System</span>
             </button>
             <button
               onClick={() => handleThemeChange('light')}
               className={`theme-option-btn ${activeTheme === 'light' ? 'active' : ''}`}
             >
-              <SunIcon />
               <span>Light</span>
             </button>
             <button
               onClick={() => handleThemeChange('dark')}
               className={`theme-option-btn ${activeTheme === 'dark' ? 'active' : ''}`}
             >
-              <MoonIcon />
               <span>Dark</span>
             </button>
           </div>
@@ -298,7 +252,7 @@ export default function Settings() {
           </div>
           
           <p style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-secondary)', margin: 0 }}>
-            ApplyTrack is a streamlined, personal career records tracker designed for quick offline access and optional secure remote updates.
+            ApplyTrack is a web dashboard designed to track job applications, manage resumes, and monitor application metrics.
           </p>
         </div>
 

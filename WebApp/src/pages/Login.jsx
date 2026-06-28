@@ -38,6 +38,7 @@ export default function Login() {
     }, 800);
   };
 
+
   const handleCustomSubmit = (e) => {
     e.preventDefault();
     if (!customName || !customEmail) return;

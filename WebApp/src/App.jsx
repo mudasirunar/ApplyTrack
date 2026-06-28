@@ -85,6 +85,30 @@ export default function App() {
     dateEndRange: new Date().toISOString().split('T')[0]
   });
 
+  // Track user session changes to reset UI state on login/logout/switch transitions
+  const lastUserEmailRef = useRef(initialUser ? initialUser.email : null);
+
+  const resetFilters = () => {
+    setFilters({
+      searchQuery: '',
+      statusFilter: 'All',
+      selectedResume: 'Select---',
+      selectedPlatform: 'LinkedIn',
+      dateFilterMode: 'Month',
+      dateMonth: (new Date().getMonth() + 1).toString(),
+      dateYear: new Date().getFullYear().toString(),
+      dateSpecificDay: new Date().toISOString().split('T')[0],
+      dateStartRange: (() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; })(),
+      dateEndRange: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const resetUIState = () => {
+    resetFilters();
+    setSelectedJobId(null);
+    setEditSource('applications');
+  };
+
   const loaderIntervalRef = useRef(null);
   const loaderTimeoutRef = useRef(null);
 
@@ -149,6 +173,15 @@ export default function App() {
     // 1. Auth Change Listener with protected redirects
     const handleAuth = () => {
       const currentUser = db.getCurrentUser();
+      
+      const prevEmail = lastUserEmailRef.current;
+      const currentEmail = currentUser ? currentUser.email : null;
+
+      if (currentEmail !== prevEmail) {
+        resetUIState();
+        lastUserEmailRef.current = currentEmail;
+      }
+
       setUser(currentUser);
       if (currentUser) {
         const currentPath = window.location.pathname;
@@ -304,7 +337,9 @@ export default function App() {
         />
       )}
       <MainLayout activeTab={user ? activeTab : 'login'} setActiveTab={setActiveTab}>
-        {renderContent()}
+        <div key={user ? user.email : 'none'} style={{ display: 'contents' }}>
+          {renderContent()}
+        </div>
       </MainLayout>
     </>
   );
