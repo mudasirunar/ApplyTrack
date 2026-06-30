@@ -137,24 +137,20 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!companyName.trim() || !role.trim()) {
-      alert('Company Name and Role are required.');
-      return;
-    }
 
     const finalPlatform = platformSelect === 'Other' ? customPlatformName.trim() : platformSelect;
     const finalEmail = platformSelect === 'Email' ? email.trim() : '';
 
     const appData = {
-      companyName: companyName.trim(),
-      role: role.trim(),
+      companyName: companyName.trim() || null,
+      role: role.trim() || null,
       platform: finalPlatform || 'Direct',
       status,
       createdAt: new Date(createdAt).getTime(),
-      jobDescription: jobDescription.trim(),
-      notes: notes.trim(),
-      url: url.trim(),
-      email: finalEmail,
+      jobDescription: jobDescription.trim() || null,
+      notes: notes.trim() || null,
+      url: url.trim() || null,
+      email: finalEmail || null,
       resume,
       coverLetter,
       additionalDocument,
@@ -206,25 +202,23 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           <div className="card-base form-card">
             <h3 className="form-card-title">Job Details</h3>
             <div className="form-group">
-              <label className="form-label">Role / Position *</label>
+              <label className="form-label">Role / Position</label>
               <input 
                 type="text" 
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 className="form-input"
                 placeholder="e.g. Senior Frontend Engineer"
-                required
               />
             </div>
             <div className="form-group" style={{ marginTop: '16px' }}>
-              <label className="form-label">Company Name *</label>
+              <label className="form-label">Company Name</label>
               <input 
                 type="text" 
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 className="form-input"
                 placeholder="e.g. Acme Corp"
-                required
               />
             </div>
           </div>

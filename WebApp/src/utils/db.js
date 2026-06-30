@@ -376,8 +376,8 @@ export const db = {
         return {
           id: item.id || index + 1,
           uuid: item.uuid || 'uuid-' + Math.random().toString(36).substring(2, 11),
-          companyName: item.companyName || 'Unknown Company',
-          role: item.role || 'Unknown Role',
+          companyName: item.companyName || null,
+          role: item.role || null,
           platform: item.platform || 'Direct',
           status: item.status || 'Applied',
           jobDescription: item.jobDescription || '',

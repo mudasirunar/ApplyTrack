@@ -110,8 +110,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
       list = list.filter(a => 
-        (a.companyName && a.companyName.toLowerCase().includes(query)) ||
-        (a.role && a.role.toLowerCase().includes(query)) ||
+        ((a.companyName || 'Unknown Company').toLowerCase().includes(query)) ||
+        ((a.role || 'Position unassigned').toLowerCase().includes(query)) ||
         (a.jobDescription && a.jobDescription.toLowerCase().includes(query)) ||
         (a.notes && a.notes.toLowerCase().includes(query)) ||
         (a.resume && a.resume.originalName && a.resume.originalName.toLowerCase().includes(query)) ||
@@ -674,8 +674,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
                 <div className="job-card-main">
                   <div className="job-card-header">
                     <div>
-                      <h4 className="job-card-company">{app.companyName}</h4>
-                      <span className="job-card-role">{app.role}</span>
+                      <h4 className="job-card-company">{app.companyName || 'Unknown Company'}</h4>
+                      <span className="job-card-role">{app.role || 'Position unassigned'}</span>
                     </div>
                     <span 
                       className="status-badge"
