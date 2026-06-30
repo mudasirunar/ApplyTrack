@@ -456,10 +456,11 @@ export default function Dashboard({ setActiveTab, setFilters }) {
           <span className="status-card-count" style={{ color: 'var(--error-red)' }}>{analytics.rejected}</span>
         </div>
         <div
-          className="status-stat-card card-base"
-          style={{ backgroundColor: 'rgba(var(--brand-primary), 0.05)' }}
+          className="status-stat-card card-base card-interactive"
+          style={{ backgroundColor: 'rgba(47, 58, 74, 0.05)' }}
+          onClick={() => handleNavigateToApps('status', 'Response')}
         >
-          <span className="status-card-header">Response</span>
+          <span className="status-card-header" style={{ color: 'var(--brand-primary)' }}>Response</span>
           <span className="status-card-count" style={{ color: 'var(--brand-primary)' }}>{analytics.responses}</span>
         </div>
       </div>

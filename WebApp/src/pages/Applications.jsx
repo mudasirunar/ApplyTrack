@@ -73,6 +73,7 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef(null);
+  const chipContainerRef = useRef(null);
 
   // Sorting options
   const SORT_OPTIONS = {
@@ -109,6 +110,20 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
     };
   }, []);
 
+  // Auto-scroll the filter chips container to make the active chip visible
+  useEffect(() => {
+    if (chipContainerRef.current) {
+      const activeBtn = chipContainerRef.current.querySelector('.filter-chip.active');
+      if (activeBtn) {
+        activeBtn.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center'
+        });
+      }
+    }
+  }, [filters.statusFilter]);
+
   // Filter application list based on active filters
   const getFilteredApps = () => {
     let list = [...applications];
@@ -132,6 +147,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
     // 2. Status Filter Chip
     if (['Applied', 'Saved', 'Interview', 'Offer', 'Rejected'].includes(filters.statusFilter)) {
       list = list.filter(a => a.status === filters.statusFilter);
+    } else if (filters.statusFilter === 'Response') {
+      list = list.filter(a => ['Interview', 'Offer', 'Rejected'].includes(a.status));
     }
 
     // 3. Sub-filter: Platform
@@ -406,8 +423,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
       {/* FILTER CHIPS (Only in normal mode) */}
       {!isSelectionMode && (
         <>
-          <div className="filter-chips-scroll">
-            {['All', 'Applied', 'Interview', 'Offer', 'Rejected', 'Saved', 'Resume', 'Platform', 'Date'].map(chip => (
+          <div className="filter-chips-scroll" ref={chipContainerRef}>
+            {['All', 'Applied', 'Interview', 'Offer', 'Rejected', 'Saved', 'Response', 'Resume', 'Platform', 'Date'].map(chip => (
               <button
                 key={chip}
                 onClick={() => handleStatusFilterClick(chip)}
@@ -463,26 +480,28 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
             <div className="sub-filter-panel animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               
               {/* Filter Type Chips and Info button */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filter Type:</span>
-                <button 
-                  type="button"
-                  onClick={() => setShowDateInfoModal(true)}
-                  className="job-card-action-btn"
-                  style={{ padding: '2px', color: 'var(--brand-primary)', cursor: 'pointer' }}
-                  title="Date filtering info"
-                >
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                  </svg>
-                </button>
+              <div className="date-filter-type-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filter Type:</span>
+                  <button 
+                    type="button"
+                    onClick={() => setShowDateInfoModal(true)}
+                    className="job-card-action-btn"
+                    style={{ padding: '2px', color: 'var(--brand-primary)', cursor: 'pointer' }}
+                    title="Date filtering info"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                    </svg>
+                  </button>
+                </div>
                 
-                <div style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
+                <div className="date-filter-toggle-scroll">
                   <button
                     type="button"
                     onClick={() => setFilters(prev => ({ ...prev, dateFilterMode: 'Month' }))}
                     className={`filter-chip ${filters.dateFilterMode === 'Month' ? 'active' : ''}`}
-                    style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                   >
                     Month
                   </button>
@@ -490,7 +509,7 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
                     type="button"
                     onClick={() => setFilters(prev => ({ ...prev, dateFilterMode: 'Day' }))}
                     className={`filter-chip ${filters.dateFilterMode === 'Day' ? 'active' : ''}`}
-                    style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                   >
                     Specific Day
                   </button>
@@ -498,7 +517,7 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
                     type="button"
                     onClick={() => setFilters(prev => ({ ...prev, dateFilterMode: 'Range' }))}
                     className={`filter-chip ${filters.dateFilterMode === 'Range' ? 'active' : ''}`}
-                    style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                   >
                     Date Range
                   </button>
@@ -564,24 +583,24 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
               {/* Sub-filter Range inputs */}
               {filters.dateFilterMode === 'Range' && (
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div className="sub-filter-group" style={{ flex: 1 }}>
+                <div className="date-filter-grid">
+                  <div className="sub-filter-group">
                     <span className="sub-filter-label">Start Date</span>
                     <input
                       type="date"
                       className="form-input"
-                      style={{ padding: '6px 10px', fontSize: '0.85rem', width: '100%' }}
+                      style={{ padding: '6px 8px', fontSize: '0.8rem', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                       value={filters.dateStartRange}
                       onChange={(e) => setFilters(prev => ({ ...prev, dateStartRange: e.target.value }))}
                     />
                   </div>
                   
-                  <div className="sub-filter-group" style={{ flex: 1 }}>
+                  <div className="sub-filter-group">
                     <span className="sub-filter-label">End Date</span>
                     <input
                       type="date"
                       className="form-input"
-                      style={{ padding: '6px 10px', fontSize: '0.85rem', width: '100%' }}
+                      style={{ padding: '6px 8px', fontSize: '0.8rem', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                       value={filters.dateEndRange}
                       onChange={(e) => setFilters(prev => ({ ...prev, dateEndRange: e.target.value }))}
                     />

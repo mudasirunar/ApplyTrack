@@ -438,11 +438,12 @@ export const db = {
     // In Android app, responses represents the COUNT of responded applications
     const responses = interviews + offers + rejected;
 
-    // Conversion Rates based on total applications
-    const successRate = total > 0 ? Math.round((offers / total) * 100) : 0;
-    const rejectionRate = total > 0 ? Math.round((rejected / total) * 100) : 0;
-    const interviewRate = total > 0 ? Math.round((interviews / total) * 100) : 0;
-    const responseRate = total > 0 ? Math.round(((interviews + offers + rejected) / total) * 100) : 0;
+    // Conversion Rates based on active (non-saved) applications
+    const activeTotal = total - saved;
+    const successRate = activeTotal > 0 ? Math.round((offers / activeTotal) * 100) : 0;
+    const rejectionRate = activeTotal > 0 ? Math.round((rejected / activeTotal) * 100) : 0;
+    const interviewRate = activeTotal > 0 ? Math.round((interviews / activeTotal) * 100) : 0;
+    const responseRate = activeTotal > 0 ? Math.round(((interviews + offers + rejected) / activeTotal) * 100) : 0;
 
     // Time calculations
     const now = Date.now();

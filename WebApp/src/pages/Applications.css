@@ -113,13 +113,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .sub-filter-label {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-secondary);
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .sub-filter-select {
@@ -141,17 +142,10 @@
   padding-right: 38px;
 }
 
-/* Date filter options */
 .date-filter-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-@media (min-width: 480px) {
-  .date-filter-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
 /* Sort Row */
@@ -487,4 +481,24 @@
   max-width: 320px;
   line-height: 1.5;
   margin-bottom: 8px;
+}
+
+.date-filter-type-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.date-filter-toggle-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  padding: 4px 0;
+  flex: 1;
+}
+
+.date-filter-toggle-scroll::-webkit-scrollbar {
+  display: none; /* Safari/Chrome */
 }
