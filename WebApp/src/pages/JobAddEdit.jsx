@@ -99,6 +99,10 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
     if (!file) return;
 
     if (type === 'screenshot') {
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file only.');
+        return;
+      }
       if (screenshots.length >= 3) {
         alert('You can upload a maximum of 3 screenshots/images.');
         return;
@@ -112,6 +116,10 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
         setScreenshots(prev => [...prev, attachment]);
       });
     } else {
+      if (file.type !== 'application/pdf') {
+        alert('Please upload a PDF document only.');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         const attachment = {
@@ -363,7 +371,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                     Upload
                     <input 
                       type="file" 
-                      accept=".pdf,.doc,.docx" 
+                      accept="application/pdf" 
                       onChange={(e) => handleFileUpload(e, 'resume')}
                       style={{ display: 'none' }}
                     />
@@ -395,7 +403,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                     Upload
                     <input 
                       type="file" 
-                      accept=".pdf,.doc,.docx" 
+                      accept="application/pdf" 
                       onChange={(e) => handleFileUpload(e, 'coverLetter')}
                       style={{ display: 'none' }}
                     />
@@ -427,7 +435,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                     Upload
                     <input 
                       type="file" 
-                      accept=".pdf,.doc,.docx" 
+                      accept="application/pdf" 
                       onChange={(e) => handleFileUpload(e, 'additionalDocument')}
                       style={{ display: 'none' }}
                     />

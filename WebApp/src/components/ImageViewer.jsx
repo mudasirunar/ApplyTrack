@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CloseIcon, ChevronIcon } from './Icons';
 import './ViewerModal.css';
 
 export default function ImageViewer({ files, initialIndex, onClose }) {
   const [activeIndex, setActiveIndex] = useState(initialIndex || 0);
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   if (!files || files.length === 0) return null;
   const file = files[activeIndex];

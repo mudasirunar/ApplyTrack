@@ -599,15 +599,17 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
       </div>
 
       {/* OVERLAY VIEWERS */}
-      {activeImageIndex !== null && app.screenshots && (
+      {activeImageIndex !== null && app.screenshots && createPortal(
         <ImageViewer 
           files={app.screenshots} 
           initialIndex={activeImageIndex} 
           onClose={() => setActiveImageIndex(null)} 
-        />
+        />,
+        document.body
       )}
-      {activePdfFile && (
-        <PDFViewer file={activePdfFile} onClose={() => setActivePdfFile(null)} />
+      {activePdfFile && createPortal(
+        <PDFViewer file={activePdfFile} onClose={() => setActivePdfFile(null)} />,
+        document.body
       )}
       {showDeleteModal && createPortal(
         <ConfirmationModal

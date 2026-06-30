@@ -1,8 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CloseIcon, FileIcon } from './Icons';
 import './ViewerModal.css';
 
 export default function PDFViewer({ file, onClose }) {
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   if (!file) return null;
 
   const pdfUrl = file.url || file.dataUrl;
