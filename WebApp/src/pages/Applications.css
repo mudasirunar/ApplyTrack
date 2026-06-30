@@ -256,6 +256,32 @@
   border: 1px solid currentColor;
 }
 
+.job-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.job-card-divider {
+  border: 0;
+  height: 1px;
+  background-color: var(--brand-outline);
+  margin: 12px 0 8px 0;
+  opacity: 0.4;
+  width: 100%;
+}
+
+.job-card-extra-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 .job-card-details {
   display: flex;
   flex-wrap: wrap;

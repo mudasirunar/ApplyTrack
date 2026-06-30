@@ -16,6 +16,13 @@ import {
 } from '../components/Icons';
 import './Applications.css';
 
+const getFormattedStatusDate = (app) => {
+  const history = app.statusHistory || [];
+  const statusTimestamp = history.length > 0 ? history[history.length - 1].timestamp : app.createdAt;
+  const dateStr = new Date(statusTimestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${app.status} on ${dateStr}`;
+};
+
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -685,47 +692,57 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
                     </span>
                   </div>
 
-                  <div className="job-card-details">
-                    <div className="job-card-detail-item">
-                      <CalendarIcon />
-                      <span>{new Date(app.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <div className="job-card-footer">
+                    <div className="job-card-details">
+                      <div className="job-card-detail-item">
+                        <CalendarIcon />
+                        <span>{getFormattedStatusDate(app)}</span>
+                      </div>
                     </div>
-                    {app.platform && (
-                      <div className="job-card-detail-item">
-                        <LinkIcon />
-                        <span>{app.platform}</span>
-                      </div>
-                    )}
-                    {app.resume && app.resume.originalName && (
-                      <div className="job-card-detail-item">
-                        <FileIcon />
-                        <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {app.resume.originalName}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Normal Mode Quick Actions */}
-                {!isSelectionMode && (
-                  <div className="job-card-actions" style={{ flexDirection: 'column', justifyContent: 'center' }}>
-                    <button 
-                      onClick={(e) => handleEditClick(e, app)} 
-                      className="job-card-action-btn"
-                      title="Edit"
-                    >
-                      <EditIcon />
-                    </button>
-                    <button 
-                      onClick={(e) => handleDeleteSingle(e, app)} 
-                      className="job-card-action-btn delete"
-                      title="Delete"
-                    >
-                      <DeleteIcon />
-                    </button>
+                    {/* Normal Mode Quick Actions */}
+                    {!isSelectionMode && (
+                      <div className="job-card-actions">
+                        <button 
+                          onClick={(e) => handleEditClick(e, app)} 
+                          className="job-card-action-btn"
+                          title="Edit"
+                        >
+                          <EditIcon />
+                        </button>
+                        <button 
+                          onClick={(e) => handleDeleteSingle(e, app)} 
+                          className="job-card-action-btn delete"
+                          title="Delete"
+                        >
+                          <DeleteIcon />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {((app.platform) || (app.resume && app.resume.originalName)) && (
+                    <>
+                      <hr className="job-card-divider" />
+                      <div className="job-card-extra-row">
+                        {app.platform && (
+                          <div className="job-card-detail-item">
+                            <LinkIcon />
+                            <span>Platform: {app.platform}</span>
+                          </div>
+                        )}
+                        {app.resume && app.resume.originalName && (
+                          <div className="job-card-detail-item">
+                            <FileIcon />
+                            <span style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={app.resume.originalName}>
+                              CV: {app.resume.originalName}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}

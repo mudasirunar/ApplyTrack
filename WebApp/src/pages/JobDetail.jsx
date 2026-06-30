@@ -231,51 +231,33 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
         </div>
 
         {/* Card 1: Detail Header Card */}
-        <div className="card-base detail-header-card" style={{ padding: '16px', display: 'flex', alignItems: 'center' }}>
-          <div 
-            style={{ 
-              width: '60px', 
-              height: '60px', 
-              borderRadius: '12px', 
-              backgroundColor: 'rgba(47, 58, 74, 0.08)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              flexShrink: 0
-            }}
-          >
-            <WorkIcon style={{ width: '28px', height: '28px', color: 'var(--brand-primary)' }} />
-          </div>
-
-          <div style={{ marginLeft: '16px', flex: 1, minWidth: 0 }}>
-            <h2 
-              style={{ 
-                margin: 0, 
-                fontSize: '1.25rem', 
-                fontWeight: 800, 
-                color: 'var(--brand-primary)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              {app.role || "Position unassigned"}
-            </h2>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '60%' }}>
+        <div className="card-base detail-header-card">
+          <div className="detail-header-left">
+            <div className="detail-icon-wrapper">
+              <WorkIcon style={{ width: '28px', height: '28px', color: 'var(--brand-primary)' }} />
+            </div>
+            <div className="detail-info-group">
+              <h2 className="detail-role-title">
+                {app.role || "Position unassigned"}
+              </h2>
+              <span className="detail-company-subtitle">
                 {app.companyName || "Unknown Company"}
               </span>
-              <span
-                className="detail-status-badge"
-                style={{ 
-                  color: getStatusColor(app.status),
-                  borderColor: getStatusColor(app.status),
-                  backgroundColor: `${getStatusColor(app.status)}10` // 10% alpha tint
-                }}
-              >
-                {app.status}
-              </span>
             </div>
+          </div>
+
+          <div className="detail-status-section">
+            <span className="detail-status-label">Status</span>
+            <span 
+              className="detail-status-pill"
+              style={{ 
+                color: getStatusColor(app.status),
+                borderColor: getStatusColor(app.status),
+                backgroundColor: `${getStatusColor(app.status)}10` // 10% alpha tint
+              }}
+            >
+              {app.status}
+            </span>
           </div>
         </div>
 
@@ -590,12 +572,10 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
                   <div className="timeline-content">
                     <span className="timeline-status">{history.status}</span>
                     <span className="timeline-time">
-                      {new Date(history.timestamp).toLocaleString(undefined, {
-                        month: 'long',
+                      {new Date(history.timestamp).toLocaleDateString(undefined, {
+                        month: 'short',
                         day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                        year: 'numeric'
                       })}
                     </span>
                   </div>

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { ChevronIcon, FileIcon, DeleteIcon } from '../components/Icons';
 import './JobAddEdit.css';
 
 export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, editSource }) {
   const isEditMode = !!jobId;
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form Fields State
   const [companyName, setCompanyName] = useState('');
@@ -137,6 +139,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isSaving) return;
+    setIsSaving(true);
 
     const finalPlatform = platformSelect === 'Other' ? customPlatformName.trim() : platformSelect;
     const finalEmail = platformSelect === 'Email' ? email.trim() : '';
@@ -157,21 +161,24 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       screenshots
     };
 
-    try {
-      if (isEditMode) {
-        db.updateApplication(jobId, appData);
-        // Navigate to previous view
-        setActiveTab(editSource || 'job-detail');
-      } else {
-        const newApp = db.addApplication(appData);
-        // Reset selected job and go to Applications
-        setSelectedJobId(null);
-        setActiveTab('applications');
+    setTimeout(() => {
+      try {
+        if (isEditMode) {
+          db.updateApplication(jobId, appData);
+          // Navigate to previous view
+          setActiveTab(editSource || 'job-detail');
+        } else {
+          const newApp = db.addApplication(appData);
+          // Reset selected job and go to Applications
+          setSelectedJobId(null);
+          setActiveTab('applications');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Failed to save application. The files you attached might be too large for browser LocalStorage. Please try using smaller files or screenshots.');
+        setIsSaving(false);
       }
-    } catch (err) {
-      console.error(err);
-      alert('Failed to save application. The files you attached might be too large for browser LocalStorage. Please try using smaller files or screenshots.');
-    }
+    }, 600);
   };
 
   const handleCancel = () => {
@@ -196,7 +203,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="form-grid" style={{ gap: '20px' }}>
+        <form id="job-add-edit-form" onSubmit={handleSubmit} className="form-grid" style={{ gap: '20px' }}>
           
           {/* Card 1: Job Details */}
           <div className="card-base form-card">
@@ -516,18 +523,31 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
             </div>
           </div>
 
-          {/* Form Actions */}
-          <div className="form-actions-bar">
-            <button type="button" onClick={handleCancel} className="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary">
-              {isEditMode ? 'Save Changes' : 'Create Application'}
-            </button>
-          </div>
-
         </form>
       </div>
+
+      {createPortal(
+        <div className="form-actions-bar">
+          <div className="form-actions-content">
+            <button 
+              type="submit" 
+              form="job-add-edit-form"
+              className="form-submit-btn"
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <span className="spinner"></span>
+                  <span>{isEditMode ? 'Updating...' : 'Saving...'}</span>
+                </>
+              ) : (
+                <span>{isEditMode ? 'Update Application' : 'Save Application'}</span>
+              )}
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
