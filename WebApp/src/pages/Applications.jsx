@@ -700,8 +700,8 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
                 <div className="job-card-main">
                   <div className="job-card-header">
                     <div>
-                      <h4 className="job-card-company">{app.companyName || 'Unknown Company'}</h4>
-                      <span className="job-card-role">{app.role || 'Position unassigned'}</span>
+                      <h4 className="job-card-role">{app.role || 'Position unassigned'}</h4>
+                      <span className="job-card-company">{app.companyName || 'Unknown Company'}</span>
                     </div>
                     <span 
                       className="status-badge"

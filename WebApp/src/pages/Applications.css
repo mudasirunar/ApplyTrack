@@ -228,17 +228,18 @@
   gap: 12px;
 }
 
-.job-card-company {
+.job-card-role {
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--brand-primary);
 }
 
-.job-card-role {
+.job-card-company {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-secondary);
   margin-top: 2px;
+  display: block;
 }
 
 .status-badge {
