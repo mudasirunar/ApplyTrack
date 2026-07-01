@@ -8,6 +8,21 @@ import JobAddEdit from './pages/JobAddEdit';
 import JobDetail from './pages/JobDetail';
 import Settings from './pages/Settings';
 
+const getLocalDateString = (timestampOrDate = new Date()) => {
+  const date = new Date(timestampOrDate);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getLocalFirstOfMonth = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+};
+
 // Custom Path Parser for Single Page Application URL routing
 const parsePath = (path) => {
   const p = path.replace(/\/$/, '') || '/';
@@ -73,7 +88,6 @@ export default function App() {
   const selectedJobIdRef = useRef(initialJobId);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
-  // Global Applications Filters State
   const [filters, setFilters] = useState({
     searchQuery: '',
     statusFilter: 'All',
@@ -82,9 +96,9 @@ export default function App() {
     dateFilterMode: 'Month',
     dateMonth: (new Date().getMonth() + 1).toString(),
     dateYear: new Date().getFullYear().toString(),
-    dateSpecificDay: new Date().toISOString().split('T')[0],
-    dateStartRange: (() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; })(),
-    dateEndRange: new Date().toISOString().split('T')[0]
+    dateSpecificDay: getLocalDateString(),
+    dateStartRange: getLocalFirstOfMonth(),
+    dateEndRange: getLocalDateString()
   });
 
   // Track user session changes to reset UI state on login/logout/switch transitions
@@ -99,9 +113,9 @@ export default function App() {
       dateFilterMode: 'Month',
       dateMonth: (new Date().getMonth() + 1).toString(),
       dateYear: new Date().getFullYear().toString(),
-      dateSpecificDay: new Date().toISOString().split('T')[0],
-      dateStartRange: (() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; })(),
-      dateEndRange: new Date().toISOString().split('T')[0]
+      dateSpecificDay: getLocalDateString(),
+      dateStartRange: getLocalFirstOfMonth(),
+      dateEndRange: getLocalDateString()
     });
   };
 

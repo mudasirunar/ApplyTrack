@@ -4,6 +4,16 @@ import { db } from '../utils/db';
 import { ChevronIcon, FileIcon, DeleteIcon } from '../components/Icons';
 import './JobAddEdit.css';
 
+const getLocalDateString = (timestampOrDate = new Date()) => {
+  const date = new Date(timestampOrDate);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+
+
 export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, editSource }) {
   const isEditMode = !!jobId;
   const [isSaving, setIsSaving] = useState(false);
@@ -14,7 +24,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
   const [platformSelect, setPlatformSelect] = useState('LinkedIn');
   const [customPlatformName, setCustomPlatformName] = useState('');
   const [status, setStatus] = useState('Applied');
-  const [createdAt, setCreatedAt] = useState(new Date().toISOString().split('T')[0]);
+  const [createdAt, setCreatedAt] = useState(getLocalDateString());
   const [jobDescription, setJobDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [url, setUrl] = useState('');
@@ -25,6 +35,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
   const [coverLetter, setCoverLetter] = useState(null);
   const [additionalDocument, setAdditionalDocument] = useState(null);
   const [screenshots, setScreenshots] = useState([]); // Array of attachment objects
+
+
 
   // Load existing data if in edit mode
   useEffect(() => {
@@ -45,7 +57,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
         }
 
         setStatus(app.status || 'Applied');
-        setCreatedAt(new Date(app.createdAt).toISOString().split('T')[0]);
+        setCreatedAt(getLocalDateString(app.createdAt));
         setJobDescription(app.jobDescription || '');
         setNotes(app.notes || '');
         setUrl(app.url || '');

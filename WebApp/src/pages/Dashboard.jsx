@@ -344,10 +344,14 @@ export default function Dashboard({ setActiveTab, setFilters }) {
       newFilters.statusFilter = 'Resume';
       newFilters.selectedResume = value;
     } else if (filterType === 'month') {
+      const monthMap = {
+        'Jan': '1', 'Feb': '2', 'Mar': '3', 'Apr': '4', 'May': '5', 'Jun': '6',
+        'Jul': '7', 'Aug': '8', 'Sep': '9', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+      };
       newFilters.statusFilter = 'Date';
       newFilters.dateFilterMode = 'Month';
-      newFilters.dateMonth = value.month;
-      newFilters.dateYear = value.year;
+      newFilters.dateMonth = monthMap[value.month] || (new Date().getMonth() + 1).toString();
+      newFilters.dateYear = value.year ? value.year.toString() : new Date().getFullYear().toString();
     }
 
     setFilters(newFilters);

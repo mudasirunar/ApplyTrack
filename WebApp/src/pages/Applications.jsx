@@ -25,6 +25,21 @@ const getFormattedStatusDate = (app) => {
   return `${app.status} on ${dateStr}`;
 };
 
+const getLocalDateString = (timestampOrDate = new Date()) => {
+  const date = new Date(timestampOrDate);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getLocalFirstOfMonth = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+};
+
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -78,6 +93,8 @@ export default function Applications({
   const [showDateInfoModal, setShowDateInfoModal] = useState(false);
   const [appToDelete, setAppToDelete] = useState(null);
   const [appsToDeleteList, setAppsToDeleteList] = useState([]);
+
+
 
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef(null);
@@ -258,9 +275,9 @@ export default function Applications({
         next.dateFilterMode = 'Month';
         next.dateMonth = (new Date().getMonth() + 1).toString();
         next.dateYear = new Date().getFullYear().toString();
-        next.dateSpecificDay = new Date().toISOString().split('T')[0];
-        next.dateStartRange = (() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; })();
-        next.dateEndRange = new Date().toISOString().split('T')[0];
+        next.dateSpecificDay = getLocalDateString();
+        next.dateStartRange = getLocalFirstOfMonth();
+        next.dateEndRange = getLocalDateString();
       }
       return next;
     });
@@ -509,7 +526,12 @@ export default function Applications({
                 <div className="date-filter-toggle-scroll">
                   <button
                     type="button"
-                    onClick={() => setFilters(prev => ({ ...prev, dateFilterMode: 'Month' }))}
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      dateFilterMode: 'Month',
+                      dateMonth: (new Date().getMonth() + 1).toString(),
+                      dateYear: new Date().getFullYear().toString()
+                    }))}
                     className={`filter-chip ${filters.dateFilterMode === 'Month' ? 'active' : ''}`}
                     style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                   >
@@ -517,7 +539,11 @@ export default function Applications({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFilters(prev => ({ ...prev, dateFilterMode: 'Day' }))}
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      dateFilterMode: 'Day',
+                      dateSpecificDay: getLocalDateString()
+                    }))}
                     className={`filter-chip ${filters.dateFilterMode === 'Day' ? 'active' : ''}`}
                     style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                   >
@@ -525,7 +551,12 @@ export default function Applications({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFilters(prev => ({ ...prev, dateFilterMode: 'Range' }))}
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      dateFilterMode: 'Range',
+                      dateStartRange: getLocalFirstOfMonth(),
+                      dateEndRange: getLocalDateString()
+                    }))}
                     className={`filter-chip ${filters.dateFilterMode === 'Range' ? 'active' : ''}`}
                     style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                   >
@@ -599,7 +630,7 @@ export default function Applications({
                     <input
                       type="date"
                       className="form-input"
-                      style={{ padding: '6px 8px', fontSize: '0.8rem', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+                      style={{ padding: '6px 8px', fontSize: '0.85rem', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                       value={filters.dateStartRange}
                       onChange={(e) => setFilters(prev => ({ ...prev, dateStartRange: e.target.value }))}
                     />
@@ -610,7 +641,7 @@ export default function Applications({
                     <input
                       type="date"
                       className="form-input"
-                      style={{ padding: '6px 8px', fontSize: '0.8rem', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+                      style={{ padding: '6px 8px', fontSize: '0.85rem', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                       value={filters.dateEndRange}
                       onChange={(e) => setFilters(prev => ({ ...prev, dateEndRange: e.target.value }))}
                     />
