@@ -12,7 +12,9 @@ import {
   LinkIcon,
   EmailIcon,
   FileIcon,
-  CheckIcon
+  CheckIcon,
+  SelectAllIcon,
+  DeselectAllIcon
 } from '../components/Icons';
 import './Applications.css';
 
@@ -57,16 +59,22 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
   );
 }
 
-export default function Applications({ filters, setFilters, setActiveTab, setSelectedJobId }) {
+export default function Applications({ 
+  filters, 
+  setFilters, 
+  setActiveTab, 
+  setSelectedJobId,
+  isSelectionMode,
+  setIsSelectionMode,
+  selectedIds,
+  setSelectedIds
+}) {
   const [applications, setApplications] = useState(db.getApplications());
   const [analytics, setAnalytics] = useState(db.getAnalytics());
   const [isFabVisible, setIsFabVisible] = useState(true);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
-  // Selection mode state
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [showDateInfoModal, setShowDateInfoModal] = useState(false);
   const [appToDelete, setAppToDelete] = useState(null);
   const [appsToDeleteList, setAppsToDeleteList] = useState([]);
@@ -234,6 +242,7 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
   const filteredApps = getFilteredApps();
   const displayedIds = filteredApps.map(a => a.id);
+  const allSelected = displayedIds.length > 0 && displayedIds.every(id => selectedIds.includes(id));
 
   // Filter actions
   const handleStatusFilterClick = (status) => {
@@ -261,14 +270,20 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
   };
 
   const handleToggleSelect = (id) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+    setSelectedIds(prev => {
+      const isSelected = prev.includes(id);
+      const newSelection = isSelected ? prev.filter(item => item !== id) : [...prev, id];
+      if (newSelection.length === 0) {
+        setIsSelectionMode(false);
+      }
+      return newSelection;
+    });
   };
 
   const handleSelectAllToggle = () => {
-    if (selectedIds.length === displayedIds.length) {
+    if (allSelected) {
       setSelectedIds([]);
+      setIsSelectionMode(false);
     } else {
       setSelectedIds([...displayedIds]);
     }
@@ -381,18 +396,10 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
       {isSelectionMode ? (
         <div className="selection-mode-bar">
           <div className="selection-bar-left">
-            <button onClick={handleExitSelectionMode} className="selection-bar-btn" title="Exit selection">
+            <button onClick={handleExitSelectionMode} className="selection-bar-btn" title="Cancel selection">
               <CloseIcon />
             </button>
-            <span>{selectedIds.length} Selected</span>
-          </div>
-          <div className="selection-bar-actions">
-            <span onClick={handleSelectAllToggle} className="selection-action-text">
-              {selectedIds.length === displayedIds.length ? 'Deselect All' : 'Select All'}
-            </span>
-            <button onClick={handleDeleteSelected} className="selection-bar-btn" title="Delete selected">
-              <DeleteIcon />
-            </button>
+            <span className="selection-bar-title">{selectedIds.length} Selected</span>
           </div>
         </div>
       ) : (
@@ -612,60 +619,60 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
             </div>
           )}
-        </>
-      )}
-
-      {/* SORTING INFO ROW */}
-      <div className="sort-info-row">
-        <span className="sort-info-text">
-          Showing {filteredApps.length} of {applications.length}
-        </span>
-        <div style={{ position: 'relative' }}>
-          <button onClick={() => setShowSortMenu(!showSortMenu)} className="sort-trigger-btn">
-            <span>Sort: {SORT_OPTIONS[sortOption]}</span>
-            <ChevronIcon direction={showSortMenu ? 'up' : 'down'} style={{ width: '14px', height: '14px' }} />
-          </button>
           
-          {showSortMenu && (
-            <div 
-              className="card-base animate-scale-in" 
-              style={{
-                position: 'absolute',
-                top: '26px',
-                right: 0,
-                zIndex: 150,
-                width: '200px',
-                padding: '8px 0',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              {Object.entries(SORT_OPTIONS).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setSortOption(key);
-                    setShowSortMenu(false);
-                  }}
+          {/* SORTING INFO ROW */}
+          <div className="sort-info-row">
+            <span className="sort-info-text">
+              Showing {filteredApps.length} of {applications.length}
+            </span>
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setShowSortMenu(!showSortMenu)} className="sort-trigger-btn">
+                <span>Sort: {SORT_OPTIONS[sortOption]}</span>
+                <ChevronIcon direction={showSortMenu ? 'up' : 'down'} style={{ width: '14px', height: '14px' }} />
+              </button>
+              
+              {showSortMenu && (
+                <div 
+                  className="card-base animate-scale-in" 
                   style={{
-                    padding: '10px 16px',
-                    textAlign: 'left',
-                    background: 'transparent',
-                    border: 'none',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    color: sortOption === key ? 'var(--brand-primary)' : 'var(--text-secondary)',
-                    backgroundColor: sortOption === key ? 'var(--bg-surface-variant)' : 'transparent'
+                    position: 'absolute',
+                    top: '26px',
+                    right: 0,
+                    zIndex: 150,
+                    width: '200px',
+                    padding: '8px 0',
+                    display: 'flex',
+                    flexDirection: 'column'
                   }}
                 >
-                  {label}
-                </button>
-              ))}
+                  {Object.entries(SORT_OPTIONS).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setSortOption(key);
+                        setShowSortMenu(false);
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        textAlign: 'left',
+                        background: 'transparent',
+                        border: 'none',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        color: sortOption === key ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                        backgroundColor: sortOption === key ? 'var(--bg-surface-variant)' : 'transparent'
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {/* APPLICATIONS LIST */}
       {filteredApps.length > 0 ? (
@@ -701,7 +708,7 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
 
                 <div className="job-card-main">
                   <div className="job-card-header">
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <h4 className="job-card-role">{app.role || 'Position unassigned'}</h4>
                       <span className="job-card-company">{app.companyName || 'Unknown Company'}</span>
                     </div>
@@ -753,9 +760,9 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
                           </div>
                         )}
                         {app.resume && app.resume.originalName && (
-                          <div className="job-card-detail-item">
-                            <FileIcon />
-                            <span style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={app.resume.originalName}>
+                          <div className="job-card-detail-item" style={{ flex: 1, minWidth: '120px' }}>
+                            <FileIcon style={{ flexShrink: 0 }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }} title={app.resume.originalName}>
                               CV: {app.resume.originalName}
                             </span>
                           </div>
@@ -919,6 +926,30 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
       >
         <AddIcon />
       </button>
+    )}
+
+    {/* SELECTION BOTTOM BAR */}
+    {isSelectionMode && (
+      <div className="selection-bottom-bar animate-fade-in">
+        <div className="selection-bottom-content">
+          <button 
+            onClick={handleSelectAllToggle} 
+            className="selection-bottom-btn select-all-toggle"
+          >
+            {allSelected ? <DeselectAllIcon /> : <SelectAllIcon />}
+            <span>{allSelected ? 'Deselect All' : 'Select All'}</span>
+          </button>
+          
+          <button 
+            onClick={handleDeleteSelected} 
+            className="selection-bottom-btn delete-btn"
+            disabled={selectedIds.length === 0}
+          >
+            <DeleteIcon />
+            <span>Delete</span>
+          </button>
+        </div>
+      </div>
     )}
   </>
 );

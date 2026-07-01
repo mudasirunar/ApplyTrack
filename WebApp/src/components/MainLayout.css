@@ -403,7 +403,8 @@
 }
 
 /* Fullscreen Layout Overrides for Add/Edit screens */
-.app-layout.layout-fullscreen .app-main {
+.app-layout.layout-fullscreen .app-main,
+.app-layout.layout-selection-mode .app-main {
   margin-left: 0 !important;
   padding-bottom: 40px !important;
 }

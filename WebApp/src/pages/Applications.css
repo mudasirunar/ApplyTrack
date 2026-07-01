@@ -216,6 +216,7 @@
 
 .job-card-main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -232,6 +233,7 @@
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--brand-primary);
+  word-break: break-word;
 }
 
 .job-card-company {
@@ -240,6 +242,7 @@
   color: var(--text-secondary);
   margin-top: 2px;
   display: block;
+  word-break: break-word;
 }
 
 .status-badge {
@@ -249,6 +252,7 @@
   font-weight: 800;
   text-transform: capitalize;
   border: 1px solid currentColor;
+  flex-shrink: 0;
 }
 
 .job-card-footer {
@@ -290,6 +294,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .job-card-detail-item svg {
@@ -388,14 +393,15 @@
   left: 0;
   right: 0;
   height: 64px;
-  background-color: var(--brand-primary);
-  color: var(--text-on-primary);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--brand-outline);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
   z-index: 101;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   margin-top: -24px;
   margin-left: -16px;
   margin-right: -16px;
@@ -432,7 +438,7 @@
 }
 
 .selection-bar-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--bg-surface-variant);
 }
 
 .selection-bar-btn svg {
@@ -441,16 +447,102 @@
   fill: currentColor;
 }
 
-.selection-bar-actions {
+/* SELECTION BOTTOM BAR */
+.selection-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--brand-outline);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 999;
+  animation: slideUp var(--transition-normal) forwards;
 }
 
-.selection-action-text {
+[data-theme='dark'] .selection-bottom-bar {
+  background-color: var(--bg-surface);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.selection-bottom-content {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selection-bottom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--border-radius-sm);
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
+  border: none;
+  background-color: transparent;
+  transition: background-color var(--transition-fast), opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.selection-bottom-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Select All toggle button styling */
+.selection-bottom-btn.select-all-toggle {
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-outline);
+}
+
+.selection-bottom-btn.select-all-toggle:hover {
+  background-color: var(--bg-surface-variant);
+}
+
+.selection-bottom-btn.select-all-toggle:active {
+  transform: translateY(1px);
+}
+
+/* Delete button styling */
+.selection-bottom-btn.delete-btn {
+  background-color: var(--error-red);
+  color: #FFFFFF;
+}
+
+.selection-bottom-btn.delete-btn:hover:not(:disabled) {
+  background-color: #D32F2F;
+}
+
+.selection-bottom-btn.delete-btn:disabled {
+  background-color: var(--error-red);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.selection-bottom-btn.delete-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Extra bottom padding in selection mode to avoid bottom bar overlap */
+.layout-selection-mode .job-cards-list {
+  padding-bottom: 112px !important;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 /* Empty State Styling */

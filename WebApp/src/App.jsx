@@ -66,6 +66,8 @@ export default function App() {
   const [activeTab, setActiveTabState] = useState(initialTab);
   const [selectedJobId, setSelectedJobIdState] = useState(initialJobId);
   const [editSource, setEditSource] = useState('applications');
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
   
   // Ref to bypass React state-batching delays in synchronous navigation clicks
   const selectedJobIdRef = useRef(initialJobId);
@@ -107,6 +109,8 @@ export default function App() {
     resetFilters();
     setSelectedJobId(null);
     setEditSource('applications');
+    setIsSelectionMode(false);
+    setSelectedIds([]);
   };
 
   const loaderIntervalRef = useRef(null);
@@ -165,6 +169,8 @@ export default function App() {
 
     // Reset scroll position so each page starts at the top
     window.scrollTo(0, 0);
+    setIsSelectionMode(false);
+    setSelectedIds([]);
     setActiveTabState(tab);
   };
 
@@ -290,6 +296,10 @@ export default function App() {
             setFilters={setFilters} 
             setActiveTab={setActiveTab} 
             setSelectedJobId={setSelectedJobId} 
+            isSelectionMode={isSelectionMode}
+            setIsSelectionMode={setIsSelectionMode}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
           />
         );
       case 'job-detail':
@@ -336,7 +346,11 @@ export default function App() {
           }}
         />
       )}
-      <MainLayout activeTab={user ? activeTab : 'login'} setActiveTab={setActiveTab}>
+      <MainLayout 
+        activeTab={user ? activeTab : 'login'} 
+        setActiveTab={setActiveTab}
+        isSelectionMode={isSelectionMode}
+      >
         <div key={user ? user.email : 'none'} style={{ display: 'contents' }}>
           {renderContent()}
         </div>

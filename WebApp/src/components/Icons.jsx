@@ -164,3 +164,19 @@ export const NotesIcon = (props) => (
     <path d="M3 18h12v-2H3v2zM3 6v2h18V6H3zm0 7h18v-2H3v2z" />
   </svg>
 );
+
+export const SelectAllIcon = ({ size = 24, ...props }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M3,7V19C3,20.1 3.9,21 5,21H17" />
+    <path d="M9,3H19C20.1,3 21,3.9 21,5V15C21,16.1 20.1,17 19,17H9C7.9,17 7,16.1 7,15V5C7,3.9 7.9,3 9,3Z" />
+    <path d="M11,10L13.5,12.5L18,8" />
+  </svg>
+);
+
+export const DeselectAllIcon = ({ size = 24, ...props }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M3,7V19C3,20.1 3.9,21 5,21H17" />
+    <path d="M9,3H19C20.1,3 21,3.9 21,5V15C21,16.1 20.1,17 19,17H9C7.9,17 7,16.1 7,15V5C7,3.9 7.9,3 9,3Z" />
+    <path d="M12,8L16,12M16,8L12,12" />
+  </svg>
+);

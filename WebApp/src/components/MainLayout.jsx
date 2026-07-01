@@ -44,7 +44,7 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
   );
 }
 
-export default function MainLayout({ activeTab, setActiveTab, children }) {
+export default function MainLayout({ activeTab, setActiveTab, isSelectionMode, children }) {
   const [user, setUser] = useState(db.getCurrentUser());
   const [toast, setToast] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -103,9 +103,9 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
   const isEditing = activeTab === 'edit-job' || activeTab === 'add-job';
 
   return (
-    <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isEditing ? 'layout-fullscreen' : ''}`}>
+    <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isEditing ? 'layout-fullscreen' : ''} ${isSelectionMode ? 'layout-selection-mode' : ''}`}>
       {/* DESKTOP SIDEBAR */}
-      {!isEditing && (
+      {!isEditing && !isSelectionMode && (
         <aside className="app-sidebar">
         <div className="app-sidebar-top">
           <div 
@@ -181,7 +181,7 @@ export default function MainLayout({ activeTab, setActiveTab, children }) {
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      {!isEditing && (
+      {!isEditing && !isSelectionMode && (
         <nav className="app-mobile-nav">
           {navItems.map(item => (
             <div
