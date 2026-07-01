@@ -154,7 +154,7 @@
   transition: padding var(--transition-normal), margin-left var(--transition-normal);
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden; /* Hide horizontal overflow on layout content area to lock viewport and prevent zooming */
+  overflow-x: clip; /* Hide horizontal overflow on layout content area without breaking position: sticky */
 }
 
 @media (min-width: 1025px) {
@@ -403,8 +403,12 @@
 }
 
 /* Fullscreen Layout Overrides for Add/Edit screens */
-.app-layout.layout-fullscreen .app-main,
-.app-layout.layout-selection-mode .app-main {
+.app-layout.layout-fullscreen .app-main {
   margin-left: 0 !important;
   padding-bottom: 40px !important;
+}
+
+.app-layout.layout-selection-mode .app-main {
+  margin-left: 0 !important;
+  padding-bottom: 0 !important;
 }

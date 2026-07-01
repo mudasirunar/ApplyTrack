@@ -392,19 +392,20 @@ export default function Applications({
     <>
       <div className="content-container animate-fade-in" style={{ position: 'relative' }}>
       
-      {/* SELECTION MODE TOP BAR */}
-      {isSelectionMode ? (
-        <div className="selection-mode-bar">
-          <div className="selection-bar-left">
-            <button onClick={handleExitSelectionMode} className="selection-bar-btn" title="Cancel selection">
-              <CloseIcon />
-            </button>
-            <span className="selection-bar-title">{selectedIds.length} Selected</span>
+      <div className={`apps-floating-header ${isSelectionMode ? 'selection-active' : ''}`}>
+        {/* SELECTION MODE TOP BAR */}
+        {isSelectionMode ? (
+          <div className="selection-mode-bar">
+            <div className="selection-bar-left">
+              <button onClick={handleExitSelectionMode} className="selection-bar-btn" title="Cancel selection">
+                <CloseIcon />
+              </button>
+              <span className="selection-bar-title">{selectedIds.length} Selected</span>
+            </div>
           </div>
-        </div>
-      ) : (
-        /* STANDARD SEARCH & HEADER */
-        <div className="apps-header-row">
+        ) : (
+          /* STANDARD SEARCH & HEADER */
+          <div className="apps-header-row">
           <div className="search-bar-container">
             <SearchIcon className="search-icon" />
             <input 
@@ -673,6 +674,7 @@ export default function Applications({
           </div>
         </>
       )}
+      </div>
 
       {/* APPLICATIONS LIST */}
       {filteredApps.length > 0 ? (

@@ -386,33 +386,67 @@
   transform: scale(0.8) translateY(10px);
 }
 
-/* SELECTION MODE TOP BAR */
-.selection-mode-bar {
+/* FLOATING STICKY HEADER */
+.apps-floating-header {
   position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  height: 64px;
-  background-color: var(--bg-surface);
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--brand-outline);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  z-index: 101;
-  box-shadow: var(--shadow-sm);
+  z-index: 100;
+  background-color: var(--bg-primary);
   margin-top: -24px;
   margin-left: -16px;
   margin-right: -16px;
   margin-bottom: 24px;
+  padding-top: 24px;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid transparent;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.apps-floating-header.selection-active {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--brand-outline);
+  box-shadow: var(--shadow-sm);
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (min-width: 768px) {
+  .apps-floating-header {
+    margin-top: -32px;
+    margin-left: -32px;
+    margin-right: -32px;
+    padding-top: 32px;
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-bottom: 16px;
+  }
+
+  .apps-floating-header.selection-active {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* SELECTION MODE TOP BAR */
+.selection-mode-bar {
+  height: 64px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  width: 100%;
 }
 
 @media (min-width: 768px) {
   .selection-mode-bar {
-    margin-top: -32px;
-    margin-left: -32px;
-    margin-right: -32px;
     padding: 0 32px;
   }
 }
@@ -537,7 +571,7 @@
 
 /* Extra bottom padding in selection mode to avoid bottom bar overlap */
 .layout-selection-mode .job-cards-list {
-  padding-bottom: 112px !important;
+  padding-bottom: 96px !important;
 }
 
 @keyframes slideUp {
