@@ -521,9 +521,6 @@ export default function Settings() {
             db.resetDatabase();
             setAppsCount(db.getApplications().length);
             setShowWipeModal(false);
-            window.dispatchEvent(new CustomEvent('applytrack_toast', {
-              detail: { message: 'Database reset to default mock applications successfully.' }
-            }));
           }}
           onCancel={() => setShowWipeModal(false)}
         />

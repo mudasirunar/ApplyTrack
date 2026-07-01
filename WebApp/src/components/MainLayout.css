@@ -329,57 +329,77 @@
 .toast-host {
   position: fixed;
   bottom: 96px; /* Above mobile bottom nav */
-  left: 50%;
-  transform: translateX(-50%);
+  left: 16px;
+  right: 16px;
   z-index: 9999;
   width: auto;
-  min-width: 260px;
-  max-width: calc(100vw - 32px);
   animation: fadeIn var(--transition-normal) forwards;
   box-sizing: border-box;
+  pointer-events: none; /* Allow clicks to pass through the host wrapper */
+}
+
+/* Position adjustment when bottom nav is not present (fullscreen/edit views) */
+.layout-fullscreen .toast-host {
+  bottom: 24px;
 }
 
 @media (min-width: 1025px) {
   .toast-host {
-    bottom: 32px;
-    left: calc(280px + (100% - 280px) / 2);
+    bottom: 24px;
+    right: 24px;
+    left: auto;
+    width: 380px;
   }
 }
 
 .toast-card {
-  background-color: var(--brand-primary);
-  color: var(--text-on-primary);
-  padding: 10px 16px;
+  pointer-events: auto; /* Re-enable pointer events on the card */
+  background-color: #1E293B; /* Slate 800 for high-contrast premium look */
+  color: #F8FAFC; /* Slate 50 */
+  padding: 12px 16px;
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-lg);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .toast-card {
+  background-color: #0F172A; /* Slate 900 for dark mode */
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .toast-message {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
 }
 
 .toast-action-btn {
   background: transparent;
   border: none;
-  color: var(--warning-amber);
+  color: #F59E0B; /* Amber 500 for proper contrast */
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color var(--transition-fast);
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0; /* Prevent the undo button from shrinking or text wrapping */
 }
 
 .toast-action-btn:hover {
-  background-color: rgba(255, 179, 0, 0.12);
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
 }
 
 /* Fullscreen Layout Overrides for Add/Edit screens */

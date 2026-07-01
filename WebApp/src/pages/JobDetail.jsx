@@ -149,14 +149,17 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
     setActiveTab('applications');
     setSelectedJobId(null);
 
+    const jobName = app.companyName 
+      ? `${app.companyName} - ${app.role || 'Position unassigned'}` 
+      : (app.role || 'Application');
+
     // Trigger undo toast
     window.dispatchEvent(new CustomEvent('applytrack_toast', {
       detail: {
-        message: `'${app.role || 'Application'}' deleted`,
+        message: `'${jobName}' deleted`,
         action: 'Undo',
         onAction: () => {
           db.undoDelete();
-          window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored application' } }));
         }
       }
     }));

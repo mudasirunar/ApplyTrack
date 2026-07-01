@@ -293,14 +293,17 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
     db.deleteApplication(app.id);
     setAppToDelete(null);
     
+    const jobName = app.companyName 
+      ? `${app.companyName} - ${app.role || 'Position unassigned'}` 
+      : (app.role || 'Application');
+
     // Trigger toast with undo
     window.dispatchEvent(new CustomEvent('applytrack_toast', {
       detail: {
-        message: `'${app.role || 'Application'}' deleted`,
+        message: `'${jobName}' deleted`,
         action: 'Undo',
         onAction: () => {
           db.undoDelete();
-          window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored application' } }));
         }
       }
     }));
@@ -326,7 +329,6 @@ export default function Applications({ filters, setFilters, setActiveTab, setSel
         action: 'Undo',
         onAction: () => {
           db.undoDelete();
-          window.dispatchEvent(new CustomEvent('applytrack_toast', { detail: { message: 'Restored applications' } }));
         }
       }
     }));
