@@ -12,6 +12,120 @@ const getLocalDateString = (timestampOrDate = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
+const ymdToDmy = (ymd) => {
+  if (!ymd) return '';
+  const parts = ymd.split('-');
+  if (parts.length !== 3) return ymd;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+};
+
+const dmyToYmd = (dmy) => {
+  if (!dmy) return '';
+  const parts = dmy.split('/');
+  if (parts.length !== 3) return '';
+  const [day, month, year] = parts;
+  if (day.length === 2 && month.length === 2 && year.length === 4) {
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+};
+
+function DatePickerField({ value, onChange, placeholder = "dd/mm/yyyy", className = "form-input", style = {} }) {
+  const [tempText, setTempText] = useState('');
+
+  useEffect(() => {
+    if (value) {
+      setTempText(ymdToDmy(value));
+    } else {
+      setTempText('');
+    }
+  }, [value]);
+
+  const handleTextChange = (e) => {
+    let inputVal = e.target.value;
+    
+    // Auto-format dd/mm/yyyy as they type
+    let clean = inputVal.replace(/[^0-9]/g, '');
+    if (clean.length > 8) clean = clean.substring(0, 8);
+    
+    let formatted = '';
+    if (clean.length > 0) {
+      formatted += clean.substring(0, 2);
+    }
+    if (clean.length > 2) {
+      formatted += '/' + clean.substring(2, 4);
+    }
+    if (clean.length > 4) {
+      formatted += '/' + clean.substring(4, 8);
+    }
+    
+    setTempText(formatted);
+
+    const ymd = dmyToYmd(formatted);
+    if (ymd) {
+      onChange(ymd);
+    } else if (formatted === '') {
+      onChange('');
+    }
+  };
+
+  const handleNativeChange = (e) => {
+    const ymd = e.target.value;
+    onChange(ymd);
+  };
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+      <input
+        type="text"
+        placeholder={placeholder}
+        className={className}
+        style={{ ...style, width: '100%', paddingRight: '40px', boxSizing: 'border-box' }}
+        value={tempText}
+        onChange={handleTextChange}
+      />
+      
+      <div 
+        style={{ 
+          position: 'absolute', 
+          right: '12px', 
+          top: '50%', 
+          transform: 'translateY(-50%)', 
+          width: '20px', 
+          height: '20px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          color: 'var(--text-secondary)',
+          pointerEvents: 'none',
+          opacity: 0.7
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+          <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 3h5v5h-5z"/>
+        </svg>
+      </div>
+
+      <input
+        type="date"
+        value={value || ''}
+        onChange={handleNativeChange}
+        style={{
+          position: 'absolute',
+          right: '8px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '28px',
+          height: '28px',
+          opacity: 0,
+          cursor: 'pointer'
+        }}
+      />
+    </div>
+  );
+}
+
 
 
 export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, editSource }) {
@@ -323,10 +437,9 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
 
             <div className="form-group" style={{ marginTop: '16px' }}>
               <label className="form-label">Status Date</label>
-              <input 
-                type="date" 
+              <DatePickerField 
                 value={createdAt}
-                onChange={(e) => setCreatedAt(e.target.value)}
+                onChange={(val) => setCreatedAt(val)}
                 className="form-input"
               />
             </div>
