@@ -154,7 +154,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 4px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .sort-info-text {
@@ -386,7 +386,6 @@
   transform: scale(0.8) translateY(10px);
 }
 
-/* FLOATING STICKY HEADER */
 .apps-floating-header {
   position: sticky;
   top: 0;
@@ -395,11 +394,11 @@
   margin-top: -24px;
   margin-left: -16px;
   margin-right: -16px;
-  margin-bottom: 24px;
+  margin-bottom: 8px;
   padding-top: 24px;
   padding-left: 16px;
   padding-right: 16px;
-  padding-bottom: 12px;
+  padding-bottom: 4px;
   border-bottom: 1px solid transparent;
   transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
@@ -422,7 +421,7 @@
     padding-top: 32px;
     padding-left: 32px;
     padding-right: 32px;
-    padding-bottom: 16px;
+    padding-bottom: 6px;
   }
 
   .apps-floating-header.selection-active {
