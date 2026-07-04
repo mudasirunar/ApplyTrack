@@ -412,3 +412,13 @@
   margin-left: 0 !important;
   padding-bottom: 0 !important;
 }
+
+/* Detail screen layout override (bottom nav hidden on mobile/smaller screens) */
+@media (max-width: 1024px) {
+  .layout-detail-screen .app-main {
+    padding-bottom: 40px !important;
+  }
+  .layout-detail-screen .toast-host {
+    bottom: 24px !important;
+  }
+}

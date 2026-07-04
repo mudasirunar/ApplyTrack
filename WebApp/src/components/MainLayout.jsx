@@ -101,9 +101,10 @@ export default function MainLayout({ activeTab, setActiveTab, isSelectionMode, c
   ];
 
   const isEditing = activeTab === 'edit-job' || activeTab === 'add-job';
+  const isDetailScreen = activeTab === 'job-detail';
 
   return (
-    <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isEditing ? 'layout-fullscreen' : ''} ${isSelectionMode ? 'layout-selection-mode' : ''}`}>
+    <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isEditing ? 'layout-fullscreen' : ''} ${isSelectionMode ? 'layout-selection-mode' : ''} ${isDetailScreen ? 'layout-detail-screen' : ''}`}>
       {/* DESKTOP SIDEBAR */}
       {!isEditing && !isSelectionMode && (
         <aside className="app-sidebar">
@@ -181,7 +182,7 @@ export default function MainLayout({ activeTab, setActiveTab, isSelectionMode, c
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      {!isEditing && !isSelectionMode && (
+      {!isEditing && !isSelectionMode && !isDetailScreen && (
         <nav className="app-mobile-nav">
           {navItems.map(item => (
             <div
