@@ -207,6 +207,7 @@ export default function Applications({
   const [showDateInfoModal, setShowDateInfoModal] = useState(false);
   const [appToDelete, setAppToDelete] = useState(null);
   const [appsToDeleteList, setAppsToDeleteList] = useState([]);
+  const [deletingIds, setDeletingIds] = useState([]);
 
 
 
@@ -435,23 +436,29 @@ export default function Applications({
   };
 
   const handleConfirmDeleteSingle = (app) => {
-    db.deleteApplication(app.id);
+    const targetId = app.id;
+    setDeletingIds(prev => [...prev, targetId]);
     setAppToDelete(null);
     
     const jobName = app.companyName 
       ? `${app.companyName} - ${app.role || 'Position unassigned'}` 
       : (app.role || 'Application');
 
-    // Trigger toast with undo
-    window.dispatchEvent(new CustomEvent('applytrack_toast', {
-      detail: {
-        message: `'${jobName}' deleted`,
-        action: 'Undo',
-        onAction: () => {
-          db.undoDelete();
+    setTimeout(() => {
+      db.deleteApplication(targetId);
+      setDeletingIds(prev => prev.filter(id => id !== targetId));
+
+      // Trigger toast with undo
+      window.dispatchEvent(new CustomEvent('applytrack_toast', {
+        detail: {
+          message: `'${jobName}' deleted`,
+          action: 'Undo',
+          onAction: () => {
+            db.undoDelete();
+          }
         }
-      }
-    }));
+      }));
+    }, 250);
   };
 
   const handleDeleteSelected = () => {
@@ -463,20 +470,26 @@ export default function Applications({
   const handleConfirmDeleteList = (appsList) => {
     const ids = appsList.map(a => a.id);
     const count = ids.length;
-    db.deleteMultipleApplications(ids);
+    
+    setDeletingIds(prev => [...prev, ...ids]);
     setAppsToDeleteList([]);
-    handleExitSelectionMode();
 
-    // Trigger toast with undo
-    window.dispatchEvent(new CustomEvent('applytrack_toast', {
-      detail: {
-        message: `${count} applications deleted`,
-        action: 'Undo',
-        onAction: () => {
-          db.undoDelete();
+    setTimeout(() => {
+      db.deleteMultipleApplications(ids);
+      setDeletingIds(prev => prev.filter(id => !ids.includes(id)));
+      handleExitSelectionMode();
+
+      // Trigger toast with undo
+      window.dispatchEvent(new CustomEvent('applytrack_toast', {
+        detail: {
+          message: `${count} applications deleted`,
+          action: 'Undo',
+          onAction: () => {
+            db.undoDelete();
+          }
         }
-      }
-    }));
+      }));
+    }, 250);
   };
 
   const handleJobCardClick = (app) => {
@@ -820,22 +833,24 @@ export default function Applications({
       {/* APPLICATIONS LIST */}
       {filteredApps.length > 0 ? (
         <div className="job-cards-list">
-          {filteredApps.map((app) => {
+          {filteredApps.map((app, index) => {
             const styles = getStatusColorClass(app.status);
             const isSelected = selectedIds.includes(app.id);
+            const isDeleting = deletingIds.includes(app.id);
 
             return (
               <div 
                 key={app.id} 
-                className={`job-card card-base card-interactive ${isSelected ? 'selected' : ''}`}
-                onClick={() => handleJobCardClick(app)}
+                className={`job-card card-base card-interactive ${isSelected ? 'selected' : ''} ${isDeleting ? 'animating-exit' : ''}`}
+                onClick={() => !isDeleting && handleJobCardClick(app)}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   handleEnterSelectionMode(app.id);
                 }}
                 style={{
                   borderColor: isSelected ? 'var(--brand-primary)' : 'var(--brand-outline)',
-                  backgroundColor: isSelected ? 'var(--bg-surface-variant)' : 'var(--bg-surface)'
+                  backgroundColor: isSelected ? 'var(--bg-surface-variant)' : 'var(--bg-surface)',
+                  animationDelay: `${Math.min(index * 35, 300)}ms`
                 }}
               >
                 {/* Checkbox visible in selection mode */}
@@ -899,14 +914,14 @@ export default function Applications({
                         {app.platform && (
                           <div className="job-card-detail-item">
                             <LinkIcon />
-                            <span>Platform: {app.platform}</span>
+                            <span>{app.platform}</span>
                           </div>
                         )}
                         {app.resume && app.resume.originalName && (
                           <div className="job-card-detail-item" style={{ flex: 1, minWidth: '120px' }}>
                             <FileIcon style={{ flexShrink: 0 }} />
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }} title={app.resume.originalName}>
-                              CV: {app.resume.originalName}
+                              {app.resume.originalName}
                             </span>
                           </div>
                         )}
