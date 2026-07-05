@@ -414,7 +414,6 @@ export default function Applications({
   const handleSelectAllToggle = () => {
     if (allSelected) {
       setSelectedIds([]);
-      setIsSelectionMode(false);
     } else {
       setSelectedIds([...displayedIds]);
     }
