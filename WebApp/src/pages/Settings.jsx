@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
-import { LogoutIcon } from '../components/Icons';
+import { LogoutIcon, AppIcon } from '../components/Icons';
 import packageJson from '../../package.json';
 import { exportBackupToZip, checkBackupConflicts, importBackup } from '../utils/backup';
 import './Settings.css';
@@ -476,11 +476,7 @@ export default function Settings() {
                 flexShrink: 0
               }}
             >
-              <img 
-                src="/app_icon.png" 
-                alt="App Logo" 
-                style={{ width: '36px', height: '36px', objectFit: 'contain' }}
-              />
+              <AppIcon size={36} />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--brand-primary)' }}>ApplyTrack</div>

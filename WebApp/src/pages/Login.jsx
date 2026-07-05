@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { db } from '../utils/db';
 import { AppIcon, GoogleIcon } from '../components/Icons';
+import loginBgMobileJpeg from '../assets/login_bg_mobile.jpeg';
+import loginBgDesktopJpeg from '../assets/login_bg_desktop.jpeg';
+import loginBgMobileAvif from '../assets/login_bg_mobile.avif';
+import loginBgDesktopAvif from '../assets/login_bg_desktop.avif';
 import './Login.css';
 
 
@@ -55,6 +59,12 @@ export default function Login() {
 
   return (
     <div className="login-container">
+      <picture className="login-bg-picture">
+        <source media="(min-width: 768px)" srcSet={loginBgDesktopAvif} type="image/avif" />
+        <source media="(min-width: 768px)" srcSet={loginBgDesktopJpeg} type="image/jpeg" />
+        <source srcSet={loginBgMobileAvif} type="image/avif" />
+        <img src={loginBgMobileJpeg} alt="" className="login-bg-image" fetchPriority="high" />
+      </picture>
       <div className="login-card animate-scale-in">
         {/* Branding Area */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>

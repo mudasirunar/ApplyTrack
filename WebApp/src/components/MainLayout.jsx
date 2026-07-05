@@ -165,11 +165,10 @@ export default function MainLayout({ activeTab, setActiveTab, isSelectionMode, c
             </div>
             <button 
               onClick={handleLogout} 
-              className="job-card-action-btn delete" 
+              className="sidebar-logout-btn" 
               title="Sign Out"
-              style={{ marginLeft: 'auto', padding: '8px' }}
             >
-              <LogoutIcon style={{ width: '20px', height: '20px' }} />
+              <LogoutIcon />
             </button>
           </div>
         </div>

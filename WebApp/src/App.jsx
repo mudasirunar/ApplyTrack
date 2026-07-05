@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from './utils/db';
 import MainLayout from './components/MainLayout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Applications from './pages/Applications';
-import JobAddEdit from './pages/JobAddEdit';
-import JobDetail from './pages/JobDetail';
-import Settings from './pages/Settings';
+
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Applications = React.lazy(() => import('./pages/Applications'));
+const JobAddEdit = React.lazy(() => import('./pages/JobAddEdit'));
+const JobDetail = React.lazy(() => import('./pages/JobDetail'));
+const Settings = React.lazy(() => import('./pages/Settings'));
 
 const getLocalDateString = (timestampOrDate = new Date()) => {
   const date = new Date(timestampOrDate);
@@ -295,57 +296,69 @@ export default function App() {
       return <Login />;
     }
 
-    switch (activeTab) {
-      case 'dashboard':
-        return (
-          <Dashboard 
-            setActiveTab={setActiveTab} 
-            setFilters={setFilters} 
-          />
-        );
-      case 'applications':
-        return (
-          <Applications 
-            filters={filters} 
-            setFilters={setFilters} 
-            setActiveTab={setActiveTab} 
-            setSelectedJobId={setSelectedJobId} 
-            isSelectionMode={isSelectionMode}
-            setIsSelectionMode={setIsSelectionMode}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-          />
-        );
-      case 'job-detail':
-        return (
-          <JobDetail 
-            jobId={selectedJobId} 
-            setActiveTab={setActiveTab} 
-            setSelectedJobId={setSelectedJobId} 
-          />
-        );
-      case 'add-job':
-        return (
-          <JobAddEdit 
-            jobId={null} 
-            setActiveTab={setActiveTab} 
-            setSelectedJobId={setSelectedJobId} 
-          />
-        );
-      case 'edit-job':
-        return (
-          <JobAddEdit 
-            jobId={selectedJobId} 
-            setActiveTab={setActiveTab} 
-            setSelectedJobId={setSelectedJobId} 
-            editSource={editSource}
-          />
-        );
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard setActiveTab={setActiveTab} setFilters={setFilters} />;
-    }
+    return (
+      <React.Suspense fallback={
+        <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '55vh' }}>
+          <div className="signin-spinner-container">
+            <div className="signin-spinner-ring"></div>
+          </div>
+        </div>
+      }>
+        {(() => {
+          switch (activeTab) {
+            case 'dashboard':
+              return (
+                <Dashboard 
+                  setActiveTab={setActiveTab} 
+                  setFilters={setFilters} 
+                />
+              );
+            case 'applications':
+              return (
+                <Applications 
+                  filters={filters} 
+                  setFilters={setFilters} 
+                  setActiveTab={setActiveTab} 
+                  setSelectedJobId={setSelectedJobId} 
+                  isSelectionMode={isSelectionMode}
+                  setIsSelectionMode={setIsSelectionMode}
+                  selectedIds={selectedIds}
+                  setSelectedIds={setSelectedIds}
+                />
+              );
+            case 'job-detail':
+              return (
+                <JobDetail 
+                  jobId={selectedJobId} 
+                  setActiveTab={setActiveTab} 
+                  setSelectedJobId={setSelectedJobId} 
+                />
+              );
+            case 'add-job':
+              return (
+                <JobAddEdit 
+                  jobId={null} 
+                  setActiveTab={setActiveTab} 
+                  setSelectedJobId={setSelectedJobId} 
+                />
+              );
+            case 'edit-job':
+              return (
+                <JobAddEdit 
+                  jobId={selectedJobId} 
+                  setActiveTab={setActiveTab} 
+                  setSelectedJobId={setSelectedJobId} 
+                  editSource={editSource}
+                />
+              );
+            case 'settings':
+              return <Settings />;
+            default:
+              return <Dashboard setActiveTab={setActiveTab} setFilters={setFilters} />;
+          }
+        })()}
+      </React.Suspense>
+    );
   };
 
   return (

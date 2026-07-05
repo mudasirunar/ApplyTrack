@@ -422,3 +422,27 @@
     bottom: 24px !important;
   }
 }
+
+.sidebar-logout-btn {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--error-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  margin-left: auto;
+}
+
+.sidebar-logout-btn:hover {
+  background-color: var(--error-red-tint);
+}
+
+.sidebar-logout-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}

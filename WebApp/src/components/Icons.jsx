@@ -10,18 +10,37 @@ export const GoogleIcon = ({ size = 24, ...props }) => (
   </svg>
 );
 
-// Uses the main app icon copied from the Android assets
-export const AppIcon = ({ size = 36, className = '', ...props }) => (
-  <img 
-    src="/app_icon.png" 
-    alt="ApplyTrack Logo" 
-    width={size} 
-    height={size} 
-    className={className}
-    style={{ objectFit: 'contain', borderRadius: '8px', ...props.style }}
-    {...props} 
-  />
-);
+export const AppIcon = ({ size, className = '', style, ...props }) => {
+  const finalSize = size || 36;
+  return (
+    <picture 
+      className={className} 
+      style={{ 
+        display: 'inline-block', 
+        width: size ? `${size}px` : undefined, 
+        height: size ? `${size}px` : undefined, 
+        flexShrink: 0, 
+        ...style 
+      }}
+    >
+      <source srcSet="/app_icon.avif" type="image/avif" />
+      <img 
+        src="/app_icon.png" 
+        alt="ApplyTrack Logo" 
+        width={finalSize} 
+        height={finalSize} 
+        style={{ 
+          objectFit: 'contain', 
+          borderRadius: '8px', 
+          width: '100%', 
+          height: '100%', 
+          display: 'block' 
+        }}
+        {...props} 
+      />
+    </picture>
+  );
+};
 
 
 export const DashboardIcon = (props) => (
