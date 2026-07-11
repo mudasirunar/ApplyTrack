@@ -29,7 +29,7 @@ export default function Login() {
   };
 
   return (
-    <div className="login-container">
+    <main className="login-container">
       <picture className="login-bg-picture">
         <source media="(min-width: 768px)" srcSet={loginBgDesktopAvif} type="image/avif" />
         <source media="(min-width: 768px)" srcSet={loginBgDesktopJpeg} type="image/jpeg" />
@@ -81,6 +81,6 @@ export default function Login() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
