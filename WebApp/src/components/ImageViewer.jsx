@@ -6,21 +6,28 @@ export default function ImageViewer({ files, initialIndex, onClose }) {
   const [activeIndex, setActiveIndex] = useState(initialIndex || 0);
   const [imageLoading, setImageLoading] = useState(true);
 
+  const file = (files && files.length > 0) ? files[activeIndex] : null;
+
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    
+    const prevTitle = document.title;
+    if (file && file.originalName) {
+      document.title = file.originalName;
+    }
+
     return () => {
       document.body.style.overflow = originalOverflow;
+      document.title = prevTitle;
     };
-  }, []);
+  }, [file]);
 
   // Whenever the active index changes, reset loading state to true
   useEffect(() => {
     setImageLoading(true);
   }, [activeIndex]);
 
-  if (!files || files.length === 0) return null;
-  const file = files[activeIndex];
   if (!file) return null;
 
   const handlePrev = (e) => {

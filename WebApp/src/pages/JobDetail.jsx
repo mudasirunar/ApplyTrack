@@ -107,6 +107,7 @@ function ThumbnailImage({ src, alt }) {
       <img
         src={src}
         alt={alt}
+        loading="lazy"
         onLoad={() => setLoaded(true)}
         style={{
           width: '100%',

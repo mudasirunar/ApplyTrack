@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { CloseIcon, FileIcon, DownloadIcon } from './Icons';
 import './ViewerModal.css';
 
+// Global module-level cache to store resolved document Blobs across mounts
+const pdfBlobCache = new Map();
+
 export default function PDFViewer({ file, onClose }) {
   const [iframeLoading, setIframeLoading] = useState(true);
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
@@ -10,10 +13,17 @@ export default function PDFViewer({ file, onClose }) {
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    
+    const prevTitle = document.title;
+    if (file && file.originalName) {
+      document.title = file.originalName;
+    }
+
     return () => {
       document.body.style.overflow = originalOverflow;
+      document.title = prevTitle;
     };
-  }, []);
+  }, [file]);
 
   useEffect(() => {
     if (!file) return;
@@ -31,13 +41,21 @@ export default function PDFViewer({ file, onClose }) {
           throw new Error("No URL found for this file.");
         }
 
-        // Fetch file data to bypass the remote Content-Disposition: attachment header
-        const res = await fetch(rawUrl);
-        if (!res.ok) throw new Error("Failed to load PDF file from server.");
+        let pdfBlob;
+        // Check if the document has already been loaded in this session
+        if (pdfBlobCache.has(rawUrl)) {
+          pdfBlob = pdfBlobCache.get(rawUrl);
+        } else {
+          // Fetch file data to bypass the remote Content-Disposition: attachment header
+          const res = await fetch(rawUrl);
+          if (!res.ok) throw new Error("Failed to load PDF file from server.");
 
-        const blob = await res.blob();
-        // Force the MIME type to application/pdf so the browser native viewer opens it
-        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+          const blob = await res.blob();
+          // Force the MIME type to application/pdf so the browser native viewer opens it
+          pdfBlob = new Blob([blob], { type: 'application/pdf' });
+          pdfBlobCache.set(rawUrl, pdfBlob);
+        }
+
         createdUrl = URL.createObjectURL(pdfBlob);
 
         if (active) {
@@ -67,8 +85,13 @@ export default function PDFViewer({ file, onClose }) {
   const handleDownload = async (e) => {
     if (e) e.stopPropagation();
     try {
-      const response = await fetch(pdfUrl);
-      const blob = await response.blob();
+      let blob;
+      if (pdfBlobCache.has(pdfUrl)) {
+        blob = pdfBlobCache.get(pdfUrl);
+      } else {
+        const response = await fetch(pdfUrl);
+        blob = await response.blob();
+      }
       const blobUrl = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
@@ -130,8 +153,15 @@ export default function PDFViewer({ file, onClose }) {
               />
             </>
           ) : (
-            <div className="viewer-fallback-text" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-              <FileIcon style={{ width: '48px', height: '48px', fill: 'var(--text-secondary)' }} />
+            <div className="viewer-fallback-text" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '16px' }}>
+              {!error ? (
+                <div style={{ position: 'relative', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div className="signin-spinner-ring" style={{ width: '100%', height: '100%', borderWidth: '3px', borderColor: 'var(--brand-primary) transparent transparent transparent' }} />
+                  <FileIcon style={{ width: '32px', height: '32px', fill: 'var(--brand-primary)' }} />
+                </div>
+              ) : (
+                <FileIcon style={{ width: '48px', height: '48px', fill: 'var(--text-secondary)' }} />
+              )}
               <p style={{ fontWeight: 600 }}>{error || "Loading document preview..."}</p>
               {error && (
                 <button 
