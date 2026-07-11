@@ -49,7 +49,6 @@ export default function PDFViewer({ file, onClose }) {
           const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(rawUrl)}&embedded=true`;
           if (active) {
             setPdfBlobUrl(googleViewerUrl);
-            setIframeLoading(false);
           }
           return;
         }
