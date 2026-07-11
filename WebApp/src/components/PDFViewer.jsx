@@ -5,6 +5,8 @@ import './ViewerModal.css';
 // Global module-level cache to store resolved document Blobs across mounts
 const pdfBlobCache = new Map();
 
+const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 export default function PDFViewer({ file, onClose }) {
   const [iframeLoading, setIframeLoading] = useState(true);
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
@@ -39,6 +41,17 @@ export default function PDFViewer({ file, onClose }) {
         const rawUrl = file.url || file.dataUrl;
         if (!rawUrl) {
           throw new Error("No URL found for this file.");
+        }
+
+        if (isMobile) {
+          // On mobile, iframes cannot render local blob PDFs or direct attachment downloads.
+          // Fall back to Google Docs PDF viewer which works beautifully on iOS and Android.
+          const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(rawUrl)}&embedded=true`;
+          if (active) {
+            setPdfBlobUrl(googleViewerUrl);
+            setIframeLoading(false);
+          }
+          return;
         }
 
         let pdfBlob;
