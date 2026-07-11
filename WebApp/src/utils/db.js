@@ -13,6 +13,7 @@ const KEYS = {
 let unsubscribeFirestore = null;
 let isInitialLoad = true;
 let currentUserId = null;
+let isAuthInitialized = false;
 
 // Helper to trigger sync status custom events
 function triggerSyncState(state, message = '') {
@@ -155,6 +156,7 @@ function stopFirestoreListener() {
 
 // Firebase Auth Observer Integration
 onAuthStateChanged(auth, (firebaseUser) => {
+  isAuthInitialized = true;
   if (firebaseUser) {
     const formattedUser = {
       uid: firebaseUser.uid,
@@ -180,6 +182,10 @@ onAuthStateChanged(auth, (firebaseUser) => {
 });
 
 export const db = {
+  isAuthReady() {
+    return isAuthInitialized;
+  },
+
   // --- AUTH OPERATIONS ---
   getCurrentUser() {
     const user = localStorage.getItem(KEYS.USER);

@@ -81,6 +81,7 @@ export default function App() {
 
   const [user, setUser] = useState(initialUser);
   const [activeTab, setActiveTabState] = useState(initialTab);
+  const [isAuthReady, setIsAuthReady] = useState(db.isAuthReady());
   const [selectedJobId, setSelectedJobIdState] = useState(initialJobId);
   const [editSource, setEditSource] = useState('applications');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -194,6 +195,7 @@ export default function App() {
   useEffect(() => {
     // 1. Auth Change Listener with protected redirects
     const handleAuth = () => {
+      setIsAuthReady(db.isAuthReady());
       const currentUser = db.getCurrentUser();
       
       const prevEmail = lastUserEmailRef.current;
@@ -361,6 +363,36 @@ export default function App() {
       </React.Suspense>
     );
   };
+
+  if (!isAuthReady) {
+    return (
+      <div 
+        style={{ 
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0E141C',
+          gap: '20px',
+          zIndex: 99999
+        }}
+      >
+        <div className="signin-spinner-container" style={{ width: '80px', height: '80px' }}>
+          <div className="signin-spinner-ring" style={{ borderWidth: '3px', borderColor: 'var(--brand-primary) transparent transparent transparent' }} />
+          <div style={{ position: 'absolute', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="var(--brand-primary)">
+              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
+            </svg>
+          </div>
+        </div>
+        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--brand-primary)', letterSpacing: '0.5px' }}>
+          Securing session...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
