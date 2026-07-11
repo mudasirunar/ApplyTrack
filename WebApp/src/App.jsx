@@ -91,6 +91,24 @@ export default function App() {
   const selectedJobIdRef = useRef(initialJobId);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
+  const renderFullScreenSpinner = () => (
+    <div 
+      style={{ 
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'var(--bg-primary)',
+        zIndex: 99999
+      }}
+    >
+      <div className="signin-spinner-container" style={{ width: '50px', height: '50px' }}>
+        <div className="signin-spinner-ring" style={{ borderWidth: '3px', borderColor: 'var(--brand-primary) transparent transparent transparent' }} />
+      </div>
+    </div>
+  );
+
   const [filters, setFilters] = useState({
     searchQuery: '',
     statusFilter: 'All',
@@ -300,13 +318,7 @@ export default function App() {
     }
 
     return (
-      <React.Suspense fallback={
-        <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '55vh' }}>
-          <div className="signin-spinner-container">
-            <div className="signin-spinner-ring"></div>
-          </div>
-        </div>
-      }>
+      <React.Suspense fallback={renderFullScreenSpinner()}>
         {(() => {
           switch (activeTab) {
             case 'dashboard':
@@ -365,33 +377,7 @@ export default function App() {
   };
 
   if (!isAuthReady) {
-    return (
-      <div 
-        style={{ 
-          position: 'fixed',
-          inset: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#0E141C',
-          gap: '20px',
-          zIndex: 99999
-        }}
-      >
-        <div className="signin-spinner-container" style={{ width: '80px', height: '80px' }}>
-          <div className="signin-spinner-ring" style={{ borderWidth: '3px', borderColor: 'var(--brand-primary) transparent transparent transparent' }} />
-          <div style={{ position: 'absolute', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="var(--brand-primary)">
-              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
-            </svg>
-          </div>
-        </div>
-        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--brand-primary)', letterSpacing: '0.5px' }}>
-          Securing session...
-        </div>
-      </div>
-    );
+    return renderFullScreenSpinner();
   }
 
   return (
