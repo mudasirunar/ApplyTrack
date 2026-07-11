@@ -82,6 +82,44 @@ function InfoRow({ label, value, isLink, href }) {
   );
 }
 
+// Helper component to render thumbnail images with loader spinner
+function ThumbnailImage({ src, alt }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {!loaded && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,0.03)'
+        }}>
+          <div className="signin-spinner-container" style={{ width: '18px', height: '18px', margin: 0 }}>
+            <div className="signin-spinner-ring" style={{ borderWidth: '2px', borderColor: 'var(--brand-primary) transparent transparent transparent' }} />
+          </div>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          opacity: loaded ? 1 : 0,
+          transition: 'opacity 0.2s ease-in-out'
+        }}
+      />
+    </div>
+  );
+}
+
 export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   const [app, setApp] = useState(null);
   
@@ -102,12 +140,18 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
 
   // Load app data
   useEffect(() => {
-    if (jobId) {
-      const data = db.getApplicationById(jobId);
-      if (data) {
-        setApp(data);
+    const loadData = () => {
+      if (jobId) {
+        const data = db.getApplicationById(jobId);
+        if (data) {
+          setApp(data);
+        }
       }
-    }
+    };
+
+    loadData();
+    window.addEventListener('applytrack_data_change', loadData);
+    return () => window.removeEventListener('applytrack_data_change', loadData);
   }, [jobId]);
 
   // Check if job description overflows 3 lines
@@ -224,7 +268,7 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
             </button>
             <button 
               onClick={handleDelete} 
-              className="backup-btn reset" 
+              className="btn-danger" 
               style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px' }}
             >
               <DeleteIcon style={{ width: '16px', height: '16px' }} />
@@ -544,10 +588,9 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
                         }}
                         className="screenshot-thumbnail-hover"
                       >
-                        <img 
+                        <ThumbnailImage 
                           src={shot.url || shot.dataUrl} 
                           alt={`Screenshot ${index + 1}`} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       </div>
                     ))}

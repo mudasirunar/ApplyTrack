@@ -513,9 +513,9 @@ export default function Settings() {
           message="WARNING: This will permanently delete all your job applications and attached documents. This action cannot be undone. Are you sure you want to proceed?"
           confirmLabel="Wipe All"
           isDestructive={true}
-          onConfirm={() => {
-            db.resetDatabase();
-            setAppsCount(db.getApplications().length);
+          onConfirm={async () => {
+            await db.resetDatabase();
+            setAppsCount(0);
             setShowWipeModal(false);
           }}
           onCancel={() => setShowWipeModal(false)}

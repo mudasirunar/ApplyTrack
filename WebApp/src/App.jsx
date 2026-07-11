@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from './utils/db';
 import MainLayout from './components/MainLayout';
 import Login from './pages/Login';
+import SyncToast from './components/SyncToast';
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Applications = React.lazy(() => import('./pages/Applications'));
@@ -373,6 +374,7 @@ export default function App() {
           }}
         />
       )}
+      {user && <SyncToast />}
       <MainLayout 
         activeTab={user ? activeTab : 'login'} 
         setActiveTab={setActiveTab}

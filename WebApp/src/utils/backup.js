@@ -1,7 +1,9 @@
 import { zip, unzip, strToU8, strFromU8 } from 'fflate';
 import { db } from './db';
+import { auth, firestore } from './firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
-// Helper: Convert base64 data URL to Uint8Array
+// Helper: Convert base64 data URL to Uint8Array (fallback)
 function dataUrlToUint8Array(dataUrl) {
   if (!dataUrl) return new Uint8Array(0);
   const parts = dataUrl.split(',');
@@ -16,7 +18,7 @@ function dataUrlToUint8Array(dataUrl) {
   return bytes;
 }
 
-// Helper: Convert Uint8Array to base64 data URL
+// Helper: Convert Uint8Array to base64 data URL (fallback)
 function uint8ArrayToDataUrl(bytes, mimeType) {
   let binary = '';
   const len = bytes.byteLength;
@@ -79,22 +81,20 @@ export function areApplicationsContentEqual(appA, appB) {
   return true;
 }
 
-// Helper: Strip dataUrls from attachment before serializing to JSON
-function serializeAttachment(att) {
-  if (!att) return null;
-  return {
-    fileName: att.fileName,
-    originalName: att.originalName
-  };
-}
+// Export function (Downloads attachment binaries from Supabase Storage and archives them into the ZIP)
+export async function exportBackupToZip(apps, onSuccess, onError) {
+  const userId = auth.currentUser ? auth.currentUser.uid : null;
+  if (!userId) {
+    onError("User is not authenticated");
+    return;
+  }
 
-// Export function
-export function exportBackupToZip(apps, onSuccess, onError) {
   try {
     const files = {};
 
-    // 1. Serialize Applications JSON without dataUrl
+    // 1. Serialize Applications JSON without dataUrl or url
     const serializedApps = apps.map(app => {
+      const cleanAttachment = (att) => att ? { fileName: att.fileName, originalName: att.originalName } : null;
       return {
         uuid: app.uuid,
         companyName: app.companyName,
@@ -108,50 +108,59 @@ export function exportBackupToZip(apps, onSuccess, onError) {
         createdAt: app.createdAt,
         updatedAt: app.updatedAt,
         statusHistory: app.statusHistory || [],
-        resume: serializeAttachment(app.resume),
-        coverLetter: serializeAttachment(app.coverLetter),
-        additionalDocument: serializeAttachment(app.additionalDocument),
-        screenshots: (app.screenshots || []).map(serializeAttachment)
+        resume: cleanAttachment(app.resume),
+        coverLetter: cleanAttachment(app.coverLetter),
+        additionalDocument: cleanAttachment(app.additionalDocument),
+        screenshots: (app.screenshots || []).map(cleanAttachment)
       };
     });
 
     files['data.json'] = strToU8(JSON.stringify(serializedApps, null, 2));
 
-    // 2. Add raw attachments files to ZIP root
+    // 2. Build list of attachments to fetch from Supabase
+    const attachmentsToFetch = [];
     apps.forEach(app => {
-      const attachments = [
-        app.resume,
-        app.coverLetter,
-        app.additionalDocument,
-        ...(app.screenshots || [])
-      ].filter(Boolean);
-
-      attachments.forEach(att => {
-        if (att.fileName && att.dataUrl) {
-          const bytes = dataUrlToUint8Array(att.dataUrl);
-          files[att.fileName] = bytes;
-        }
-      });
+      const items = [
+        { att: app.resume, type: 'resumes' },
+        { att: app.coverLetter, type: 'cover_letters' },
+        { att: app.additionalDocument, type: 'additional_documents' },
+        ...(app.screenshots || []).map(scr => ({ att: scr, type: 'screenshots' }))
+      ].filter(item => item.att && item.att.fileName && item.att.url);
+      
+      attachmentsToFetch.push(...items);
     });
 
-    // 3. Compress ZIP asynchronously
+    // 3. Fetch all binaries in parallel from Supabase Storage
+    await Promise.all(attachmentsToFetch.map(async ({ att }) => {
+      try {
+        const response = await fetch(att.url);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          files[att.fileName] = new Uint8Array(arrayBuffer);
+        }
+      } catch (e) {
+        console.error(`Failed to fetch attachment file ${att.fileName}:`, e);
+      }
+    }));
+
+    // 4. Compress ZIP asynchronously
     zip(files, (err, zipBytes) => {
       if (err) {
         onError(err.message || err);
         return;
       }
 
-      // 4. Download file
+      // 5. Trigger download of ZIP archive
       const blob = new Blob([zipBytes], { type: 'application/zip' });
-      const url = URL.createObjectURL(blob);
+      const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = downloadUrl;
       const dateStr = new Date().toISOString().slice(0, 10);
       a.download = `applytrack_backup_${dateStr}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(downloadUrl);
 
       onSuccess();
     });
@@ -185,7 +194,7 @@ export function checkBackupConflicts(file, onResult, onError) {
           return;
         }
 
-        // Count conflicts
+        // Count conflicts against local database cache
         const existingApps = db.getApplications();
         let conflictsCount = 0;
 
@@ -209,97 +218,131 @@ export function checkBackupConflicts(file, onResult, onError) {
   reader.readAsArrayBuffer(file);
 }
 
-// Import execution function
-export function importBackup(importedApps, unzipped, overwrite, onProgress, onSuccess, onError) {
+// Import execution function (Uploads unzipped files to Supabase and writes metadata to Firestore)
+export async function importBackup(importedApps, unzipped, overwrite, onProgress, onSuccess, onError) {
+  const userId = auth.currentUser ? auth.currentUser.uid : null;
+  if (!userId) {
+    onError("User is not authenticated");
+    return;
+  }
+
   try {
-    onProgress("Restoring records...");
-    const localApps = db.getApplications();
+    onProgress("Importing applications and uploading attachments...");
+    
+    const existingApps = db.getApplications();
     let importedCount = 0;
     let updatedCount = 0;
     let ignoredCount = 0;
 
-    // Helper: restore dataUrl from unzip
-    const restoreAttachment = (att, localMatchAtt) => {
-      if (!att) return null;
-      // Look up in ZIP
-      const fileBytes = unzipped[att.fileName];
-      if (fileBytes) {
-        const mimeType = getMimeType(att.fileName);
-        return {
-          ...att,
-          dataUrl: uint8ArrayToDataUrl(fileBytes, mimeType)
-        };
-      }
-      // Fallback to local copy if files match and local copy has dataUrl
-      if (localMatchAtt && localMatchAtt.fileName === att.fileName && localMatchAtt.dataUrl) {
-        return {
-          ...att,
-          dataUrl: localMatchAtt.dataUrl
-        };
-      }
-      return {
-        ...att,
-        dataUrl: ''
-      };
-    };
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
-    importedApps.forEach(importedApp => {
-      const matchIndex = localApps.findIndex(a => a.uuid === importedApp.uuid);
-      const match = matchIndex !== -1 ? localApps[matchIndex] : null;
-
-      // Prepare attachment dataUrls
-      const resume = restoreAttachment(importedApp.resume, match?.resume);
-      const coverLetter = restoreAttachment(importedApp.coverLetter, match?.coverLetter);
-      const additionalDocument = restoreAttachment(importedApp.additionalDocument, match?.additionalDocument);
-      const screenshots = (importedApp.screenshots || []).map((scr, idx) => {
-        const localMatchScr = match?.screenshots?.[idx];
-        return restoreAttachment(scr, localMatchScr);
-      });
-
-      const processedApp = {
-        ...importedApp,
-        resume,
-        coverLetter,
-        additionalDocument,
-        screenshots
-      };
-
-      if (!match) {
-        // New application record -> calculate ID and push
-        const nextId = localApps.length > 0 ? Math.max(...localApps.map(a => a.id)) + 1 : 1;
-        localApps.push({
-          ...processedApp,
-          id: nextId,
-          updatedAt: Date.now()
-        });
-        importedCount++;
-      } else {
-        // Match exists by UUID -> check duplicate content
-        const isIdentical = areApplicationsContentEqual(match, processedApp);
-        if (isIdentical) {
-          ignoredCount++;
-        } else {
-          // Conflict
-          if (overwrite) {
-            // Overwrite and keep the same local ID
-            localApps[matchIndex] = {
-              ...processedApp,
-              id: match.id,
-              updatedAt: Date.now()
-            };
-            updatedCount++;
-          } else {
-            // Ignore / Keep current version
-            ignoredCount++;
+    // Helper: Upload file bytes to Supabase Storage
+    async function uploadBytesToSupabase(type, fileName, bytes) {
+      const uploadUrl = `${supabaseUrl}/storage/v1/object/ApplyTrack/users/${userId}/${type}/${fileName}`;
+      
+      // Perform HEAD check to skip if already uploaded
+      try {
+        const checkRes = await fetch(uploadUrl, {
+          method: 'HEAD',
+          headers: {
+            'Authorization': `Bearer ${anonKey}`,
+            'apikey': anonKey
           }
+        });
+        if (checkRes.ok) return true;
+      } catch (e) {}
+
+      const mimeType = getMimeType(fileName);
+      const blob = new Blob([bytes], { type: mimeType });
+      
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${anonKey}`,
+          'apikey': anonKey,
+          'Content-Type': mimeType
+        },
+        body: blob
+      });
+      return res.ok;
+    }
+
+    // Process imported applications one by one
+    for (let i = 0; i < importedApps.length; i++) {
+      const importedApp = importedApps[i];
+      const matchIndex = existingApps.findIndex(a => a.uuid === importedApp.uuid);
+      const match = matchIndex !== -1 ? existingApps[matchIndex] : null;
+
+      const isIdentical = match ? areApplicationsContentEqual(match, importedApp) : false;
+
+      if (match && isIdentical) {
+        ignoredCount++;
+        continue;
+      }
+
+      if (match && !overwrite) {
+        ignoredCount++;
+        continue;
+      }
+
+      onProgress(`Processing ${importedApp.companyName || 'Application'}...`);
+
+      // 1. Upload files from unzipped ZIP bytes if present
+      const attachmentsToUpload = [
+        { att: importedApp.resume, type: 'resumes' },
+        { att: importedApp.coverLetter, type: 'cover_letters' },
+        { att: importedApp.additionalDocument, type: 'additional_documents' },
+        ...(importedApp.screenshots || []).map(scr => ({ att: scr, type: 'screenshots' }))
+      ].filter(item => item.att && item.att.fileName);
+
+      for (let j = 0; j < attachmentsToUpload.length; j++) {
+        const { att, type } = attachmentsToUpload[j];
+        const bytes = unzipped[att.fileName];
+        if (bytes) {
+          await uploadBytesToSupabase(type, att.fileName, bytes);
         }
       }
-    });
 
-    // Save applications list and trigger data changes
-    db.saveApplications(localApps);
+      // 2. Prepare cleaned Firestore metadata object
+      const cleanAttachment = (att) => att ? { fileName: att.fileName, originalName: att.originalName } : null;
+
+      const serializedApp = {
+        id: match ? match.id : (existingApps.length > 0 ? Math.max(...existingApps.map(a => a.id)) + 1 : 1),
+        uuid: importedApp.uuid,
+        companyName: importedApp.companyName || null,
+        role: importedApp.role || null,
+        platform: importedApp.platform || 'Direct',
+        status: importedApp.status || 'Applied',
+        jobDescription: importedApp.jobDescription || '',
+        notes: importedApp.notes || '',
+        url: importedApp.url || '',
+        email: importedApp.email || '',
+        createdAt: importedApp.createdAt || Date.now(),
+        updatedAt: Date.now(),
+        statusHistory: importedApp.statusHistory || [
+          { status: importedApp.status || 'Applied', timestamp: importedApp.createdAt || Date.now() }
+        ],
+        resume: cleanAttachment(importedApp.resume),
+        coverLetter: cleanAttachment(importedApp.coverLetter),
+        additionalDocument: cleanAttachment(importedApp.additionalDocument),
+        screenshots: (importedApp.screenshots || []).map(cleanAttachment)
+      };
+
+      // 3. Save directly to Firestore
+      const userDocRef = doc(firestore, 'users', userId, 'job_applications', importedApp.uuid);
+      await setDoc(userDocRef, serializedApp);
+
+      if (match) {
+        updatedCount++;
+      } else {
+        importedCount++;
+      }
+    }
+
     onSuccess(importedCount, updatedCount, ignoredCount);
   } catch (err) {
+    console.error('Import backup failed:', err);
     onError(err.message || err);
   }
 }

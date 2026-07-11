@@ -154,34 +154,40 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
 
   // Load existing data if in edit mode
   useEffect(() => {
-    if (isEditMode) {
-      const app = db.getApplicationById(jobId);
-      if (app) {
-        setCompanyName(app.companyName || '');
-        setRole(app.role || '');
-        
-        const plat = app.platform || '';
-        const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
-        if (standardPlatforms.includes(plat)) {
-          setPlatformSelect(plat);
-          setCustomPlatformName('');
-        } else {
-          setPlatformSelect('Other');
-          setCustomPlatformName(plat || 'Direct');
-        }
+    const loadData = () => {
+      if (isEditMode) {
+        const app = db.getApplicationById(jobId);
+        if (app) {
+          setCompanyName(app.companyName || '');
+          setRole(app.role || '');
+          
+          const plat = app.platform || '';
+          const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
+          if (standardPlatforms.includes(plat)) {
+            setPlatformSelect(plat);
+            setCustomPlatformName('');
+          } else {
+            setPlatformSelect('Other');
+            setCustomPlatformName(plat || 'Direct');
+          }
 
-        setStatus(app.status || 'Applied');
-        setCreatedAt(getLocalDateString(app.createdAt));
-        setJobDescription(app.jobDescription || '');
-        setNotes(app.notes || '');
-        setUrl(app.url || '');
-        setEmail(app.email || '');
-        setResume(app.resume);
-        setCoverLetter(app.coverLetter);
-        setAdditionalDocument(app.additionalDocument || null);
-        setScreenshots(app.screenshots || []);
+          setStatus(app.status || 'Applied');
+          setCreatedAt(getLocalDateString(app.createdAt));
+          setJobDescription(app.jobDescription || '');
+          setNotes(app.notes || '');
+          setUrl(app.url || '');
+          setEmail(app.email || '');
+          setResume(app.resume);
+          setCoverLetter(app.coverLetter);
+          setAdditionalDocument(app.additionalDocument || null);
+          setScreenshots(app.screenshots || []);
+        }
       }
-    }
+    };
+
+    loadData();
+    window.addEventListener('applytrack_data_change', loadData);
+    return () => window.removeEventListener('applytrack_data_change', loadData);
   }, [jobId, isEditMode]);
 
   const compressImage = (file, callback) => {

@@ -204,6 +204,27 @@ button, input, textarea, select {
   background-color: var(--bg-surface-variant);
 }
 
+.btn-danger {
+  padding: 10px 20px;
+  background-color: transparent;
+  color: var(--error-red);
+  border: 1px solid rgba(229, 57, 53, 0.3);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-danger:hover {
+  background-color: rgba(229, 57, 53, 0.08);
+  border-color: var(--error-red);
+}
+
+.btn-danger:active {
+  transform: translateY(1px);
+}
+
 /* Premium YouTube/GitHub-style Linear Progress Loader Bar */
 .app-loader-bar {
   position: fixed;
@@ -214,6 +235,39 @@ button, input, textarea, select {
   box-shadow: 0 0 8px var(--link-blue-tint), 0 0 4px var(--link-blue);
   z-index: 99999;
   pointer-events: none;
+}
+
+/* GLOBAL ICON/ACTION BUTTONS */
+.job-card-action-btn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.job-card-action-btn:hover {
+  background-color: var(--bg-surface-variant);
+  color: var(--brand-primary);
+}
+
+.job-card-action-btn.delete {
+  color: var(--error-red);
+}
+
+.job-card-action-btn.delete:hover {
+  background-color: var(--error-red-tint);
+}
+
+.job-card-action-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 /* Global Dialog Overlay and Modal Content Cards (centered vertically and horizontally) */
