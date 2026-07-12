@@ -1,173 +1,173 @@
 # ApplyTrack 🚀
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-1.9+-7F52FF.svg?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0+-7F52FF.svg?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Jetpack Compose](https://img.shields.io/badge/Compose-Material%203-4285F4.svg?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/jetpack/compose)
-[![Room DB](https://img.shields.io/badge/Room-Local--First-3DDC84.svg?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/training/data-storage/room)
-[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28.svg?style=flat-square&logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-File%20Storage-3ECF8E.svg?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Room](https://img.shields.io/badge/Room-Local%20Database-3DDC84.svg?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/jetpack/androidx/releases/room)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%26%20Firestore-FFCA28.svg?style=flat-square&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Storage-3ECF8E.svg?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF.svg?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
 
+ApplyTrack is an offline-first job application tracker built for people who want a fast, reliable way to manage opportunities from both mobile and web. The project currently contains two working clients:
 
-**ApplyTrack** is an offline-first, local-priority career companion and job application tracking platform. Designed to provide job seekers with sub-millisecond interface responsiveness and absolute data integrity, the system consists of a native Android application and a responsive web companion.
+- an Android app built with Jetpack Compose and Room for local-first storage
+- a React + Vite web companion for desktop and browser access
 
-Job seekers can instantly log job applications, manage resumes/cover letters, view rich analytical dashboards, and trace interview stages with zero network latency. When connectivity is restored, a robust synchronization engine reconciles metadata and binaries in the background using Google Cloud Firestore and Supabase Storage.
+Both clients support local data capture, rich analytics, attachment handling, and cloud sync through Firebase Firestore and Supabase Storage.
 
 ---
 
 ## 📂 Repository Structure
 
-* **`AndroidApp/`**: Native Android client written in Kotlin, built with Jetpack Compose, Room, WorkManager, Firebase, and Supabase.
-* **`WebApp/`**: Web application companion (HTML/CSS/JS client for tracking and viewing applications on desktop/web devices).
+- AndroidApp/ApplyTrack: native Android application written in Kotlin
+- WebApp: React web companion with Vite and Firebase-backed sync
 
 ---
 
-## 📱 Android Application: Feature Breakdown
+## 📱 Android App
 
-The Android application is built with modern Android development standards, delivering a fully-featured, premium experience:
+The Android client is the primary experience in this repository. It is built around a local-first architecture with a Compose UI and Room persistence, and it supports:
 
-### 1. Interactive Analytics Dashboard
-* **Dynamic Distribution Charts**: Interactive charts displaying applications breakdown by status (Applied, Saved, Interview, Offer, Rejected) using curated HSL color palettes.
-* **Platform Effectiveness**: Track which portals (LinkedIn, Indeed, Website, Email, etc.) yield the highest response, interview, and offer rates.
-* **Resume Efficacy Tracking**: Automatically compiles performance metrics for different resumes used during your search (tracking total uses, interview conversion, and offer rates).
-* **Monthly Activity Timelines**: Visual bar graphs illustrating monthly application volumes for the selected calendar year.
-* **Key Performance Indicators (KPIs)**: Instant reporting on success rates, response ratios, interview conversion metrics, and rejection trends.
+- job tracking with company, role, platform, status, notes, URL, and email
+- status history and timeline-style tracking
+- resume, cover letter, additional document, and screenshot attachments
+- image and PDF viewing inside the app
+- dashboard analytics for status distribution, platform performance, resume effectiveness, and monthly activity
+- filtering, search, sorting, and batch selection for large result sets
+- local backup/export and import workflows
+- Google sign-in and anonymous guest mode
+- background sync to Firestore and Supabase when a network connection is available
 
-### 2. Granular Application Management
-* **Comprehensive Job Metadata**: Log company name, job title/role, submission platform, application dates, URLs, point-of-contact emails, and rich markdown notes.
-* **Interactive Timeline**: Automatically logs status history changes with timestamps to build an application-specific audit trail.
-* **Attachment Hub**: Store associated documents directly within each job entry:
-  * Dedicated slots for **Resume**, **Cover Letter**, and **Additional Documents**.
-  * Multi-file upload support for **Screenshots** (capturing job specs, confirmation emails, etc.).
-  * **Built-in Document Viewers**: View image screenshots with interactive pinch-to-zoom gestures and read PDF attachments directly in-app using native PDF renderers.
+### Android stack
 
-### 3. Advanced Filtering & Search
-* **Fuzzy Global Search**: Instant filtering of application lists by matching keywords in the company name, role description, preparation notes, email addresses, external URLs, or attachment filenames.
-* **Status, Resume, and Platform Filters**: Easily narrow down lists by specific status, particular resume versions, or platforms.
-* **Multi-Criteria Sorting**: Order applications by latest/oldest update status time, or latest/oldest creation timestamp.
-
-### 4. Selection Mode & Batch Operations
-* **Long-Press Activation**: Long-press any job application card to activate multi-select mode.
-* **Batch Operations**: Select multiple applications to perform batch deletions, making bulk data cleanups frictionless.
-
-### 5. Local Backup & Offline Restoration
-* **ZIP Archive Exports**: Package your entire local database, metadata, and all downloaded attachments into a single portable `.zip` file.
-* **Conflict-Aware Restoration**: Before importing, the app reads the backup and reports the exact number of data conflicts (matching UUIDs with mismatched content).
-* **Overwrite Guard**: Choose whether to overwrite existing records or merge them gracefully during import.
-
-### 6. Authentication & Account Migration
-* **Google Sign-In & Anonymous Guest Mode**: Start using the app instantly as a guest without registering.
-* **Seamless Migration**: Ready to back up to the cloud? Sign in with your Google account, and ApplyTrack automatically migrates all local Guest data and attachments to Firestore and Supabase.
+- Kotlin
+- Jetpack Compose + Material 3
+- Room Database
+- Coroutines + StateFlow
+- WorkManager for background sync
+- Firebase Authentication and Firestore
+- Supabase Storage
 
 ---
 
-## 🏗️ Technical Architecture
+## 🌐 Web App
 
-ApplyTrack follows Clean Architecture guidelines partitioned into **UI**, **Domain**, and **Data** layers, conforming to the Android MVVM pattern:
+The web companion is implemented and runs as a modern React/Vite app. It provides a browser-based interface for:
 
-```
-               ┌─────────────────────────────────────┐
-               │              UI Layer               │
-               │  (Compose Screens / ViewModels)     │
-               └──────────────────┬──────────────────┘
-                                  │ (Flow Observables)
-                                  ▼
-               ┌─────────────────────────────────────┐
-               │            Domain Layer             │
-               │       (Repository Interfaces)       │
-               └──────────────────┬──────────────────┘
-                                  │
-                                  ▼
-               ┌─────────────────────────────────────┐
-               │             Data Layer              │
-               │   (Room Database / Supabase SDK /   │
-               │       Firestore Service SDK)        │
-               └─────────────────────────────────────┘
-```
+- authentication and protected routes
+- dashboard views with analytics and summaries
+- applications listing, search, filtering, and sorting
+- add/edit/detail flows for jobs
+- attachment handling and metadata editing
+- settings, theme support, and data management actions
+- synchronization with the same Firebase/Firestore + Supabase storage model used by Android
 
-### Core Technologies
-* **UI & Presentation**: Jetpack Compose, Material Design 3 (Dynamic Color, custom theme transitions), Compose Navigation.
-* **Asynchronous Execution**: Kotlin Coroutines, StateFlow/SharedFlow for reactive state management.
-* **Local Storage**: Room Persistence Library with custom Type Converters for status histories and attachment objects.
-* **Remote Database**: Cloud Firestore (hierarchical structures partitioned by authenticated user IDs).
-* **Remote File Storage**: Supabase Storage Buckets utilizing authenticated REST APIs.
-* **Background Tasks**: Android WorkManager (handling sync tasks and retry operations).
+### Web stack
+
+- React 19
+- Vite 8
+- Firebase Auth + Firestore + Analytics
+- Supabase Storage REST integration
+- Local browser storage for cache and UI state
 
 ---
 
-## 🔄 Bidirectional Data Sync Engine
+## 🏗️ Architecture Overview
 
-The background synchronization engine is designed with a double-insurance workflow to guarantee consistency between local database stores and cloud providers:
+The project uses a split approach:
 
-```
-[Local Database Update]
-         │
-         ▼
-[Trigger Sync Event] ──► [Upload Attachments to Supabase] ──► [Write Metadata to Firestore]
-                                                                        │
-                                                                        ▼
-[Update Local UI Flow] ◄── [Notify UI] ◄── [Download Attachments] ◄── [Firestore Live Snapshot]
+- Android app: local Room database + Compose UI + repository/sync layer
+- Web app: React UI + local browser storage + Firestore/Supabase sync utilities
+- Shared sync concept: metadata is stored in Firestore while binary attachments are uploaded to Supabase Storage
+
+This gives the app a practical offline-first workflow: users can create and edit data locally first, then sync it to the cloud when connectivity is available.
+
+---
+
+## ⚙️ Setup
+
+### Android setup
+
+1. Create a Firebase project in the Firebase console.
+2. Enable Firebase Authentication with Google and Anonymous sign-in.
+3. Enable Cloud Firestore.
+4. Download google-services.json and place it in AndroidApp/ApplyTrack/app/.
+5. Create AndroidApp/ApplyTrack/local.properties with your Supabase values:
+
+```properties
+supabase.url=https://your-project-reference.supabase.co
+supabase.anonkey=your-anon-public-api-key
 ```
 
-### Core Sync Rules & Guardrails
-1. **Write-Ordering Guarantee**: To prevent client devices from attempting to download attachments that do not exist yet, document metadata is only pushed to Firestore *after* Supabase Storage confirms successful binary uploads.
-2. **Conflict Resolution (Last-Write-Wins)**: Every record tracks an `updatedAt` millisecond timestamp. Remote modifications overwrite local data only if the remote timestamp is strictly newer.
-3. **Deletions & Tombstones**: To propagate deletions that occur offline, deleted record UUIDs are stored in a local tombstone table (`deleted_jobs`). Upon restoring network access, the Sync Worker reads this table, deletes the documents from Firestore, removes the files from Supabase, and clears the tombstones.
-4. **Resilient Download Queue**: In-flight downloads are tracked in state. Failed attachment downloads are automatically retried up to three times with exponential backoff delays.
+6. Open the Android project and run the app from Android Studio or build it from the command line.
 
----
+### Web setup
 
-## ⚙️ Development Configuration
+1. Create a .env file in WebApp with your Firebase and Supabase settings:
 
-### 1. Firebase Suite Setup
-1. Create a Firebase project in the [Firebase Console](https://console.firebase.google.com/).
-2. Register an Android Application under package `com.applytrack` (or your modified package name).
-3. Generate and add SHA-1 certificate fingerprints (debug & release keys) to your Firebase project settings to enable **Google Sign-In**.
-4. Download the generated `google-services.json` config file and place it in the `AndroidApp/ApplyTrack/app/` directory.
-5. In the Firebase console:
-   * Enable **Firebase Authentication** and turn on **Google** and **Anonymous** sign-in providers.
-   * Enable **Cloud Firestore** and deploy the security rules.
+```env
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+VITE_SUPABASE_URL=https://your-project-reference.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-api-key
+```
 
-### 2. Supabase Storage Setup
-1. Set up a project in the [Supabase Dashboard](https://supabase.com/).
-2. Navigate to **Storage** and create a new public bucket named `ApplyTrack`.
-3. Configure Row Level Security (RLS) policies allowing `SELECT`, `INSERT`, `UPDATE`, and `DELETE` access to subfolders inside the bucket matching `auth.uid()`.
-4. Create a `local.properties` file in `AndroidApp/ApplyTrack/` and add your API credentials:
-   ```properties
-   supabase.url=https://your-project-reference.supabase.co
-   supabase.anonkey=your-anon-public-api-key
-   ```
+2. Install dependencies:
 
----
-
-## 📦 Building & Testing
-
-All building and verification workflows utilize the Gradle wrapper. Run commands inside the `AndroidApp/ApplyTrack` directory:
-
-### Compile Source Code
-Verify static compilation and syntax correctness:
 ```bash
-./gradlew compileReleaseKotlin
+cd WebApp
+npm install
 ```
 
-### Run Unit Tests
-Execute the local JUnit test suite verifying repositories, mapping utilities, and sync helpers:
+3. Start the development server:
+
 ```bash
+npm run dev
+```
+
+---
+
+## 🧪 Build and Test Status
+
+The current repository has been verified locally with the following commands:
+
+### Android
+
+```bash
+cd AndroidApp/ApplyTrack
 ./gradlew testDebugUnitTest
 ```
 
-### Build Distribution Package
-Compile and assemble the release APK or Android App Bundle (AAB):
+Result: unit tests completed successfully.
+
+### Web
+
 ```bash
-./gradlew assembleRelease
+cd WebApp
+npm run build
 ```
-The resulting installation binary will be output to:
-`app/build/outputs/apk/release/app-release-unsigned.apk` (or signed output if keystore configuration is integrated).
+
+Result: production build completed successfully.
 
 ---
 
-## 🌐 Web Application (Companion)
+## ▶️ Run Commands
 
-The web companion is planned for future implementation and will be located in the `WebApp/` directory.
+### Android
 
-* **Planned Tech Stack**: Vanilla HTML5, CSS3, and JavaScript logic.
-* **Planned Capabilities**: A lightweight web dashboard to load and visualize tracked job application metrics directly from browser clients.
-* *(Note: The WebApp project is currently in the planning stage. Implementation details and execution instructions will be updated here once development begins.)*
+```bash
+cd AndroidApp/ApplyTrack
+./gradlew assembleRelease
+```
+
+### Web
+
+```bash
+cd WebApp
+npm run dev
+```
