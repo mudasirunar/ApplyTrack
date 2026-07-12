@@ -17,9 +17,17 @@ import ImageViewer from '../components/ImageViewer';
 import PDFViewer from '../components/PDFViewer';
 import './JobDetail.css';
 
-function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
+function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel, hideCancel = false }) {
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay" onClick={hideCancel ? undefined : onCancel}>
       <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
         <h3 className="modal-title" style={{ margin: 0, color: isDestructive ? 'var(--error-red)' : 'var(--brand-primary)' }}>
           {title}
@@ -29,9 +37,11 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
           {message}
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-          <button onClick={onCancel} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
-            Cancel
-          </button>
+          {!hideCancel && (
+            <button onClick={onCancel} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+              Cancel
+            </button>
+          )}
           <button 
             onClick={onConfirm} 
             className="btn-primary" 
@@ -40,7 +50,7 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
               fontSize: '0.85rem', 
               backgroundColor: isDestructive ? 'var(--error-red)' : undefined,
               borderColor: isDestructive ? 'var(--error-red)' : undefined,
-              color: '#FFFFFF'
+              color: isDestructive ? '#FFFFFF' : undefined
             }}
           >
             {confirmLabel}
@@ -138,6 +148,8 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   const [activeImageIndex, setActiveImageIndex] = useState(null);
   const [activePdfFile, setActivePdfFile] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRemoteDeleteModal, setShowRemoteDeleteModal] = useState(false);
+  const isDeletingLocally = React.useRef(false);
 
   // Load app data
   useEffect(() => {
@@ -146,6 +158,14 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
         const data = db.getApplicationById(jobId);
         if (data) {
           setApp(data);
+        } else {
+          setApp(prevApp => {
+            if (prevApp !== null && !isDeletingLocally.current) {
+              setShowRemoteDeleteModal(true);
+              return prevApp; // Keep the app data so the modal shows over the detail screen
+            }
+            return null;
+          });
         }
       }
     };
@@ -187,6 +207,7 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
   };
 
   const handleConfirmDelete = () => {
+    isDeletingLocally.current = true;
     db.deleteApplication(app.id);
     setShowDeleteModal(false);
     
@@ -659,13 +680,27 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
         document.body
       )}
       {showDeleteModal && createPortal(
-        <ConfirmationModal
+        <ConfirmationModal 
           title="Delete Application"
-          message="Are you sure you want to delete this job application?"
+          message={`Are you sure you want to delete ${app.role || 'this application'}? This action cannot be undone.`}
           confirmLabel="Delete"
           isDestructive={true}
           onConfirm={handleConfirmDelete}
           onCancel={() => setShowDeleteModal(false)}
+        />,
+        document.body
+      )}
+      {showRemoteDeleteModal && createPortal(
+        <ConfirmationModal 
+          title="Application Deleted"
+          message="This job application has been deleted from another device"
+          confirmLabel="Go to Applications"
+          hideCancel={true}
+          onConfirm={() => {
+            setShowRemoteDeleteModal(false);
+            setActiveTab('applications');
+            setSelectedJobId(null);
+          }}
         />,
         document.body
       )}

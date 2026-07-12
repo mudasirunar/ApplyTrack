@@ -4,6 +4,50 @@ import { db } from '../utils/db';
 import { ChevronIcon, FileIcon, DeleteIcon } from '../components/Icons';
 import './JobAddEdit.css';
 
+function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel, hideCancel = false }) {
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
+  return (
+    <div className="modal-overlay" onClick={hideCancel ? undefined : onCancel}>
+      <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title" style={{ margin: 0, color: isDestructive ? 'var(--error-red)' : 'var(--brand-primary)' }}>
+          {title}
+        </h3>
+        <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '8px 0' }}></div>
+        <p className="modal-text" style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-primary)', margin: '12px 0 20px' }}>
+          {message}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          {!hideCancel && (
+            <button onClick={onCancel} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+              Cancel
+            </button>
+          )}
+          <button 
+            onClick={onConfirm} 
+            className="btn-primary" 
+            style={{ 
+              padding: '8px 16px', 
+              fontSize: '0.85rem', 
+              backgroundColor: isDestructive ? 'var(--error-red)' : undefined,
+              borderColor: isDestructive ? 'var(--error-red)' : undefined,
+              color: isDestructive ? '#FFFFFF' : undefined
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const getLocalDateString = (timestampOrDate = new Date()) => {
   const date = new Date(timestampOrDate);
   const year = date.getFullYear();
@@ -149,8 +193,11 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
   const [coverLetter, setCoverLetter] = useState(null);
   const [additionalDocument, setAdditionalDocument] = useState(null);
   const [screenshots, setScreenshots] = useState([]); // Array of attachment objects
+  const [showRemoteDeleteModal, setShowRemoteDeleteModal] = useState(false);
 
 
+
+  const hasLoadedOnce = React.useRef(false);
 
   // Load existing data if in edit mode
   useEffect(() => {
@@ -158,6 +205,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       if (isEditMode) {
         const app = db.getApplicationById(jobId);
         if (app) {
+          hasLoadedOnce.current = true;
           setCompanyName(app.companyName || '');
           setRole(app.role || '');
           
@@ -181,6 +229,9 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           setCoverLetter(app.coverLetter);
           setAdditionalDocument(app.additionalDocument || null);
           setScreenshots(app.screenshots || []);
+        } else if (hasLoadedOnce.current) {
+          // If we successfully loaded the job data but now it's gone, it was deleted!
+          setShowRemoteDeleteModal(true);
         }
       }
     };
@@ -301,21 +352,21 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       screenshots
     };
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         if (isEditMode) {
-          db.updateApplication(jobId, appData);
+          await db.updateApplication(jobId, appData);
           // Navigate to previous view
           setActiveTab(editSource || 'job-detail');
         } else {
-          const newApp = db.addApplication(appData);
+          await db.addApplication(appData);
           // Reset selected job and go to Applications
           setSelectedJobId(null);
           setActiveTab('applications');
         }
       } catch (err) {
         console.error(err);
-        alert('Failed to save application. The files you attached might be too large for browser LocalStorage. Please try using smaller files or screenshots.');
+        alert('Failed to save application. Please try again.');
         setIsSaving(false);
       }
     }, 600);
@@ -685,6 +736,22 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
             </button>
           </div>
         </div>,
+        document.body
+      )}
+
+      {showRemoteDeleteModal && createPortal(
+        <ConfirmationModal 
+          title="Application Deleted"
+          message="This job application has been deleted from another device"
+          confirmLabel="Go to Applications"
+          hideCancel={true}
+          onConfirm={() => {
+            setShowRemoteDeleteModal(false);
+            setActiveTab('applications');
+            setSelectedJobId(null);
+          }}
+          onCancel={() => {}}
+        />,
         document.body
       )}
     </div>
