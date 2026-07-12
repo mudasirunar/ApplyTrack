@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.JobViewModel
+import com.example.ui.components.DeletedAlertDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +48,8 @@ fun DetailScreen(
     onNavigateToEdit: (Long) -> Unit,
     onNavigateToPdfViewer: (String, String) -> Unit,
     onNavigateToImageViewer: (Long, Int) -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToApplications: () -> Unit
 ) {
     val selectedApp by viewModel.selectedApplication.collectAsStateWithLifecycle()
     val downloadingFiles by viewModel.downloadingFiles.collectAsStateWithLifecycle()
@@ -186,8 +188,8 @@ fun DetailScreen(
     }
 
     if (hasLoadedOnce && selectedApp == null) {
-        DeletedFallbackDialog(
-            onConfirm = onNavigateBack
+        DeletedAlertDialog(
+            onConfirm = onNavigateToApplications
         )
     }
 }

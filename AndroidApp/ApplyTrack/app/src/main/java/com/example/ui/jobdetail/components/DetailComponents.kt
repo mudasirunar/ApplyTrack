@@ -1,6 +1,7 @@
 package com.example.ui.jobdetail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -108,6 +109,15 @@ fun TimelineNode(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val lineColor = MaterialTheme.colorScheme.surfaceVariant
+        val statusColor = when (stage.lowercase()) {
+            "applied" -> WarningAmber
+            "saved" -> SavedGray
+            "interview", "interviewing" -> AccentGreen
+            "offer" -> LinkBlue
+            "rejected" -> ErrorRed
+            else -> MaterialTheme.colorScheme.primary
+        }
+
         Box(
             modifier = Modifier
                 .width(32.dp)
@@ -139,8 +149,13 @@ fun TimelineNode(
             Box(
                 modifier = Modifier
                     .size(if (isCurrent) 16.dp else 12.dp)
+                    .border(
+                        width = if (isCurrent) 3.dp else 2.dp,
+                        color = statusColor,
+                        shape = CircleShape
+                    )
                     .background(
-                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        color = MaterialTheme.colorScheme.surface,
                         shape = CircleShape
                     )
             )
