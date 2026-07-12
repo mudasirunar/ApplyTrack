@@ -91,7 +91,7 @@ fun StatusCardsGrid(
                 textColor = MaterialTheme.colorScheme.primary,
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
                 modifier = Modifier.weight(1f),
-                onClick = null
+                onClick = { onStatusClick("Response") }
             )
         }
     }
