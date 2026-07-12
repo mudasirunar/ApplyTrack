@@ -1,4 +1,4 @@
-package com.example.ui.jobaddedit
+package com.example.ui.components
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -21,7 +21,7 @@ fun DeletedAlertDialog(
             Button(
                 onClick = onConfirm
             ) {
-                Text("Return to Dashboard", fontWeight = FontWeight.Bold)
+                Text("Go to Applications", fontWeight = FontWeight.Bold)
             }
         },
         properties = DialogProperties(
