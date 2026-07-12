@@ -697,7 +697,9 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                         padding: '4px'
                       }}
                     >
-                      <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ lineHeight: 1 }}>
+                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                      </svg>
                       <span>Add ({screenshots.length}/3)</span>
                       <input 
                         type="file" 
