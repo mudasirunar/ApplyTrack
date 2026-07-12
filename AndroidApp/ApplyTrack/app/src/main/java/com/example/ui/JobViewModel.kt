@@ -317,6 +317,12 @@ class JobViewModel(
                     }
                 }
             }
+            "Response" -> {
+                result = result.filter { app ->
+                    val s = app.status.lowercase()
+                    s == "interview" || s == "offer" || s == "rejected"
+                }
+            }
             "All" -> {
                 // Show all
             }
@@ -373,11 +379,12 @@ class JobViewModel(
         val offers = apps.count { it.status.equals("Offer", ignoreCase = true) }
         val rejected = apps.count { it.status.equals("Rejected", ignoreCase = true) }
         val responses = interviews + offers + rejected
+        val activeTotal = total - saved
 
-        val successRate = if (total > 0) (offers.toFloat() / total * 100f) else 0f
-        val rejectionRate = if (total > 0) (rejected.toFloat() / total * 100f) else 0f
-        val interviewRate = if (total > 0) (interviews.toFloat() / total * 100f) else 0f
-        val responseRate = if (total > 0) ((interviews + offers + rejected).toFloat() / total * 100f) else 0f
+        val successRate = if (activeTotal > 0) (offers.toFloat() / activeTotal * 100f) else 0f
+        val rejectionRate = if (activeTotal > 0) (rejected.toFloat() / activeTotal * 100f) else 0f
+        val interviewRate = if (activeTotal > 0) (interviews.toFloat() / activeTotal * 100f) else 0f
+        val responseRate = if (activeTotal > 0) ((interviews + offers + rejected).toFloat() / activeTotal * 100f) else 0f
 
         // Platform analytics (group custom platforms under "Other" to align with dropdown options)
         val standardPlatforms = listOf("LinkedIn", "Indeed", "Email", "Website")
