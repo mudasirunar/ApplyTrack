@@ -593,7 +593,8 @@
 .resume-leaderboard-card {
   padding: 16px;
   margin-bottom: 8px; /* Reduced to tighten mobile bottom spacing */
-  align-self: start; /* Fit content height, don't stretch to match sibling */
+  display: flex;
+  flex-direction: column;
 }
 
 .resume-leaderboard-card .chart-header {
@@ -703,15 +704,7 @@
   height: 100%;
 }
 
-.monthly-activity-card.empty {
-  height: auto;
-  align-self: start;
-}
-
-.monthly-activity-card.empty .card-empty-text {
-  padding: 6px 4px;
-  font-size: 0.7rem;
-}
+/* Removed empty overrides to allow cards to stretch to match height */
 
 @media (min-width: 600px) {
   .monthly-activity-card {
@@ -720,10 +713,7 @@
 }
 
 @media (min-width: 768px) {
-  .monthly-activity-card.empty {
-    /* On desktop, maintain the grid row height so sibling doesn't shift */
-    align-self: start;
-  }
+/* Removed desktop empty override */
 }
 
 .monthly-activity-card .activity-chart-scroll-container {
@@ -740,10 +730,63 @@
   padding: 32px 16px;
   line-height: 1.5;
   width: 100%;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Force empty cards to have matching compact heights and uniform layout */
+.card-base.empty {
+  height: 180px !important;
+  min-height: 180px !important;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+@media (min-width: 600px) {
+  .card-base.empty {
+    padding: 20px !important;
+    height: 180px !important;
+    min-height: 180px !important;
+  }
+}
+
+.card-base.empty .chart-header {
+  margin-bottom: 0 !important;
+  padding-bottom: 12px !important;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.card-base.empty .card-empty-text {
+  padding: 12px 8px !important;
+  margin: 0 !important;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  opacity: 0.65;
+  line-height: 1.4;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .platform-breakdown-card {
   padding: 16px;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (min-width: 600px) {

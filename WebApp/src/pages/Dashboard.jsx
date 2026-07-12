@@ -470,11 +470,15 @@ export default function Dashboard({ setActiveTab, setFilters }) {
       </div>
 
       {/* Conversion Rates Section */}
-      {analytics.total > 0 && (
-        <div className="conversion-rates-card card-base">
-          <div className="chart-header">
-            <h3 className="section-title" style={{ margin: 0 }}>Conversion Rates</h3>
+      <div className={`conversion-rates-card card-base${analytics.total === 0 ? ' empty' : ''}`}>
+        <div className="chart-header">
+          <h3 className="section-title" style={{ margin: 0 }}>Conversion Rates</h3>
+        </div>
+        {analytics.total === 0 ? (
+          <div className="card-empty-text">
+            No conversion rates available. Add applications with different statuses to calculate your success and interview rates.
           </div>
+        ) : (
           <div className="rates-container">
             <CircularProgressRing
               label="Success"
@@ -497,205 +501,209 @@ export default function Dashboard({ setActiveTab, setFilters }) {
               color="var(--brand-primary)"
             />
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Double Column Section (Charts & platform list) */}
-      {analytics.total > 0 && (
-        <div className="dashboard-grid-2">
-          {/* Status Distribution */}
-          <div className="card-base donut-chart-container">
-            <div className="chart-header" style={{ width: '100%' }}>
-              <h3 className="section-title" style={{ margin: 0 }}>Status Distribution</h3>
-            </div>
-            <DonutChart total={analytics.total} statusDistribution={analytics.statusDistribution} />
-            <div
-              className="donut-legend"
-              ref={legendScrollRef}
-              onMouseDown={handleLegendMouseDown}
-              onMouseLeave={handleLegendMouseLeave}
-              onMouseUp={handleLegendMouseUp}
-              onMouseMove={handleLegendMouseMove}
-            >
-              {analytics.statusDistribution.map((slice, idx) => (
-                <div
-                  key={idx}
-                  className="legend-item"
-                >
-                  <span className="legend-color" style={{ backgroundColor: slice.color }}></span>
-                  <span style={{ color: 'var(--text-secondary)' }}>{slice.name} ({slice.count})</span>
-                </div>
-              ))}
-            </div>
+      <div className="dashboard-grid-2">
+        {/* Status Distribution */}
+        <div className={`card-base donut-chart-container${analytics.total === 0 ? ' empty' : ''}`}>
+          <div className="chart-header" style={{ width: '100%' }}>
+            <h3 className="section-title" style={{ margin: 0 }}>Status Distribution</h3>
           </div>
-
-          {/* Monthly Activity Section */}
-          <div className={`card-base monthly-activity-card${isMonthlyActivityEmpty ? ' empty' : ''}`}>
-            <div className="chart-header">
-              <h3 className="section-title" style={{ margin: 0 }}>Monthly Activity</h3>
-              <YearSelector year={chartYear} onChange={setSelectedYear} />
+          {analytics.total === 0 ? (
+            <div className="card-empty-text">
+              Add applications to see your status distribution chart.
             </div>
-
-            {isMonthlyActivityEmpty ? (
-              <div className="card-empty-text">
-                No application activity recorded in {chartYear}. Try adding or editing applications to see activity.
-              </div>
-            ) : (
-              <>
-                {/* Less/More Active Legend matching native Compose BarChart */}
-                <div className="activity-legend">
-                  <span className="legend-text">Less Active</span>
-                  <div className="legend-gradient-bar"></div>
-                  <span className="legend-text">More Active</span>
-                </div>
-
-                {/* Scrollable drag-to-scroll chart wrapper */}
-                <div
-                  className="activity-chart-scroll-container"
-                  ref={scrollRef}
-                  onMouseDown={handleMouseDown}
-                  onMouseLeave={handleMouseLeave}
-                  onMouseUp={handleMouseUp}
-                  onMouseMove={handleMouseMove}
-                >
-                  <div className="activity-chart-inner">
-                    {monthsList.map((month) => {
-                      const count = monthlyDataForYear[month] || 0;
-                      const percentHeight = (count / maxApplicationsInMonth) * 100;
-                      const barColor = getBarColor(count, maxApplicationsInMonth);
-                      const barBackground = count > 0 ? `linear-gradient(to bottom, ${barColor}, ${barColor}80)` : 'transparent';
-
-                      return (
-                        <div key={month} className="chart-bar-column">
-                          <div className="chart-bar-container">
-                            {count > 0 && (
-                              <div
-                                className="chart-bar"
-                                style={{
-                                  height: `${percentHeight}%`,
-                                  background: barBackground,
-                                  border: `1px solid ${barColor}4d`
-                                }}
-                                onClick={() => handleNavigateToApps('month', { month, year: Number(chartYear) })}
-                                title={`${count} ${count === 1 ? 'activity' : 'activities'}`}
-                              />
-                            )}
-                          </div>
-                          <span
-                            className="chart-bar-count"
-                            style={{
-                              color: count > 0 ? barColor : 'var(--text-secondary)',
-                              opacity: count > 0 ? 1 : 0.5
-                            }}
-                          >
-                            {count}
-                          </span>
-                          <span className="chart-label">{month}</span>
-                        </div>
-                      );
-                    })}
+          ) : (
+            <>
+              <DonutChart total={analytics.total} statusDistribution={analytics.statusDistribution} />
+              <div
+                className="donut-legend"
+                ref={legendScrollRef}
+                onMouseDown={handleLegendMouseDown}
+                onMouseLeave={handleLegendMouseLeave}
+                onMouseUp={handleLegendMouseUp}
+                onMouseMove={handleLegendMouseMove}
+              >
+                {analytics.statusDistribution.map((slice, idx) => (
+                  <div
+                    key={idx}
+                    className="legend-item"
+                  >
+                    <span className="legend-color" style={{ backgroundColor: slice.color }}></span>
+                    <span style={{ color: 'var(--text-secondary)' }}>{slice.name} ({slice.count})</span>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      )}
+
+        {/* Monthly Activity Section */}
+        <div className={`card-base monthly-activity-card${isMonthlyActivityEmpty ? ' empty' : ''}`}>
+          <div className="chart-header">
+            <h3 className="section-title" style={{ margin: 0 }}>Monthly Activity</h3>
+            <YearSelector year={chartYear} onChange={setSelectedYear} />
+          </div>
+
+          {isMonthlyActivityEmpty ? (
+            <div className="card-empty-text">
+              No application activity recorded in {chartYear}. Try adding or editing applications to see activity.
+            </div>
+          ) : (
+            <>
+              {/* Less/More Active Legend matching native Compose BarChart */}
+              <div className="activity-legend">
+                <span className="legend-text">Less Active</span>
+                <div className="legend-gradient-bar"></div>
+                <span className="legend-text">More Active</span>
+              </div>
+
+              {/* Scrollable drag-to-scroll chart wrapper */}
+              <div
+                className="activity-chart-scroll-container"
+                ref={scrollRef}
+                onMouseDown={handleMouseDown}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={handleMouseUp}
+                onMouseMove={handleMouseMove}
+              >
+                <div className="activity-chart-inner">
+                  {monthsList.map((month) => {
+                    const count = monthlyDataForYear[month] || 0;
+                    const percentHeight = (count / maxApplicationsInMonth) * 100;
+                    const barColor = getBarColor(count, maxApplicationsInMonth);
+                    const barBackground = count > 0 ? `linear-gradient(to bottom, ${barColor}, ${barColor}80)` : 'transparent';
+
+                    return (
+                      <div key={month} className="chart-bar-column">
+                        <div className="chart-bar-container">
+                          {count > 0 && (
+                            <div
+                              className="chart-bar"
+                              style={{
+                                height: `${percentHeight}%`,
+                                background: barBackground,
+                                border: `1px solid ${barColor}4d`
+                              }}
+                              onClick={() => handleNavigateToApps('month', { month, year: Number(chartYear) })}
+                              title={`${count} ${count === 1 ? 'activity' : 'activities'}`}
+                            />
+                          )}
+                        </div>
+                        <span
+                          className="chart-bar-count"
+                          style={{
+                            color: count > 0 ? barColor : 'var(--text-secondary)',
+                            opacity: count > 0 ? 1 : 0.5
+                          }}
+                        >
+                          {count}
+                        </span>
+                        <span className="chart-label">{month}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Double Column Section (Platform & Resume effectiveness) */}
-      {analytics.total > 0 && (
-        <div className="dashboard-grid-2">
-          {/* Platform Breakdown */}
-          <div className="card-base platform-breakdown-card">
-            <div className="platform-header-container">
-              <h3 className="section-title" style={{ margin: 0 }}>Platforms</h3>
+      <div className="dashboard-grid-2">
+        {/* Platform Breakdown */}
+        <div className={`card-base platform-breakdown-card${analytics.platforms.length === 0 ? ' empty' : ''}`}>
+          <div className="chart-header">
+            <h3 className="section-title" style={{ margin: 0 }}>Platforms</h3>
+          </div>
+          {analytics.platforms.length === 0 ? (
+            <div className="card-empty-text">
+              No platform data recorded yet. Add platforms to your applications to see breakdown.
             </div>
+          ) : (
             <div className="platform-list">
-              {analytics.platforms.length > 0 ? (
-                analytics.platforms.map((p, idx) => {
-                  const maxCount = Math.max(...analytics.platforms.map(item => item.count), 1);
-                  const barPercent = (p.count / maxCount) * 100;
-                  return (
-                    <div
-                      key={idx}
-                      className="platform-row"
-                      onClick={() => handleNavigateToApps('platform', p.name)}
-                    >
-                      <div className="platform-row-info">
-                        <span style={{ color: 'var(--brand-primary)' }}>{p.name}</span>
-                        <span style={{ color: 'var(--text-secondary)' }}>{p.count}</span>
-                      </div>
-                      <div className="platform-bar-container">
-                        <div className="platform-bar-fill" style={{ width: `${barPercent}%` }}></div>
-                      </div>
+              {analytics.platforms.map((p, idx) => {
+                const maxCount = Math.max(...analytics.platforms.map(item => item.count), 1);
+                const barPercent = (p.count / maxCount) * 100;
+                return (
+                  <div
+                    key={idx}
+                    className="platform-row"
+                    onClick={() => handleNavigateToApps('platform', p.name)}
+                  >
+                    <div className="platform-row-info">
+                      <span style={{ color: 'var(--brand-primary)' }}>{p.name}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{p.count}</span>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="card-empty-text">
-                  No platform data recorded yet. Add platforms to your applications to see breakdown.
-                </div>
-              )}
+                    <div className="platform-bar-container">
+                      <div className="platform-bar-fill" style={{ width: `${barPercent}%` }}></div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-
-          {/* Resume Effectiveness Section */}
-          <div className="card-base resume-leaderboard-card">
-            <div className="chart-header">
-              <h3 className="section-title" style={{ margin: 0 }}>Resume Effectiveness</h3>
-            </div>
-            <div className="resume-table-wrapper">
-              {analytics.resumeStats.length > 0 ? (
-                <table className="resume-table">
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left' }}>Resume</th>
-                      <th style={{ textAlign: 'center', width: '45px' }}>Used</th>
-                      <th style={{ textAlign: 'center', width: '45px', color: 'var(--accent-green)' }}>Int.</th>
-                      <th style={{ textAlign: 'center', width: '45px', color: 'var(--link-blue)' }}>Offer</th>
-                      <th style={{ textAlign: 'center', width: '45px', color: 'var(--error-red)' }}>Rej.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analytics.resumeStats.map((r, idx) => {
-                      const displayName = r.resumeName.replace(/\.(pdf|docx|doc)$/i, '');
-                      return (
-                        <tr key={idx}>
-                          <td style={{ textAlign: 'left' }}>
-                            <div
-                              className="resume-tag-name"
-                              title={r.resumeName}
-                              onClick={() => handleNavigateToApps('resume', r.resumeName)}
-                            >
-                              {displayName}
-                            </div>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            {r.totalUsed}
-                          </td>
-                          <td style={{ textAlign: 'center', color: 'var(--accent-green)' }}>
-                            {r.interviewCount}
-                          </td>
-                          <td style={{ textAlign: 'center', color: 'var(--link-blue)' }}>
-                            {r.offerCount}
-                          </td>
-                          <td style={{ textAlign: 'center', color: 'var(--error-red)' }}>
-                            {r.rejectedCount}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="card-empty-text">
-                  No resumes attached yet. Attach a CV/resume to applications to track which works best.
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
-      )}
+
+        {/* Resume Effectiveness Section */}
+        <div className={`card-base resume-leaderboard-card${analytics.resumeStats.length === 0 ? ' empty' : ''}`}>
+          <div className="chart-header">
+            <h3 className="section-title" style={{ margin: 0 }}>Resume Effectiveness</h3>
+          </div>
+          {analytics.resumeStats.length === 0 ? (
+            <div className="card-empty-text">
+              No resumes attached yet. Attach a CV/resume to applications to track which works best.
+            </div>
+          ) : (
+            <div className="resume-table-wrapper">
+              <table className="resume-table">
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left' }}>Resume</th>
+                    <th style={{ textAlign: 'center', width: '45px' }}>Used</th>
+                    <th style={{ textAlign: 'center', width: '45px', color: 'var(--accent-green)' }}>Int.</th>
+                    <th style={{ textAlign: 'center', width: '45px', color: 'var(--link-blue)' }}>Offer</th>
+                    <th style={{ textAlign: 'center', width: '45px', color: 'var(--error-red)' }}>Rej.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.resumeStats.map((r, idx) => {
+                    const displayName = r.resumeName.replace(/\.(pdf|docx|doc)$/i, '');
+                    return (
+                      <tr key={idx}>
+                        <td style={{ textAlign: 'left' }}>
+                          <div
+                            className="resume-tag-name"
+                            title={r.resumeName}
+                            onClick={() => handleNavigateToApps('resume', r.resumeName)}
+                          >
+                            {displayName}
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {r.totalUsed}
+                        </td>
+                        <td style={{ textAlign: 'center', color: 'var(--accent-green)' }}>
+                          {r.interviewCount}
+                        </td>
+                        <td style={{ textAlign: 'center', color: 'var(--link-blue)' }}>
+                          {r.offerCount}
+                        </td>
+                        <td style={{ textAlign: 'center', color: 'var(--error-red)' }}>
+                          {r.rejectedCount}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
