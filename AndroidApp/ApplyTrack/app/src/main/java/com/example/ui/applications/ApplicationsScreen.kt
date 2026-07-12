@@ -2,6 +2,7 @@ package com.example.ui.applications
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -29,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -75,7 +78,8 @@ fun ApplicationsScreen(
     val isSelectionModeActive by viewModel.isSelectionModeActive.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
-    val filterLazyListState = rememberLazyListState()
+    val filterScrollState = rememberScrollState()
+    val chipPositions = remember { mutableStateMapOf<Int, Int>() }
     val coroutineScope = rememberCoroutineScope()
 
     val scrollToTopEvent by viewModel.applicationsScrollToTop.collectAsStateWithLifecycle()
@@ -125,10 +129,13 @@ fun ApplicationsScreen(
 
     LaunchedEffect(shouldScrollToFilter) {
         if (shouldScrollToFilter) {
-            val statuses = listOf("All", "Applied", "Interview", "Offer", "Rejected", "Saved", "Resume", "Platform", "Date")
-            val selectedIndex = statuses.indexOf(statusFilter)
+            val selectedIndex = filterStatuses.indexOf(statusFilter)
             if (selectedIndex >= 0) {
-                filterLazyListState.animateScrollToItem(selectedIndex)
+                val targetOffset = chipPositions[selectedIndex] ?: 0
+                filterScrollState.animateScrollTo(
+                    value = targetOffset,
+                    animationSpec = tween(durationMillis = 400)
+                )
             }
             viewModel.shouldScrollToFilter.value = false
         }
@@ -210,7 +217,8 @@ fun ApplicationsScreen(
                                         viewModel.sortOption.value = SortOption.STATUS_LATEST
                                     }
                                 },
-                                lazyListState = filterLazyListState
+                                scrollState = filterScrollState,
+                                chipPositions = chipPositions
                             )
 
                             // Resume & Platform Sub-filters
@@ -240,13 +248,17 @@ fun ApplicationsScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                if (!isSelectionModeActive) {
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                // Sort Info Row
-                SortInfoRow(
-                    sortOption = sortOption,
-                    onClick = { showSortBottomSheet = true }
-                )
+                    // Sort Info Row
+                    SortInfoRow(
+                        filteredCount = apps.size,
+                        totalCount = stats.total,
+                        sortOption = sortOption,
+                        onClick = { showSortBottomSheet = true }
+                    )
+                }
 
                 // Main Content List / Shimmers / Empty screens
                 ApplicationsContent(
@@ -282,7 +294,19 @@ fun ApplicationsScreen(
                         jobToDelete = job
                         showDeleteConfirmDialog = true
                     },
-                    onAddClick = { onNavigateToAddEdit(null) }
+                    onAddClick = { onNavigateToAddEdit(null) },
+                    onClearFilters = {
+                        viewModel.searchQuery.value = ""
+                        viewModel.statusFilter.value = "All"
+                        viewModel.isSearchFocused.value = false
+                        focusManager.clearFocus()
+                        coroutineScope.launch {
+                            filterScrollState.animateScrollTo(
+                                value = 0,
+                                animationSpec = tween(durationMillis = 400)
+                            )
+                        }
+                    }
                 )
             }
         }

@@ -24,11 +24,7 @@ fun ApplicationsTopBar(
     selectedCount: Int,
     onCloseClick: () -> Unit
 ) {
-    AnimatedVisibility(
-        visible = isSelectionModeActive,
-        enter = expandVertically() + fadeIn(),
-        exit = shrinkVertically() + fadeOut()
-    ) {
+    if (isSelectionModeActive) {
         TopAppBar(
             title = {
                 Text(
