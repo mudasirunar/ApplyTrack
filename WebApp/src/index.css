@@ -221,6 +221,14 @@ button, input, textarea, select {
   border-color: var(--error-red);
 }
 
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
 .btn-danger:active {
   transform: translateY(1px);
 }
@@ -346,4 +354,23 @@ button, input, textarea, select {
 .form-textarea {
   resize: vertical;
   min-height: 100px;
+}
+
+/* Global Button Spinner */
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: currentColor;
+  animation: btn-spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

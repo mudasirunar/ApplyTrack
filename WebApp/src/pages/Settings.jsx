@@ -12,33 +12,47 @@ const DialogOutcome = {
   INFO: 'INFO'
 };
 
-function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
+function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel, isLoading = false, loadingText = '' }) {
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
   const modalContent = (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay" onClick={isLoading ? undefined : onCancel}>
       <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
         <h3 className="modal-title" style={{ margin: 0, color: isDestructive ? 'var(--error-red)' : 'var(--brand-primary)' }}>
           {title}
         </h3>
         <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '8px 0' }}></div>
         <p className="modal-text" style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-primary)', margin: '12px 0 20px' }}>
-          {message}
+          {isLoading ? (loadingText || "Processing...") : message}
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-          <button onClick={onCancel} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
-            Cancel
-          </button>
+          {!isLoading && (
+            <button onClick={onCancel} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+              Cancel
+            </button>
+          )}
           <button 
             onClick={onConfirm} 
             className="btn-primary" 
+            disabled={isLoading}
             style={{ 
               padding: '8px 16px', 
               fontSize: '0.85rem', 
               backgroundColor: isDestructive ? 'var(--error-red)' : undefined,
               borderColor: isDestructive ? 'var(--error-red)' : undefined,
-              color: isDestructive ? '#FFFFFF' : 'var(--text-on-primary)'
+              color: isDestructive ? '#FFFFFF' : 'var(--text-on-primary)',
+              display: 'flex',
+              alignItems: 'center'
             }}
           >
-            {confirmLabel}
+            {isLoading && <span className="btn-spinner" />}
+            <span>{isLoading ? (loadingText || "Processing...") : confirmLabel}</span>
           </button>
         </div>
       </div>
@@ -164,6 +178,7 @@ export default function Settings() {
   const [appsCount, setAppsCount] = useState(db.getApplications().length);
 
   const [showWipeModal, setShowWipeModal] = useState(false);
+  const [isWiping, setIsWiping] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
 
   const appVersion = packageJson.version;
@@ -242,8 +257,12 @@ export default function Settings() {
       },
       (error) => {
         setIsWorking(false);
-        setDialogOutcome(DialogOutcome.FAILURE);
-        setDialogMessage(`Failed to export backup: ${error}`);
+        if (error === "Save cancelled by user") {
+          setShowProgressDialog(false);
+        } else {
+          setDialogOutcome(DialogOutcome.FAILURE);
+          setDialogMessage(`Failed to export backup: ${error}`);
+        }
       }
     );
   };
@@ -513,10 +532,20 @@ export default function Settings() {
           message="WARNING: This will permanently delete all your job applications and attached documents. This action cannot be undone. Are you sure you want to proceed?"
           confirmLabel="Wipe All"
           isDestructive={true}
+          isLoading={isWiping}
+          loadingText="Wiping all records..."
           onConfirm={async () => {
-            await db.resetDatabase();
-            setAppsCount(0);
-            setShowWipeModal(false);
+            setIsWiping(true);
+            try {
+              await db.resetDatabase();
+              setAppsCount(0);
+            } catch (err) {
+              console.error(err);
+              alert("Failed to wipe records.");
+            } finally {
+              setIsWiping(false);
+              setShowWipeModal(false);
+            }
           }}
           onCancel={() => setShowWipeModal(false)}
         />

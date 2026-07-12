@@ -144,25 +144,55 @@ export async function exportBackupToZip(apps, onSuccess, onError) {
     }));
 
     // 4. Compress ZIP asynchronously
-    zip(files, (err, zipBytes) => {
+    zip(files, async (err, zipBytes) => {
       if (err) {
         onError(err.message || err);
         return;
       }
 
-      // 5. Trigger download of ZIP archive
+      // 5. Trigger download/save of ZIP archive
       const blob = new Blob([zipBytes], { type: 'application/zip' });
-      const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
       const dateStr = new Date().toISOString().slice(0, 10);
-      a.download = `applytrack_backup_${dateStr}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+      const defaultFilename = `applytrack_backup_${dateStr}.zip`;
 
-      onSuccess();
+      const triggerTraditionalDownload = () => {
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = defaultFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+        onSuccess();
+      };
+
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: defaultFilename,
+            types: [{
+              description: 'ZIP Archive',
+              accept: {
+                'application/zip': ['.zip']
+              }
+            }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          onSuccess();
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            onError("Save cancelled by user");
+          } else {
+            console.error("Save picker failed, falling back:", err);
+            triggerTraditionalDownload();
+          }
+        }
+      } else {
+        triggerTraditionalDownload();
+      }
     });
   } catch (e) {
     onError(e.message || e);
