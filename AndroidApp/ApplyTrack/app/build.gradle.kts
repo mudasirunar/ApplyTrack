@@ -16,7 +16,7 @@ android {
     minSdk = 24
     targetSdk = 36
     versionCode = 4
-    versionName = "2.2.0"
+    versionName = "3.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -27,7 +27,6 @@ android {
     }
     val supabaseUrl = localProperties.getProperty("supabase.url") ?: "https://glrjlwwggnpzrsrakdzx.supabase.co"
     val supabaseKey = localProperties.getProperty("supabase.anonkey") ?: ""
-
     buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
     buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
   }
