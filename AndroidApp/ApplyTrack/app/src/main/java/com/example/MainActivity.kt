@@ -404,6 +404,12 @@ class MainActivity : ComponentActivity() {
                                 jobId = jobId,
                                 onNavigateBack = {
                                     navController.popBackStack()
+                                },
+                                onNavigateToApplications = {
+                                    navController.navigate("applications") {
+                                        popUpTo("dashboard") { inclusive = false }
+                                        launchSingleTop = true
+                                    }
                                 }
                             )
                         }
@@ -433,6 +439,12 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateBack = {
                                     navController.popBackStack()
+                                },
+                                onNavigateToApplications = {
+                                    navController.navigate("applications") {
+                                        popUpTo("dashboard") { inclusive = false }
+                                        launchSingleTop = true
+                                    }
                                 }
                             )
                         }
