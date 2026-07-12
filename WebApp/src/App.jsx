@@ -3,6 +3,8 @@ import { db } from './utils/db';
 import MainLayout from './components/MainLayout';
 import Login from './pages/Login';
 import SyncToast from './components/SyncToast';
+import { logEvent } from 'firebase/analytics';
+import { analytics } from './utils/firebase';
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Applications = React.lazy(() => import('./pages/Applications'));
@@ -310,6 +312,17 @@ export default function App() {
       if (loaderTimeoutRef.current) clearTimeout(loaderTimeoutRef.current);
     };
   }, []);
+
+  // Log page view to Firebase Analytics on activeTab change
+  useEffect(() => {
+    if (analytics) {
+      logEvent(analytics, 'page_view', {
+        page_title: activeTab,
+        page_location: window.location.href,
+        page_path: window.location.pathname
+      });
+    }
+  }, [activeTab]);
 
   // Render correct page content
   const renderContent = () => {
