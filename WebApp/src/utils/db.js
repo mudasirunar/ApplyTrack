@@ -14,6 +14,7 @@ let isInitialLoad = true;
 let currentUserId = null;
 let isAuthInitialized = false;
 let lastLocalWriteTime = 0;
+let currentSyncState = 'IDLE';
 
 function markLocalWrite() {
   lastLocalWriteTime = Date.now();
@@ -21,6 +22,7 @@ function markLocalWrite() {
 
 // Helper to trigger sync status custom events
 function triggerSyncState(state, message = '') {
+  currentSyncState = state;
   window.dispatchEvent(new CustomEvent('applytrack_sync_state', {
     detail: { state, message }
   }));
@@ -197,6 +199,9 @@ onAuthStateChanged(auth, (firebaseUser) => {
 });
 
 export const db = {
+  getSyncState() {
+    return currentSyncState;
+  },
   isAuthReady() {
     return isAuthInitialized;
   },

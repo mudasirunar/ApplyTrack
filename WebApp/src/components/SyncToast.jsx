@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '../utils/db';
 import './SyncToast.css';
 
 export default function SyncToast() {
-  const [visible, setVisible] = useState(false);
-  const [state, setState] = useState('IDLE'); // IDLE, SYNCING, SUCCESS, ERROR
+  const [visible, setVisible] = useState(() => {
+    const initialState = db.getSyncState();
+    return initialState !== 'IDLE';
+  });
+  const [state, setState] = useState(() => db.getSyncState());
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
