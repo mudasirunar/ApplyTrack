@@ -27,7 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +74,8 @@ fun AttachmentsCard(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
             AttachmentRow(
                 label = "Resume / CV",
@@ -152,17 +158,36 @@ fun AttachmentsCard(
                         }
                     }
                     if (screenshotsList.size < 3) {
+                        val dashedBorderColor = MaterialTheme.colorScheme.primary
                         Box(
                             modifier = Modifier
                                 .size(80.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .clickable { onAddScreenshot() }
-                                .border(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                    shape = RoundedCornerShape(8.dp)
-                                ),
+                                .drawBehind {
+                                    val strokeWidth = 1.5.dp.toPx()
+                                    val dashLength = 3.dp.toPx()
+                                    val gapLength = 3.dp.toPx()
+                                    val cornerRadiusPx = 8.dp.toPx()
+                                    val halfStroke = strokeWidth / 2
+                                    drawRoundRect(
+                                        color = dashedBorderColor,
+                                        topLeft = androidx.compose.ui.geometry.Offset(halfStroke, halfStroke),
+                                        size = androidx.compose.ui.geometry.Size(
+                                            size.width - strokeWidth,
+                                            size.height - strokeWidth
+                                        ),
+                                        cornerRadius = CornerRadius(cornerRadiusPx),
+                                        style = Stroke(
+                                            width = strokeWidth,
+                                            pathEffect = PathEffect.dashPathEffect(
+                                                floatArrayOf(dashLength, gapLength),
+                                                0f
+                                            )
+                                        )
+                                    )
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Column(

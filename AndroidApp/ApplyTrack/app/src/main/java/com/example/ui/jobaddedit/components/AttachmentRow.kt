@@ -75,7 +75,7 @@ fun AttachmentRow(
                 )
             } else {
                 Text(
-                    text = "No document uploaded",
+                    text = "No file attached",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )

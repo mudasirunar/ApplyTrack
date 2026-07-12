@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.Attachment
+import com.example.ui.components.DeletedAlertDialog
 import com.example.ui.JobViewModel
 import com.example.utils.AttachmentHelper
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +61,8 @@ import java.util.UUID
 fun AddEditScreen(
     viewModel: JobViewModel,
     jobId: Long?,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToApplications: () -> Unit
 ) {
     val selectedApp by viewModel.selectedApplication.collectAsStateWithLifecycle()
 
@@ -466,7 +468,7 @@ fun AddEditScreen(
 
     if (jobId != null && hasLoadedOnce && selectedApp == null) {
         DeletedAlertDialog(
-            onConfirm = onNavigateBack
+            onConfirm = onNavigateToApplications
         )
     }
 }
