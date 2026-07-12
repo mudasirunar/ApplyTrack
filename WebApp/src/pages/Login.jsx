@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import { AppIcon, GoogleIcon } from '../components/Icons';
 import loginBgMobileJpeg from '../assets/login_bg_mobile.jpeg';
@@ -14,6 +14,8 @@ export default function Login() {
   const handleGoogleSignInClick = async () => {
     setIsLoading(true);
     try {
+      // Explicitly set persistence to local to remember the user across sessions
+      await setPersistence(auth, browserLocalPersistence);
       const provider = new GoogleAuthProvider();
       // Enforce account selection popup
       provider.setCustomParameters({ prompt: 'select_account' });
