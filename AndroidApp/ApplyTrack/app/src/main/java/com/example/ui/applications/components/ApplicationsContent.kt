@@ -15,13 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -53,7 +56,8 @@ fun ApplicationsContent(
     onJobLongClick: (JobApplication) -> Unit,
     onEditClick: (Long) -> Unit,
     onDeleteClick: (JobApplication) -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onClearFilters: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (isInitialLoading) {
@@ -127,14 +131,27 @@ fun ApplicationsContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
                     )
+                    if (isSearchOrFilterActive) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = onClearFilters,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("Clear All Filters")
+                        }
+                    }
                 }
             }
         } else {
+            val bottomPadding = if (isSelectionModeActive) 16.dp else 96.dp
             LazyColumn(
                 state = lazyListState,
                 modifier = Modifier
                     .fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottomPadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(apps, key = { it.id }) { job ->
@@ -154,7 +171,7 @@ fun ApplicationsContent(
         }
 
         AddJobFab(
-            visible = isFabVisible && !isSearchFocused && !isInitialLoading && !isListCalculating,
+            visible = isFabVisible && !isSearchFocused && !isInitialLoading && !isListCalculating && !isSelectionModeActive,
             bottomPadding = fabBottomPadding,
             onClick = onAddClick,
             modifier = Modifier.align(Alignment.BottomEnd)
