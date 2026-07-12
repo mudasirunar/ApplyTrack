@@ -9,11 +9,15 @@ const KEYS = {
   DELETED_TEMP: 'applytrack_deleted_temp'
 };
 
-// Global variables for Firestore listener
 let unsubscribeFirestore = null;
 let isInitialLoad = true;
 let currentUserId = null;
 let isAuthInitialized = false;
+let lastLocalWriteTime = 0;
+
+function markLocalWrite() {
+  lastLocalWriteTime = Date.now();
+}
 
 // Helper to trigger sync status custom events
 function triggerSyncState(state, message = '') {
@@ -109,8 +113,10 @@ function startFirestoreListener(userId) {
   
   const colRef = collection(firestore, 'users', userId, 'job_applications');
   
-  // Trigger syncing status during initial load
-  triggerSyncState('SYNCING');
+  // Trigger syncing status during initial load so UI shows loading state
+  if (isInitialLoad) {
+    triggerSyncState('SYNCING');
+  }
   
   unsubscribeFirestore = onSnapshot(colRef, (snapshot) => {
     const apps = [];
@@ -137,9 +143,18 @@ function startFirestoreListener(userId) {
     
     if (isInitialLoad) {
       isInitialLoad = false;
-      triggerSyncState('IDLE');
+      // Show success on initial load only if there is data
+      if (snapshot.docs.length > 0) {
+        triggerSyncState('SUCCESS');
+      } else {
+        triggerSyncState('IDLE');
+      }
     } else {
-      triggerSyncState('SUCCESS');
+      // For subsequent snapshots, only show SUCCESS if it came from remote and there are actual changes
+      const isEchoOfLocalWrite = (Date.now() - lastLocalWriteTime) < 1500;
+      if (!snapshot.metadata.hasPendingWrites && snapshot.docChanges().length > 0 && !isEchoOfLocalWrite) {
+        triggerSyncState('SUCCESS');
+      }
     }
   }, (error) => {
     console.error('Firestore listener error:', error);
@@ -231,7 +246,7 @@ export const db = {
     const userId = currentUserId;
     if (!userId) throw new Error('User is not authenticated');
 
-    triggerSyncState('SYNCING');
+    markLocalWrite();
     try {
       const uuid = crypto.randomUUID ? crypto.randomUUID() : 'uuid-' + Math.random().toString(36).substring(2, 11);
       const apps = this.getApplications();
@@ -285,7 +300,6 @@ export const db = {
       const userDocRef = doc(firestore, 'users', userId, 'job_applications', uuid);
       await setDoc(userDocRef, serializedApp);
 
-      triggerSyncState('SUCCESS');
       return serializedApp;
     } catch (e) {
       console.error('Add application failed:', e);
@@ -298,7 +312,7 @@ export const db = {
     const userId = currentUserId;
     if (!userId) throw new Error('User is not authenticated');
 
-    triggerSyncState('SYNCING');
+    markLocalWrite();
     try {
       const originalApp = this.getApplicationById(id);
       if (!originalApp) throw new Error('Application not found');
@@ -365,7 +379,6 @@ export const db = {
       const userDocRef = doc(firestore, 'users', userId, 'job_applications', originalApp.uuid);
       await setDoc(userDocRef, serializedApp);
 
-      triggerSyncState('SUCCESS');
       return serializedApp;
     } catch (e) {
       console.error('Update application failed:', e);
@@ -378,7 +391,7 @@ export const db = {
     const userId = currentUserId;
     if (!userId) throw new Error('User is not authenticated');
 
-    triggerSyncState('SYNCING');
+    markLocalWrite();
     try {
       const app = this.getApplicationById(id);
       if (!app) throw new Error('Application not found');
@@ -390,7 +403,6 @@ export const db = {
       const userDocRef = doc(firestore, 'users', userId, 'job_applications', app.uuid);
       await deleteDoc(userDocRef);
 
-      triggerSyncState('SUCCESS');
       return true;
     } catch (e) {
       console.error('Delete application failed:', e);
@@ -403,7 +415,7 @@ export const db = {
     const userId = currentUserId;
     if (!userId) throw new Error('User is not authenticated');
 
-    triggerSyncState('SYNCING');
+    markLocalWrite();
     try {
       const apps = this.getApplications();
       const idStrings = ids.map(String);
@@ -424,7 +436,6 @@ export const db = {
       });
       await batch.commit();
 
-      triggerSyncState('SUCCESS');
       return true;
     } catch (e) {
       console.error('Multiple delete failed:', e);
@@ -437,7 +448,7 @@ export const db = {
     const userId = currentUserId;
     if (!userId) throw new Error('User is not authenticated');
 
-    triggerSyncState('SYNCING');
+    markLocalWrite();
     try {
       const temp = localStorage.getItem(KEYS.DELETED_TEMP);
       if (!temp) return false;
@@ -463,7 +474,6 @@ export const db = {
       await batch.commit();
 
       localStorage.removeItem(KEYS.DELETED_TEMP);
-      triggerSyncState('SUCCESS');
       return true;
     } catch (e) {
       console.error('Undo delete failed:', e);
@@ -523,7 +533,7 @@ export const db = {
     const userId = currentUserId;
     if (!userId) return;
 
-    triggerSyncState('SYNCING');
+    markLocalWrite();
     try {
       const apps = this.getApplications();
       
@@ -556,7 +566,6 @@ export const db = {
       await batch.commit();
 
       localStorage.removeItem(KEYS.APPLICATIONS);
-      triggerSyncState('SUCCESS');
     } catch (e) {
       console.error('Reset database failed:', e);
       triggerSyncState('ERROR', e.message || 'Failed to wipe database');
