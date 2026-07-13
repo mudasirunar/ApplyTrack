@@ -456,15 +456,53 @@ class JobViewModel(
 
         // Weekly/monthly activity counts
         val now = System.currentTimeMillis()
-        val oneWeekAgo = now - 7L * 24 * 60 * 60 * 1000
-        val applicationsThisWeek = apps.count { it.createdAt >= oneWeekAgo }
+        val calInstance = Calendar.getInstance().apply { timeInMillis = now }
 
-        cal.timeInMillis = now
-        val thisMonth = cal.get(Calendar.MONTH)
-        val thisYear = cal.get(Calendar.YEAR)
-        val applicationsThisMonth = apps.count { app ->
-            val appCal = Calendar.getInstance().apply { timeInMillis = app.createdAt }
-            appCal.get(Calendar.MONTH) == thisMonth && appCal.get(Calendar.YEAR) == thisYear
+        // Weekly calculation (Monday to Sunday)
+        val dayOfWeek = calInstance.get(Calendar.DAY_OF_WEEK)
+        val daysToSubtract = if (dayOfWeek == Calendar.SUNDAY) 6 else dayOfWeek - Calendar.MONDAY
+        val startOfWeek = Calendar.getInstance().apply {
+            timeInMillis = now
+            add(Calendar.DAY_OF_MONTH, -daysToSubtract)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val endOfWeek = Calendar.getInstance().apply {
+            timeInMillis = startOfWeek
+            add(Calendar.DAY_OF_MONTH, 6)
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        }.timeInMillis
+
+        // Monthly calculation (1st to last day of month)
+        val startOfMonth = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val endOfMonth = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.DAY_OF_MONTH, calInstance.getActualMaximum(Calendar.DAY_OF_MONTH))
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        }.timeInMillis
+
+        val applicationsThisWeek = apps.count { 
+            it.createdAt >= startOfWeek && it.createdAt <= endOfWeek && !it.status.equals("Saved", ignoreCase = true) 
+        }
+        val applicationsThisMonth = apps.count { 
+            it.createdAt >= startOfMonth && it.createdAt <= endOfMonth && !it.status.equals("Saved", ignoreCase = true) 
         }
 
         return DashboardAnalytics(

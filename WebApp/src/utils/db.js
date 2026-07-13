@@ -638,12 +638,28 @@ export const db = {
     const interviewRate = activeTotal > 0 ? Math.round((interviews / activeTotal) * 100) : 0;
     const responseRate = activeTotal > 0 ? Math.round(((interviews + offers + rejected) / activeTotal) * 100) : 0;
 
-    const now = Date.now();
-    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
-    const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const now = new Date();
     
-    const applicationsThisWeek = apps.filter(a => a.createdAt >= oneWeekAgo && a.status !== 'Saved').length;
-    const applicationsThisMonth = apps.filter(a => a.createdAt >= oneMonthAgo && a.status !== 'Saved').length;
+    // Start of current week (Monday)
+    const startOfWeek = new Date(now);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // End of current week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Start of current month (1st)
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+
+    // End of current month (last day)
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    
+    const applicationsThisWeek = apps.filter(a => a.createdAt >= startOfWeek.getTime() && a.createdAt <= endOfWeek.getTime() && a.status !== 'Saved').length;
+    const applicationsThisMonth = apps.filter(a => a.createdAt >= startOfMonth.getTime() && a.createdAt <= endOfMonth.getTime() && a.status !== 'Saved').length;
 
     const statusDistribution = [
       { name: 'Applied', count: applied, color: '#FFB300' },
@@ -693,7 +709,6 @@ export const db = {
 
     const monthlyActivity = {};
     apps.forEach(a => {
-      if (a.status === 'Saved') return;
       const date = new Date(a.createdAt);
       const year = date.getFullYear();
       const month = date.toLocaleString('default', { month: 'short' });
