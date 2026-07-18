@@ -48,6 +48,12 @@ const ymdToDmy = (ymd) => {
   return `${day}/${month}/${year}`;
 };
 
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 const dmyToYmd = (dmy) => {
   if (!dmy) return '';
   const parts = dmy.split('/');
@@ -322,15 +328,18 @@ export default function Applications({
 
         if (filters.dateFilterMode === 'Day') {
           if (!filters.dateSpecificDay) return true;
-          const targetDate = new Date(filters.dateSpecificDay);
-          return date.getFullYear() === targetDate.getFullYear() &&
+          const targetDate = parseLocalDate(filters.dateSpecificDay);
+          return targetDate &&
+                 date.getFullYear() === targetDate.getFullYear() &&
                  date.getMonth() === targetDate.getMonth() &&
                  date.getDate() === targetDate.getDate();
         }
 
         if (filters.dateFilterMode === 'Range') {
-          const startTimestamp = filters.dateStartRange ? new Date(filters.dateStartRange).setHours(0, 0, 0, 0) : 0;
-          const endTimestamp = filters.dateEndRange ? new Date(filters.dateEndRange).setHours(23, 59, 59, 999) : Infinity;
+          const startTarget = parseLocalDate(filters.dateStartRange);
+          const startTimestamp = startTarget ? startTarget.setHours(0, 0, 0, 0) : 0;
+          const endTarget = parseLocalDate(filters.dateEndRange);
+          const endTimestamp = endTarget ? endTarget.setHours(23, 59, 59, 999) : Infinity;
           return statusTimestamp >= startTimestamp && statusTimestamp <= endTimestamp;
         }
 
@@ -999,9 +1008,9 @@ export default function Applications({
                 dateFilterMode: 'Month',
                 dateMonth: (new Date().getMonth() + 1).toString(),
                 dateYear: new Date().getFullYear().toString(),
-                dateSpecificDay: new Date().toISOString().split('T')[0],
-                dateStartRange: (() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; })(),
-                dateEndRange: new Date().toISOString().split('T')[0]
+                dateSpecificDay: getLocalDateString(),
+                dateStartRange: getLocalFirstOfMonth(),
+                dateEndRange: getLocalDateString()
               })} 
               className="btn-secondary"
               style={{ marginTop: '12px' }}

@@ -56,6 +56,25 @@ const getLocalDateString = (timestampOrDate = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
+const parseLocalDateStringToTimestamp = (selectedDateStr, originalTime = null) => {
+  if (!selectedDateStr) return Date.now();
+  
+  if (originalTime) {
+    const originalDateStr = getLocalDateString(originalTime);
+    if (selectedDateStr === originalDateStr) {
+      return originalTime;
+    }
+  }
+  
+  const todayStr = getLocalDateString(new Date());
+  if (selectedDateStr === todayStr) {
+    return Date.now();
+  }
+  
+  const [year, month, day] = selectedDateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).getTime();
+};
+
 const ymdToDmy = (ymd) => {
   if (!ymd) return '';
   const parts = ymd.split('-');
@@ -220,7 +239,10 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           }
 
           setStatus(app.status || 'Applied');
-          setCreatedAt(getLocalDateString(app.createdAt));
+          const lastStatusTimestamp = (app.statusHistory && app.statusHistory.length > 0)
+            ? app.statusHistory[app.statusHistory.length - 1].timestamp
+            : app.createdAt;
+          setCreatedAt(getLocalDateString(lastStatusTimestamp));
           setJobDescription(app.jobDescription || '');
           setNotes(app.notes || '');
           setUrl(app.url || '');
@@ -336,12 +358,19 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
     const finalPlatform = platformSelect === 'Other' ? customPlatformName.trim() : platformSelect;
     const finalEmail = platformSelect === 'Email' ? email.trim() : '';
 
+    const originalApp = isEditMode ? db.getApplicationById(jobId) : null;
+    const originalTimestamp = originalApp
+      ? ((originalApp.statusHistory && originalApp.statusHistory.length > 0)
+          ? originalApp.statusHistory[originalApp.statusHistory.length - 1].timestamp
+          : originalApp.createdAt)
+      : null;
+
     const appData = {
       companyName: companyName.trim() || null,
       role: role.trim() || null,
       platform: finalPlatform || 'Direct',
       status,
-      createdAt: new Date(createdAt).getTime(),
+      createdAt: parseLocalDateStringToTimestamp(createdAt, originalTimestamp),
       jobDescription: jobDescription.trim() || null,
       notes: notes.trim() || null,
       url: url.trim() || null,
