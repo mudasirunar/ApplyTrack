@@ -299,7 +299,18 @@ export default function Applications({
 
     // 3. Sub-filter: Platform
     if (filters.statusFilter === 'Platform') {
-      list = list.filter(a => a.platform === filters.selectedPlatform);
+      const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
+      if (filters.selectedPlatform === 'Other') {
+        list = list.filter(a => {
+          const plat = a.platform ? a.platform.trim() : '';
+          return !standardPlatforms.some(sp => sp.toLowerCase() === plat.toLowerCase());
+        });
+      } else {
+        list = list.filter(a => {
+          const plat = a.platform ? a.platform.trim() : '';
+          return plat.toLowerCase() === filters.selectedPlatform.toLowerCase();
+        });
+      }
     }
 
     // 4. Sub-filter: Resume

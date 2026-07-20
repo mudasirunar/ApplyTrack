@@ -230,8 +230,9 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           
           const plat = app.platform || '';
           const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
-          if (standardPlatforms.includes(plat)) {
-            setPlatformSelect(plat);
+          const matched = standardPlatforms.find(sp => sp.toLowerCase() === plat.trim().toLowerCase());
+          if (matched) {
+            setPlatformSelect(matched);
             setCustomPlatformName('');
           } else {
             setPlatformSelect('Other');

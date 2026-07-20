@@ -672,8 +672,8 @@ export const db = {
     const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
     const platformMap = {};
     apps.forEach(a => {
-      if (a.status === 'Saved') return;
       const plat = a.platform ? a.platform.trim() : '';
+      if (!plat) return;
       const matched = standardPlatforms.find(sp => sp.toLowerCase() === plat.toLowerCase()) || 'Other';
       platformMap[matched] = (platformMap[matched] || 0) + 1;
     });
