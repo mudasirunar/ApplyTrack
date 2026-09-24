@@ -6,6 +6,7 @@ import SyncToast from './components/SyncToast';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from './utils/firebase';
 
+const Landing = React.lazy(() => import('./pages/Landing'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Applications = React.lazy(() => import('./pages/Applications'));
 const JobAddEdit = React.lazy(() => import('./pages/JobAddEdit'));
@@ -31,10 +32,13 @@ const getLocalFirstOfMonth = () => {
 const parsePath = (path) => {
   const p = path.replace(/\/$/, '') || '/';
   
+  if (p === '/') {
+    return { tab: 'landing', jobId: null };
+  }
   if (p === '/login') {
     return { tab: 'login', jobId: null };
   }
-  if (p === '/dashboard' || p === '/') {
+  if (p === '/dashboard') {
     return { tab: 'dashboard', jobId: null };
   }
   if (p === '/applications') {
@@ -57,7 +61,7 @@ const parsePath = (path) => {
     return { tab: 'job-detail', jobId: detailMatch[1] };
   }
   
-  return { tab: 'dashboard', jobId: null };
+  return { tab: 'landing', jobId: null };
 };
 
 export default function App() {
@@ -70,10 +74,16 @@ export default function App() {
   
   // Resolve protected routes on initial load
   if (!initialUser) {
-    initialTab = 'login';
-    initialJobId = null;
-    if (window.location.pathname !== '/login') {
-      window.history.replaceState(null, '', '/login');
+    if (initialTab === 'landing' || initialTab === 'login') {
+      // Public routes allowed without auth
+      initialJobId = null;
+    } else {
+      // Protected routes require login
+      initialTab = 'login';
+      initialJobId = null;
+      if (window.location.pathname !== '/login') {
+        window.history.replaceState(null, '', '/login');
+      }
     }
   } else if (initialTab === 'login') {
     initialTab = 'dashboard';
@@ -192,7 +202,9 @@ export default function App() {
     }
     
     let path = '/dashboard';
-    if (tab === 'login') path = '/login';
+    if (tab === 'landing') path = '/';
+    else if (tab === 'login') path = '/login';
+    else if (tab === 'dashboard') path = '/dashboard';
     else if (tab === 'applications') path = '/applications';
     else if (tab === 'settings') path = '/settings';
     else if (tab === 'add-job') path = '/applications/new';
@@ -240,12 +252,20 @@ export default function App() {
           setSelectedJobIdState(parsed.jobId);
         }
       } else {
-        if (window.location.pathname !== '/login') {
-          window.history.replaceState(null, '', '/login');
+        const currentPath = window.location.pathname;
+        const parsed = parsePath(currentPath);
+        if (parsed.tab === 'landing' || parsed.tab === 'login') {
+          setActiveTabState(parsed.tab);
+          selectedJobIdRef.current = null;
+          setSelectedJobIdState(null);
+        } else {
+          if (window.location.pathname !== '/login') {
+            window.history.replaceState(null, '', '/login');
+          }
+          setActiveTabState('login');
+          selectedJobIdRef.current = null;
+          setSelectedJobIdState(null);
         }
-        setActiveTabState('login');
-        selectedJobIdRef.current = null;
-        setSelectedJobIdState(null);
       }
     };
     
@@ -326,8 +346,16 @@ export default function App() {
 
   // Render correct page content
   const renderContent = () => {
+    if (activeTab === 'landing') {
+      return (
+        <React.Suspense fallback={renderFullScreenSpinner()}>
+          <Landing setActiveTab={setActiveTab} user={user} />
+        </React.Suspense>
+      );
+    }
+
     if (!user) {
-      return <Login />;
+      return <Login setActiveTab={setActiveTab} />;
     }
 
     return (
@@ -407,11 +435,11 @@ export default function App() {
       )}
       {user && activeTab !== 'login' && <SyncToast />}
       <MainLayout 
-        activeTab={user ? activeTab : 'login'} 
+        activeTab={user ? activeTab : (activeTab === 'landing' ? 'landing' : 'login')} 
         setActiveTab={setActiveTab}
         isSelectionMode={isSelectionMode}
       >
-        <div key={user ? user.email : 'none'} style={{ display: 'contents' }}>
+        <div key={user ? user.email : 'guest'} style={{ display: 'contents' }}>
           {renderContent()}
         </div>
       </MainLayout>

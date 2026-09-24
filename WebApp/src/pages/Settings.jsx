@@ -498,8 +498,25 @@ export default function Settings() {
               <AppIcon size={36} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--brand-primary)' }}>ApplyTrack</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Version {appVersion}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--brand-primary)' }}>ApplyTrack</span>
+                <span style={{ 
+                  fontFamily: 'var(--font-mono, monospace)', 
+                  fontSize: '0.72rem', 
+                  fontWeight: 700, 
+                  backgroundColor: 'var(--bg-surface-variant)', 
+                  border: '1px solid var(--brand-outline)', 
+                  padding: '2px 8px', 
+                  borderRadius: '9999px',
+                  color: 'var(--text-secondary)',
+                  letterSpacing: '0.03em'
+                }}>
+                  v{appVersion}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                Web Dashboard Edition
+              </div>
             </div>
           </div>
           

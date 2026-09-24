@@ -8,7 +8,7 @@ import loginBgMobileAvif from '../assets/login_bg_mobile.avif';
 import loginBgDesktopAvif from '../assets/login_bg_desktop.avif';
 import './Login.css';
 
-export default function Login() {
+export default function Login({ setActiveTab }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignInClick = async () => {
@@ -32,6 +32,33 @@ export default function Login() {
 
   return (
     <main className="login-container">
+      {/* Top Header Navigation */}
+      {setActiveTab && (
+        <header className="login-header-bar">
+          <button 
+            type="button" 
+            onClick={() => setActiveTab('landing')}
+            className="login-header-brand"
+            title="ApplyTrack Overview"
+          >
+            <AppIcon size={28} />
+            <span className="login-header-brand-name">ApplyTrack</span>
+          </button>
+
+          <button 
+            type="button" 
+            onClick={() => setActiveTab('landing')}
+            className="login-header-explore-btn"
+            title="Explore features and overview"
+          >
+            <span>Explore ApplyTrack</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M5 13h11.86l-5.43 5.43 1.42 1.41L21.14 12l-8.29-8.29-1.42 1.41L16.86 11H5v2z" />
+            </svg>
+          </button>
+        </header>
+      )}
+
       <picture className="login-bg-picture">
         <source media="(min-width: 768px)" srcSet={loginBgDesktopAvif} type="image/avif" />
         <source media="(min-width: 768px)" srcSet={loginBgDesktopJpeg} type="image/jpeg" />
@@ -52,8 +79,8 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Action Button */}
-        <div style={{ width: '100%' }}>
+        {/* Action Button & Exploration Link */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center' }}>
           <button 
             onClick={handleGoogleSignInClick} 
             className="google-login-btn"
@@ -62,6 +89,17 @@ export default function Login() {
             <GoogleIcon size={22} />
             <span>Sign in with Google</span>
           </button>
+
+          {setActiveTab && (
+            <button 
+              type="button" 
+              onClick={() => setActiveTab('landing')}
+              className="login-card-learn-more"
+            >
+              <span>New to ApplyTrack?</span>
+              <span className="learn-more-accent">See how it works &rarr;</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -92,7 +92,7 @@ export default function MainLayout({ activeTab, setActiveTab, isSelectionMode, c
     if (window.toastTimeout) clearTimeout(window.toastTimeout);
   };
 
-  if (!user) return <>{children}</>;
+  if (!user || activeTab === 'landing') return <>{children}</>;
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },

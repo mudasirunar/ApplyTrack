@@ -29,11 +29,139 @@
     })();
   </script>
 
-  <!-- SEO and Branding metadata -->
-  <title>ApplyTrack | Career Application & Resume Tracker</title>
+  <!-- Primary SEO Metadata -->
+  <title>ApplyTrack | Modern Job Application, Resume & Career Tracker</title>
   <meta name="description"
-    content="Track your job applications, custom resumes, interview progress, and conversion success analytics in one premium, secure dashboard with ApplyTrack." />
-  <meta name="author" content="ApplyTrack Team" />
+    content="Track job applications, tailored resume variations, interview milestones, and conversion rate analytics with real-time Android and Web cloud sync. Free, private, and secure." />
+  <meta name="keywords"
+    content="job application tracker, resume tracker, career dashboard, interview tracker, job search organizer, cross-platform job tracker, ApplyTrack, Mudasir Ali, job hunt tools" />
+  <meta name="author" content="Mudasir Ali" />
+  <meta name="theme-color" content="#0E141C" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://apply-track-web.vercel.app/" />
+
+  <!-- Search Engine & Crawler Directives -->
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1" />
+
+  <!-- Open Graph / Facebook / LinkedIn -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://apply-track-web.vercel.app/" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:site_name" content="ApplyTrack" />
+  <meta property="og:title" content="ApplyTrack | Modern Job Application & Resume Tracker" />
+  <meta property="og:description"
+    content="Track applications, attach custom resumes via Supabase, and sync seamlessly across Android and Web." />
+  <meta property="og:image" content="/og-preview.png" />
+  <meta property="og:image:width" content="1280" />
+  <meta property="og:image:height" content="720" />
+  <meta property="og:image:alt" content="ApplyTrack Smart Job Application & Resume Tracker Preview" />
+
+  <!-- Twitter / X Cards -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@mudasirunar" />
+  <meta name="twitter:creator" content="@mudasirunar" />
+  <meta name="twitter:title" content="ApplyTrack | Modern Job Application & Resume Tracker" />
+  <meta name="twitter:description"
+    content="Track applications, attach custom resumes via Supabase, and sync seamlessly across Android and Web." />
+  <meta name="twitter:image" content="/og-preview.png" />
+
+  <!-- Structured Data (JSON-LD) for Search Engines & AI Knowledge Graphs -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "ApplyTrack",
+      "url": "https://apply-track-web.vercel.app/",
+      "image": "https://apply-track-web.vercel.app/og-preview.png",
+      "applicationCategory": "BusinessApplication, ProductivityApplication",
+      "operatingSystem": "Web, Android",
+      "softwareVersion": "3.1.0",
+      "description": "Cross-platform job application and resume tracking tool with two-way Android sync, Supabase cloud document storage, and conversion analytics.",
+      "featureList": [
+        "Structured 5-Stage Job Pipeline Tracking",
+        "Supabase Document Vault for PDF Resumes and Cover Letters",
+        "Bi-directional Android (Jetpack Compose + Room) and Web (React 19) Sync",
+        "Resume Effectiveness and Callback Conversion Analytics",
+        "Fast Search and Multi-Platform Sub-Filters",
+        "Complete Full ZIP Archive Data Export without vendor lock-in"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Mudasir Ali",
+        "url": "https://mudasir.tech/",
+        "sameAs": [
+          "https://www.linkedin.com/in/mudasir-ali-442196261",
+          "https://github.com/mudasirunar"
+        ]
+      },
+      "codeRepository": "https://github.com/mudasirunar/ApplyTrack"
+    }
+  </script>
+
+  <!-- FAQPage Schema for Search Engines and AI Crawlers (GEO / Generative Engine Optimization) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does the cloud synchronization between Android and the WebApp work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ApplyTrack uses an integrated dual-cloud synchronization model. Application metadata (job title, company, status pipeline, salary, platform, and notes) synchronizes instantly through Firebase Firestore, while physical document attachments (PDF resumes, cover letters, and document snapshots) are stored securely in Supabase Storage. Changes reflect across Android and Web in real-time."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Where are my uploaded resumes stored, and are they private?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Your uploaded attachments are stored in your authenticated user directory within Supabase Storage (/users/{userId}/{type}/{fileName}). Access is strictly isolated to your authenticated account via secure token policies. ApplyTrack never shares, parses, or monetizes your resume data."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use the Android app without an internet connection?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The native ApplyTrack Android client is engineered with an offline-first architecture powered by local SQLite with Android Jetpack Room. You can record applications and view notes offline. When connectivity is restored, Android WorkManager automatically synchronizes changes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does ApplyTrack measure resume effectiveness?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Whenever you log an application, you can attach or tag the exact CV variation used. ApplyTrack computes callback rates, interview milestones, and offer conversions for each resume file, enabling you to identify which CV version generates the most recruiter response."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I export or backup all my application records and attachments?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, zero vendor lock-in. Under Settings, ApplyTrack offers a Full ZIP Archive Export that downloads your complete structured application JSON dataset alongside every original PDF resume and cover letter binary into an unencrypted ZIP archive."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is ApplyTrack free to use, and is it open source?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, ApplyTrack is 100% free, privacy-first, and open source with no paid tiers, hidden subscriptions, or advertising trackers. Both the native Android application and Web dashboard are created and maintained by Mudasir Ali."
+          }
+        }
+      ]
+    }
+  </script>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />

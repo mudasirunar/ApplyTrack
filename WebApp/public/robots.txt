@@ -1,7 +1,37 @@
+# ApplyTrack robots.txt
+# Public Search Engines and AI Crawlers Policy
+
 User-agent: *
 Allow: /
-Disallow: /login
+Allow: /login
+Disallow: /dashboard
+Disallow: /applications
+Disallow: /settings
+Disallow: /job/
 Disallow: /edit-job
 Disallow: /add-job
 
+# Explicit indexing rules for modern AI Knowledge Engines & Assistants (GEO)
+User-agent: GPTBot
+Allow: /
+Disallow: /dashboard
+Disallow: /applications
+Disallow: /settings
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# Canonical XML Sitemap
 Sitemap: https://apply-track-web.vercel.app/sitemap.xml
