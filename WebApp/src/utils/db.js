@@ -21,11 +21,19 @@ function markLocalWrite() {
 }
 
 // Helper to trigger sync status custom events
+let syncStateResetTimeout = null;
 function triggerSyncState(state, message = '') {
   currentSyncState = state;
   window.dispatchEvent(new CustomEvent('applytrack_sync_state', {
     detail: { state, message }
   }));
+
+  if (syncStateResetTimeout) clearTimeout(syncStateResetTimeout);
+  if (state === 'SUCCESS' || state === 'ERROR') {
+    syncStateResetTimeout = setTimeout(() => {
+      currentSyncState = 'IDLE';
+    }, 2500);
+  }
 }
 
 // Resolve remote attachment to absolute public Supabase URLs

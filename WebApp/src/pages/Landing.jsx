@@ -825,6 +825,7 @@ export default function Landing({ setActiveTab, user }) {
                 <li><button type="button" onClick={() => scrollToSection('how-it-works')} className="footer-link-action">How It Works</button></li>
                 <li><button type="button" onClick={() => scrollToSection('ecosystem')} className="footer-link-action">Platforms</button></li>
                 <li><button type="button" onClick={() => scrollToSection('faq')} className="footer-link-action">FAQs</button></li>
+                <li><button type="button" onClick={() => setActiveTab('privacy')} className="footer-link-action">Privacy Policy</button></li>
                 <li><button type="button" onClick={() => setActiveTab('login')} className="footer-link-action">Sign In</button></li>
               </ul>
             </div>
@@ -896,13 +897,23 @@ export default function Landing({ setActiveTab, user }) {
 
           <div className="footer-bottom-line">
             <span>&copy; {new Date().getFullYear()} ApplyTrack. Designed and engineered by Mudasir Ali.</span>
-            <button 
-              type="button" 
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
-              className="scroll-top-link"
-            >
-              Back to Top ↑
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('privacy')} 
+                className="scroll-top-link"
+                style={{ opacity: 0.85 }}
+              >
+                Privacy Policy
+              </button>
+              <button 
+                type="button" 
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
+                className="scroll-top-link"
+              >
+                Back to Top ↑
+              </button>
+            </div>
           </div>
         </div>
       </footer>

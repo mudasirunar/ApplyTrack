@@ -172,7 +172,7 @@ function BackupProgressDialog({ dialogTitle, dialogMessage, isWorking, dialogOut
   return createPortal(modalContent, document.body);
 }
 
-export default function Settings() {
+export default function Settings({ setActiveTab }) {
   const [user, setUser] = useState(db.getCurrentUser());
   const [activeTheme, setActiveTheme] = useState(db.getTheme());
   const [appsCount, setAppsCount] = useState(db.getApplications().length);
@@ -523,6 +523,38 @@ export default function Settings() {
           <p style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-secondary)', margin: 0 }}>
             ApplyTrack is a web dashboard designed to track job applications, manage resumes, and monitor application metrics.
           </p>
+
+          <div style={{ paddingTop: '12px', borderTop: '1px solid var(--brand-outline)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Data &amp; Privacy Governance</span>
+            <a 
+              href="/privacy" 
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                  e.preventDefault();
+                  if (setActiveTab) {
+                    setActiveTab('privacy');
+                  } else {
+                    window.location.href = '/privacy';
+                  }
+                }
+              }}
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                fontSize: '0.85rem', 
+                fontWeight: 600, 
+                color: 'var(--brand-primary)', 
+                textDecoration: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <span>Privacy Policy</span>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+              </svg>
+            </a>
+          </div>
         </div>
 
       </div>

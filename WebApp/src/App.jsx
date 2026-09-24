@@ -7,6 +7,7 @@ import { logEvent } from 'firebase/analytics';
 import { analytics } from './utils/firebase';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
+const Privacy = React.lazy(() => import('./pages/Privacy'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Applications = React.lazy(() => import('./pages/Applications'));
 const JobAddEdit = React.lazy(() => import('./pages/JobAddEdit'));
@@ -30,13 +31,17 @@ const getLocalFirstOfMonth = () => {
 
 // Custom Path Parser for Single Page Application URL routing
 const parsePath = (path) => {
-  const p = path.replace(/\/$/, '') || '/';
+  const clean = (path || '/').split('?')[0].split('#')[0];
+  const p = (clean.replace(/\/+$/, '') || '/').toLowerCase();
   
   if (p === '/') {
     return { tab: 'landing', jobId: null };
   }
   if (p === '/login') {
     return { tab: 'login', jobId: null };
+  }
+  if (p === '/privacy') {
+    return { tab: 'privacy', jobId: null };
   }
   if (p === '/dashboard') {
     return { tab: 'dashboard', jobId: null };
@@ -74,7 +79,7 @@ export default function App() {
   
   // Resolve protected routes on initial load
   if (!initialUser) {
-    if (initialTab === 'landing' || initialTab === 'login') {
+    if (initialTab === 'landing' || initialTab === 'login' || initialTab === 'privacy') {
       // Public routes allowed without auth
       initialJobId = null;
     } else {
@@ -93,6 +98,13 @@ export default function App() {
 
   const [user, setUser] = useState(initialUser);
   const [activeTab, setActiveTabState] = useState(initialTab);
+  const [fromTab, setFromTab] = useState(() => {
+    try {
+      return sessionStorage.getItem('applytrack_privacy_from') || null;
+    } catch {
+      return null;
+    }
+  });
   const [isAuthReady, setIsAuthReady] = useState(db.isAuthReady());
   const [selectedJobId, setSelectedJobIdState] = useState(initialJobId);
   const [editSource, setEditSource] = useState('applications');
@@ -195,6 +207,17 @@ export default function App() {
   const setActiveTab = (tab) => {
     const jobId = selectedJobIdRef.current;
     
+    if (tab === 'privacy') {
+      setFromTab(activeTab);
+      try {
+        sessionStorage.setItem('applytrack_privacy_from', activeTab);
+      } catch {}
+    } else if (activeTab === 'privacy') {
+      try {
+        sessionStorage.removeItem('applytrack_privacy_from');
+      } catch {}
+    }
+
     if (tab === 'edit-job') {
       if (activeTab === 'applications' || activeTab === 'job-detail') {
         setEditSource(activeTab);
@@ -204,6 +227,7 @@ export default function App() {
     let path = '/dashboard';
     if (tab === 'landing') path = '/';
     else if (tab === 'login') path = '/login';
+    else if (tab === 'privacy') path = '/privacy';
     else if (tab === 'dashboard') path = '/dashboard';
     else if (tab === 'applications') path = '/applications';
     else if (tab === 'settings') path = '/settings';
@@ -254,7 +278,7 @@ export default function App() {
       } else {
         const currentPath = window.location.pathname;
         const parsed = parsePath(currentPath);
-        if (parsed.tab === 'landing' || parsed.tab === 'login') {
+        if (parsed.tab === 'landing' || parsed.tab === 'login' || parsed.tab === 'privacy') {
           setActiveTabState(parsed.tab);
           selectedJobIdRef.current = null;
           setSelectedJobIdState(null);
@@ -354,6 +378,14 @@ export default function App() {
       );
     }
 
+    if (activeTab === 'privacy') {
+      return (
+        <React.Suspense fallback={renderFullScreenSpinner()}>
+          <Privacy setActiveTab={setActiveTab} user={user} fromTab={fromTab} />
+        </React.Suspense>
+      );
+    }
+
     if (!user) {
       return <Login setActiveTab={setActiveTab} />;
     }
@@ -408,7 +440,9 @@ export default function App() {
                 />
               );
             case 'settings':
-              return <Settings />;
+              return <Settings setActiveTab={setActiveTab} />;
+            case 'privacy':
+              return <Privacy setActiveTab={setActiveTab} user={user} fromTab={fromTab} />;
             default:
               return <Dashboard setActiveTab={setActiveTab} setFilters={setFilters} />;
           }
@@ -433,9 +467,9 @@ export default function App() {
           }}
         />
       )}
-      {user && activeTab !== 'login' && activeTab !== 'landing' && <SyncToast />}
+      {user && activeTab !== 'login' && activeTab !== 'landing' && activeTab !== 'privacy' && <SyncToast />}
       <MainLayout 
-        activeTab={user ? activeTab : (activeTab === 'landing' ? 'landing' : 'login')} 
+        activeTab={user ? activeTab : (activeTab === 'landing' || activeTab === 'privacy' ? activeTab : 'login')} 
         setActiveTab={setActiveTab}
         isSelectionMode={isSelectionMode}
       >

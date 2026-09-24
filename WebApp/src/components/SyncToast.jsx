@@ -4,8 +4,8 @@ import './SyncToast.css';
 
 export default function SyncToast() {
   const [visible, setVisible] = useState(() => {
-    const initialState = db.getSyncState();
-    return initialState !== 'IDLE';
+    // Only show on initial mount if a sync operation is actively in progress
+    return db.getSyncState() === 'SYNCING';
   });
   const [state, setState] = useState(() => db.getSyncState());
   const [errorMsg, setErrorMsg] = useState('');
@@ -20,6 +20,11 @@ export default function SyncToast() {
         setVisible(false);
         setState('IDLE');
       }, 3500);
+    } else if (state === 'SUCCESS' || state === 'ERROR') {
+      hideTimeout = setTimeout(() => {
+        setVisible(false);
+        setState('IDLE');
+      }, 2000);
     }
 
     const handleSyncState = (e) => {
