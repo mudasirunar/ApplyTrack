@@ -51,6 +51,11 @@ android {
       isIncludeAndroidResources = true
     }
   }
+  packaging {
+    jniLibs {
+      useLegacyPackaging = false
+    }
+  }
 }
 
 tasks.withType<Test> {
@@ -82,7 +87,7 @@ dependencies {
   implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.coil.compose)
   implementation("androidx.work:work-runtime-ktx:2.9.0")
-  implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
+  implementation("io.github.ahmerafzal1:ahmer-pdfviewer:2.0.1")
   implementation("com.github.chrisbanes:PhotoView:2.3.0")
   implementation("androidx.appcompat:appcompat:1.7.0")
   implementation(libs.androidx.room.ktx)

@@ -30,8 +30,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.utils.AttachmentHelper
-import com.github.barteksc.pdfviewer.PDFView
-import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
+import com.ahmer.pdfviewer.PDFView
+import com.ahmer.pdfviewer.listener.OnDrawListener
+import com.ahmer.pdfviewer.listener.OnPageChangeListener
+import com.ahmer.pdfviewer.scroll.DefaultScrollHandle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,17 +113,26 @@ fun PdfViewerScreen(
                             .defaultPage(currentPage)
                             .enableSwipe(true)
                             .swipeHorizontal(false)
-                            .enableDoubletap(true)
+                            .enableDoubleTap(true)
                             .scrollHandle(DefaultScrollHandle(context))
                             .spacing(16)
-                            .onPageChange { page, _ ->
-                                currentPage = page
-                            }
-                            .onDraw { canvas, pageWidth, pageHeight, displayedPage ->
-                                if (pageCount > 1 && displayedPage < pageCount - 1) {
-                                    canvas.drawLine(0f, pageHeight - 3f, pageWidth, pageHeight - 3f, dividerPaint)
+                            .onPageChange(object : OnPageChangeListener {
+                                override fun onPageChanged(page: Int, totalPages: Int) {
+                                    currentPage = page
                                 }
-                            }
+                            })
+                            .onDraw(object : OnDrawListener {
+                                override fun onLayerDrawn(
+                                    canvas: android.graphics.Canvas?,
+                                    pageWidth: Float,
+                                    pageHeight: Float,
+                                    currentPage: Int
+                                ) {
+                                    if (pagesCount > 1 && currentPage < pagesCount - 1) {
+                                        canvas?.drawLine(0f, pageHeight - 3f, pageWidth, pageHeight - 3f, dividerPaint)
+                                    }
+                                }
+                            })
                             .load()
                     }
                 },
