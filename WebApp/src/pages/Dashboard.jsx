@@ -223,6 +223,7 @@ function YearSelector({ year, onChange }) {
 
 export default function Dashboard({ setActiveTab, setFilters }) {
   const [analytics, setAnalytics] = useState(db.getAnalytics());
+  const [isSyncing, setIsSyncing] = useState(() => db.getSyncState() === 'SYNCING');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [user, setUser] = useState(db.getCurrentUser());
   const [dashboardMessage, setDashboardMessage] = useState('');
@@ -305,13 +306,22 @@ export default function Dashboard({ setActiveTab, setFilters }) {
     const handleDataChange = () => {
       setAnalytics(db.getAnalytics());
     };
+    const handleSyncState = (e) => {
+      setIsSyncing(e.detail?.state === 'SYNCING');
+    };
     window.addEventListener('applytrack_data_change', handleDataChange);
+    window.addEventListener('applytrack_sync_state', handleSyncState);
     return () => {
       window.removeEventListener('applytrack_data_change', handleDataChange);
+      window.removeEventListener('applytrack_sync_state', handleSyncState);
     };
   }, []);
 
   useEffect(() => {
+    if (isSyncing && analytics.total === 0) {
+      setDashboardMessage('Syncing your applications from the cloud...');
+      return;
+    }
     // Set initial message immediately
     setDashboardMessage(getDashboardMessage(analytics.total));
 
@@ -321,7 +331,7 @@ export default function Dashboard({ setActiveTab, setFilters }) {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [analytics.total]);
+  }, [analytics.total, isSyncing]);
 
   const handleNavigateToApps = (filterType, value) => {
     // Reset all filters first, then apply the selected one
@@ -388,16 +398,26 @@ export default function Dashboard({ setActiveTab, setFilters }) {
         <div className="overview-top">
           <div>
             <span className="overview-title">Total Applications</span>
-            <div className="overview-count">{analytics.total}</div>
+            <div className="overview-count">
+              {isSyncing && analytics.total === 0 ? (
+                <span style={{ opacity: 0.5, fontSize: '1.8rem', letterSpacing: '2px' }}>•••</span>
+              ) : (
+                analytics.total
+              )}
+            </div>
           </div>
           <div className="overview-badges">
             <div className="activity-badge">
               <span>This Week</span>
-              <span className="activity-badge-count">{analytics.applicationsThisWeek}</span>
+              <span className="activity-badge-count">
+                {isSyncing && analytics.total === 0 ? '—' : analytics.applicationsThisWeek}
+              </span>
             </div>
             <div className="activity-badge">
               <span>This Month</span>
-              <span className="activity-badge-count">{analytics.applicationsThisMonth}</span>
+              <span className="activity-badge-count">
+                {isSyncing && analytics.total === 0 ? '—' : analytics.applicationsThisMonth}
+              </span>
             </div>
           </div>
         </div>
@@ -407,11 +427,13 @@ export default function Dashboard({ setActiveTab, setFilters }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setActiveTab('add-job');
+                if (!isSyncing) setActiveTab('add-job');
               }}
-              className="btn-primary"
+              disabled={isSyncing}
+              className={`btn-primary ${isSyncing ? 'btn-disabled' : ''}`}
+              style={isSyncing ? { opacity: 0.65, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
             >
-              Add Your First Application
+              {isSyncing ? 'Syncing Applications...' : 'Add Your First Application'}
             </button>
           </div>
         )}

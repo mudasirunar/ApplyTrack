@@ -12,11 +12,23 @@ export default function SyncToast() {
 
   useEffect(() => {
     let hideTimeout;
+    let syncingTimeout;
+
+    // Safety auto-dismiss if mounted while state is SYNCING
+    if (state === 'SYNCING') {
+      syncingTimeout = setTimeout(() => {
+        setVisible(false);
+        setState('IDLE');
+      }, 3500);
+    }
 
     const handleSyncState = (e) => {
       const { state: newState, message } = e.detail || {};
       setState(newState || 'IDLE');
       if (message) setErrorMsg(message);
+
+      if (hideTimeout) clearTimeout(hideTimeout);
+      if (syncingTimeout) clearTimeout(syncingTimeout);
 
       if (newState === 'IDLE') {
         setVisible(false);
@@ -24,12 +36,19 @@ export default function SyncToast() {
         setVisible(true);
       }
 
-      // Auto-hide success or error messages after 2.5 seconds
+      // Safety timeout: Never let 'Syncing...' hang on screen for more than 3.5 seconds
+      if (newState === 'SYNCING') {
+        syncingTimeout = setTimeout(() => {
+          setVisible(false);
+          setState('IDLE');
+        }, 3500);
+      }
+
+      // Auto-hide success or error messages promptly after 2 seconds
       if (newState === 'SUCCESS' || newState === 'ERROR') {
-        if (hideTimeout) clearTimeout(hideTimeout);
         hideTimeout = setTimeout(() => {
           setVisible(false);
-        }, 2500);
+        }, 2000);
       }
     };
 
@@ -37,6 +56,7 @@ export default function SyncToast() {
     return () => {
       window.removeEventListener('applytrack_sync_state', handleSyncState);
       if (hideTimeout) clearTimeout(hideTimeout);
+      if (syncingTimeout) clearTimeout(syncingTimeout);
     };
   }, []);
 

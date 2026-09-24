@@ -433,7 +433,7 @@ export default function App() {
           }}
         />
       )}
-      {user && activeTab !== 'login' && <SyncToast />}
+      {user && activeTab !== 'login' && activeTab !== 'landing' && <SyncToast />}
       <MainLayout 
         activeTab={user ? activeTab : (activeTab === 'landing' ? 'landing' : 'login')} 
         setActiveTab={setActiveTab}
