@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.JobViewModel
 import com.example.ui.applications.DateFilterMode
+import com.example.ui.dashboard.components.ActivityGridSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +33,7 @@ fun DashboardScreen(
     val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
     val analytics by viewModel.dashboardAnalytics.collectAsStateWithLifecycle()
     val dashboardYear by viewModel.dashboardYear.collectAsStateWithLifecycle()
+    val activityCounts by viewModel.activityCounts.collectAsStateWithLifecycle()
 
     val scrollState = rememberScrollState()
     val scrollToTopEvent by viewModel.dashboardScrollToTop.collectAsStateWithLifecycle()
@@ -77,6 +79,20 @@ fun DashboardScreen(
                         onNavigateToApplications()
                     }
                 )
+
+                ActivityGridSection(
+                    counts = activityCounts,
+                    onDayClick = { dayMillis ->
+                        viewModel.statusFilter.value = "Date"
+                        viewModel.updateDateFilter {
+                            copy(mode = DateFilterMode.DAY, specificDate = dayMillis)
+                        }
+                        viewModel.shouldScrollToFilter.value = true
+                        onNavigateToApplications()
+                    }
+                )
+
+                ConversionFunnelRow(analytics = analytics)
 
                 ConversionFunnelRow(analytics = analytics)
 

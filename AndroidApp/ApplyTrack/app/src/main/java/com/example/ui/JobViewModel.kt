@@ -27,6 +27,7 @@ import android.content.Context
 import java.util.Calendar
 import com.example.ui.applications.DateFilterState
 import com.example.ui.applications.DateFilterMode
+import com.example.ui.dashboard.components.activityDayKey
 
 
 enum class SortOption {
@@ -370,6 +371,23 @@ class JobViewModel(
         started = SharingStarted.Lazily,
         initialValue = DashboardAnalytics()
     )
+
+    // Applications per day (by createdAt), for the activity grid
+    val activityCounts: StateFlow<Map<Int, Int>> = combine(
+        repository.getAllApplications(),
+        _pendingDeleteJobs,
+        _inFlightDeleteIds
+    ) { apps, pendingDelete, inFlightIds ->
+        val hidden = pendingDelete.map { it.id }.toSet() + inFlightIds
+        apps.filter { it.id !in hidden }
+            .groupingBy { activityDayKey(it.createdAt) }
+            .eachCount()
+    }.flowOn(defaultDispatcher)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Lazily,
+            initialValue = emptyMap()
+        )
 
     private fun computeDashboardAnalytics(apps: List<JobApplication>, year: String): DashboardAnalytics {
         val total = apps.size
