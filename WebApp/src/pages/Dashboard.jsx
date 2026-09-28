@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../utils/db';
 import { AppIcon } from '../components/Icons';
 import { getDashboardMessage } from '../utils/dashboardMessageProvider';
+import ActivityGrid, { getActivityDates } from '../components/ActivityGrid';
 import './Dashboard.css';
 
 // Custom Hook for smooth animation mimicking Jetpack Compose FastOutSlowInEasing (easeOutCubic)
@@ -227,6 +228,7 @@ export default function Dashboard({ setActiveTab, setFilters }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [user, setUser] = useState(db.getCurrentUser());
   const [dashboardMessage, setDashboardMessage] = useState('');
+  const [activityDates, setActivityDates] = useState(() => getActivityDates());
   const scrollRef = useRef(null);
   const legendScrollRef = useRef(null);
 
@@ -305,6 +307,7 @@ export default function Dashboard({ setActiveTab, setFilters }) {
   useEffect(() => {
     const handleDataChange = () => {
       setAnalytics(db.getAnalytics());
+      setActivityDates(getActivityDates());
     };
     const handleSyncState = (e) => {
       setIsSyncing(e.detail?.state === 'SYNCING');
@@ -365,6 +368,23 @@ export default function Dashboard({ setActiveTab, setFilters }) {
     }
 
     setFilters(newFilters);
+    setActiveTab('applications');
+  };
+
+  // Handler for when a day is clicked in the activity grid
+  const handleDayClick = (ymd) => {
+    setFilters({
+      searchQuery: '',
+      statusFilter: 'Date',
+      selectedResume: 'Select---',
+      selectedPlatform: 'LinkedIn',
+      dateFilterMode: 'Day',
+      dateMonth: (new Date().getMonth() + 1).toString(),
+      dateYear: new Date().getFullYear().toString(),
+      dateSpecificDay: ymd,
+      dateStartRange: ymd,
+      dateEndRange: ymd
+    });
     setActiveTab('applications');
   };
 
@@ -490,6 +510,13 @@ export default function Dashboard({ setActiveTab, setFilters }) {
           <span className="status-card-count" style={{ color: 'var(--brand-primary)' }}>{analytics.responses}</span>
         </div>
       </div>
+
+      {/* Activity Grid */}
+      <ActivityGrid
+        dates={activityDates}
+        isLoading={isSyncing && analytics.total === 0}
+        onDayClick={handleDayClick}
+      />
 
       {/* Conversion Rates Section */}
       <div className={`conversion-rates-card card-base${analytics.total === 0 ? ' empty' : ''}`}>
