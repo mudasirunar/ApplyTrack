@@ -22,7 +22,7 @@ Closes #
 Please ensure the following before requesting a review:
 - [ ] My code follows the established coding standards of this repository.
 - [ ] I have tested these changes locally and verified all workflows function properly.
-- [ ] **Web Changes:** `npm run lint` and `npm run build` pass without errors.
-- [ ] **Android Changes:** `./gradlew testDebugUnitTest` passes without errors.
+- [ ] **Web Changes:** `npm run lint`, `npm test`, and `npm run build` pass without errors.
+- [ ] **Android Changes:** `./gradlew testDebugUnitTest` and `./gradlew lintDebug` pass without errors.
 - [ ] **Security Check:** No personal API keys, credentials, or sensitive files are included in this PR.
 - [ ] I have added/updated relevant documentation if applicable.

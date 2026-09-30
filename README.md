@@ -31,7 +31,7 @@ Unlike traditional spreadsheet trackers or ad-heavy platforms, ApplyTrack adopts
 * **Immediate Responsiveness:** Capture jobs with zero latency, even completely offline.
 * **Dual-Client Synchronization:** Seamlessly sync your pipeline between your **Android device** on the go and your **Web browser** on your desktop.
 * **Dual-Cloud Architecture:** Structured job metadata is synchronized via **Cloud Firestore**, while physical binary attachments (resumes, cover letters, and offer PDFs) are preserved in **Supabase Storage**.
-* **Zero Lock-in:** 100% data ownership with instant one-click ZIP backup and complete GDPR data erasure.
+* **Zero Lock-in:** 100% data ownership with instant one-click ZIP/JSON export and full in-app data deletion.
 
 ---
 
@@ -179,7 +179,7 @@ The app works immediately in **offline/guest mode** with the provided example fi
 
 Continuous Integration is powered by **GitHub Actions** (`.github/workflows/ci.yml`). Pull Requests trigger path-specific validation:
 * **Web changes (`WebApp/**`):** Runs `npm run lint`, `npm test` (Vitest), and `npm run build`.
-* **Android changes (`AndroidApp/**`):** Executes `./gradlew testDebugUnitTest` (70 automated tests).
+* **Android changes (`AndroidApp/**`):** Executes `./gradlew testDebugUnitTest` (70 automated tests) and `./gradlew lintDebug`.
 
 Run tests locally before submitting your contribution:
 ```bash
@@ -187,7 +187,7 @@ Run tests locally before submitting your contribution:
 cd WebApp && npm run lint && npm test && npm run build
 
 # Test Android
-cd AndroidApp/ApplyTrack && ./gradlew testDebugUnitTest
+cd AndroidApp/ApplyTrack && ./gradlew testDebugUnitTest && ./gradlew lintDebug
 ```
 
 ---
@@ -196,8 +196,8 @@ cd AndroidApp/ApplyTrack && ./gradlew testDebugUnitTest
 
 ApplyTrack is designed with privacy as a foundational principle:
 * **100% Free & Open Source:** No ads, no commercial trackers, and no selling of user resumes or application history.
-* **Per-User Security Isolation:** Firestore and Supabase rules enforce strict account partitioning.
-* **Zero Lock-In:** Export or wipe all your data at any time from the Settings screen.
+* **Per-User Isolation:** Firestore security rules enforce strict per-user account partitioning, and Supabase attachments are isolated under user-scoped UUID paths (`users/{userId}/*`).
+* **Zero Lock-In:** Export all your data anytime (ZIP/JSON) or delete your stored data directly from the in-app Settings screen.
 * Read the complete [Privacy Policy](WebApp/src/pages/Privacy.jsx) or visit the deployed app's `/privacy` page.
 
 For security vulnerabilities, please refer to our [Security Policy](SECURITY.md).

@@ -109,3 +109,10 @@ jobs:
         run: |
           cd AndroidApp/ApplyTrack
           ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Run Android Lint
+        if: steps.check_android.outputs.android == 'true'
+        run: |
+          cd AndroidApp/ApplyTrack
+          ./gradlew lintDebug --no-daemon
+

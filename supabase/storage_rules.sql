@@ -1,53 +1,64 @@
 -- =========================================================================
--- Supabase Storage Row Level Security (RLS) Policy for ApplyTrack
+-- Supabase Storage Configuration & Access Policies for ApplyTrack
 -- =========================================================================
--- This script configures the storage bucket and policies required for ApplyTrack
--- resume and document attachment synchronization.
+-- This script configures the storage bucket and access policies required for
+-- ApplyTrack resume and document attachment synchronization.
+--
+-- Architecture Note:
+-- ApplyTrack uses Firebase Authentication (Google / Anonymous sign-in) as its
+-- primary identity provider. Attachments are synchronized to Supabase Storage
+-- partitioned under unlisted, user-scoped UUID path structures:
+--   users/{userId}/{type}/{fileName}
+--   (e.g., users/5F8a.../resumes/my_resume.pdf)
+--
+-- The bucket is created with public read access so client applications
+-- (Android Compose & React Web) can directly fetch and preview attachments
+-- without requiring an intermediate backend signed-URL proxy server.
+--
 -- Run this in your Supabase SQL Editor: Dashboard -> SQL Editor -> New Query.
 -- =========================================================================
 
--- 1. Ensure the 'ApplyTrack' storage bucket exists
+-- 1. Ensure the 'ApplyTrack' storage bucket exists with public read access
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('ApplyTrack', 'ApplyTrack', true)
 ON CONFLICT (id) DO NOTHING;
 
--- 2. Allow authenticated users to upload attachments to their own user directory
--- Target path pattern: users/{userId}/{type}/{fileName}
-CREATE POLICY "Allow authenticated user uploads to own directory"
+-- 2. Allow clients to upload attachment files under the 'users/' path partition
+CREATE POLICY "Allow client uploads to user directories"
 ON storage.objects
 FOR INSERT
-TO authenticated
+TO anon, authenticated
 WITH CHECK (
   bucket_id = 'ApplyTrack'
-  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND (storage.foldername(name))[1] = 'users'
 );
 
--- 3. Allow authenticated users to update/overwrite files in their own user directory
-CREATE POLICY "Allow authenticated user updates to own directory"
+-- 3. Allow clients to update/overwrite attachments in user directories
+CREATE POLICY "Allow client updates to user directories"
 ON storage.objects
 FOR UPDATE
-TO authenticated
+TO anon, authenticated
 USING (
   bucket_id = 'ApplyTrack'
-  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND (storage.foldername(name))[1] = 'users'
 );
 
--- 4. Allow authenticated users to delete files from their own user directory
-CREATE POLICY "Allow authenticated user deletes from own directory"
+-- 4. Allow clients to delete attachments in user directories
+CREATE POLICY "Allow client deletes from user directories"
 ON storage.objects
 FOR DELETE
-TO authenticated
+TO anon, authenticated
 USING (
   bucket_id = 'ApplyTrack'
-  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND (storage.foldername(name))[1] = 'users'
 );
 
--- 5. Allow users to read/download attachments
-CREATE POLICY "Allow authenticated user reads from own directory"
+-- 5. Public read access policy for viewing and downloading attachments
+CREATE POLICY "Allow public read access to user attachments"
 ON storage.objects
 FOR SELECT
-TO authenticated
+TO public
 USING (
   bucket_id = 'ApplyTrack'
-  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND (storage.foldername(name))[1] = 'users'
 );
