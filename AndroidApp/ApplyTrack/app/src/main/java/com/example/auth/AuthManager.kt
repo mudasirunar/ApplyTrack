@@ -75,7 +75,13 @@ class AuthManager(
         }
 
         auth.addAuthStateListener { firebaseAuth ->
-            _currentUser.value = firebaseAuth.currentUser
+            val user = firebaseAuth.currentUser
+            _currentUser.value = user
+            try {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().setUserId(user?.uid ?: "guest")
+            } catch (ignored: Exception) {
+                // Safe fallback for unit tests or offline execution
+            }
         }
     }
 
