@@ -45,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -521,7 +522,10 @@ fun DateFilterBottomSheetContent(
         // Done / Apply Action Button
         Button(
             onClick = {
-                onUpdateFilter { draftState }
+                val finalStart = if (draftState.mode == DateFilterMode.RANGE) minOf(draftState.startDate, draftState.endDate) else draftState.startDate
+                val finalEnd = if (draftState.mode == DateFilterMode.RANGE) maxOf(draftState.startDate, draftState.endDate) else draftState.endDate
+                val appliedState = draftState.copy(startDate = finalStart, endDate = finalEnd)
+                onUpdateFilter { appliedState }
                 onDismiss()
             },
             modifier = Modifier
@@ -584,6 +588,19 @@ fun DateFilterBottomSheetContent(
     }
 
     if (showStartRangeDatePicker) {
+        val maxEndUtcMillis = remember(draftState.endDate) {
+            val localCal =
+                Calendar.getInstance().apply { timeInMillis = draftState.endDate }
+            val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                clear()
+                set(
+                    localCal.get(Calendar.YEAR),
+                    localCal.get(Calendar.MONTH),
+                    localCal.get(Calendar.DAY_OF_MONTH)
+                )
+            }
+            utcCal.timeInMillis
+        }
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = remember(draftState.startDate) {
                 val localCal =
@@ -597,6 +614,13 @@ fun DateFilterBottomSheetContent(
                     )
                 }
                 utcCal.timeInMillis
+            },
+            selectableDates = remember(maxEndUtcMillis) {
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                        return utcTimeMillis <= maxEndUtcMillis
+                    }
+                }
             }
         )
         DatePickerDialog(
@@ -618,7 +642,19 @@ fun DateFilterBottomSheetContent(
                                 set(Calendar.SECOND, 0)
                                 set(Calendar.MILLISECOND, 0)
                             }
-                            draftState = draftState.copy(startDate = localCal.timeInMillis)
+                            val newStart = localCal.timeInMillis
+                            val newEnd = if (newStart > draftState.endDate) {
+                                val endCal = (localCal.clone() as Calendar).apply {
+                                    set(Calendar.HOUR_OF_DAY, 23)
+                                    set(Calendar.MINUTE, 59)
+                                    set(Calendar.SECOND, 59)
+                                    set(Calendar.MILLISECOND, 999)
+                                }
+                                endCal.timeInMillis
+                            } else {
+                                draftState.endDate
+                            }
+                            draftState = draftState.copy(startDate = newStart, endDate = newEnd)
                         }
                         showStartRangeDatePicker = false
                     }
@@ -633,6 +669,19 @@ fun DateFilterBottomSheetContent(
     }
 
     if (showEndRangeDatePicker) {
+        val minStartUtcMillis = remember(draftState.startDate) {
+            val localCal =
+                Calendar.getInstance().apply { timeInMillis = draftState.startDate }
+            val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                clear()
+                set(
+                    localCal.get(Calendar.YEAR),
+                    localCal.get(Calendar.MONTH),
+                    localCal.get(Calendar.DAY_OF_MONTH)
+                )
+            }
+            utcCal.timeInMillis
+        }
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = remember(draftState.endDate) {
                 val localCal =
@@ -646,6 +695,13 @@ fun DateFilterBottomSheetContent(
                     )
                 }
                 utcCal.timeInMillis
+            },
+            selectableDates = remember(minStartUtcMillis) {
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                        return utcTimeMillis >= minStartUtcMillis
+                    }
+                }
             }
         )
         DatePickerDialog(
@@ -667,7 +723,19 @@ fun DateFilterBottomSheetContent(
                                 set(Calendar.SECOND, 59)
                                 set(Calendar.MILLISECOND, 999)
                             }
-                            draftState = draftState.copy(endDate = localCal.timeInMillis)
+                            val newEnd = localCal.timeInMillis
+                            val newStart = if (newEnd < draftState.startDate) {
+                                val startCal = (localCal.clone() as Calendar).apply {
+                                    set(Calendar.HOUR_OF_DAY, 0)
+                                    set(Calendar.MINUTE, 0)
+                                    set(Calendar.SECOND, 0)
+                                    set(Calendar.MILLISECOND, 0)
+                                }
+                                startCal.timeInMillis
+                            } else {
+                                draftState.startDate
+                            }
+                            draftState = draftState.copy(startDate = newStart, endDate = newEnd)
                         }
                         showEndRangeDatePicker = false
                     }

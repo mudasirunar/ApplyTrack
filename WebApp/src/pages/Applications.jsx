@@ -28,7 +28,7 @@ import {
 import './Applications.css';
 
 
-function DatePickerField({ value, onChange, placeholder = "dd/mm/yyyy", className = "form-input", style = {} }) {
+function DatePickerField({ value, onChange, min, max, placeholder = "dd/mm/yyyy", className = "form-input", style = {} }) {
   const [tempText, setTempText] = useState('');
 
   useEffect(() => {
@@ -107,6 +107,8 @@ function DatePickerField({ value, onChange, placeholder = "dd/mm/yyyy", classNam
       <input
         type="date"
         value={value || ''}
+        min={min || undefined}
+        max={max || undefined}
         onChange={handleNativeChange}
         style={{
           position: 'absolute',
@@ -315,7 +317,16 @@ function DateFilterModal({ isOpen, onClose, dateDraft, setDateDraft, onApply }) 
                 <span className="sub-filter-label">Start Date</span>
                 <DatePickerField
                   value={dateDraft.dateStartRange}
-                  onChange={(val) => setDateDraft(prev => ({ ...prev, dateStartRange: val }))}
+                  max={dateDraft.dateEndRange}
+                  onChange={(val) => {
+                    setDateDraft(prev => {
+                      const updates = { ...prev, dateStartRange: val };
+                      if (val && prev.dateEndRange && val > prev.dateEndRange) {
+                        updates.dateEndRange = val;
+                      }
+                      return updates;
+                    });
+                  }}
                   className="form-input"
                   style={{ padding: '7px 8px', fontSize: '0.85rem' }}
                 />
@@ -325,7 +336,16 @@ function DateFilterModal({ isOpen, onClose, dateDraft, setDateDraft, onApply }) 
                 <span className="sub-filter-label">End Date</span>
                 <DatePickerField
                   value={dateDraft.dateEndRange}
-                  onChange={(val) => setDateDraft(prev => ({ ...prev, dateEndRange: val }))}
+                  min={dateDraft.dateStartRange}
+                  onChange={(val) => {
+                    setDateDraft(prev => {
+                      const updates = { ...prev, dateEndRange: val };
+                      if (val && prev.dateStartRange && val < prev.dateStartRange) {
+                        updates.dateStartRange = val;
+                      }
+                      return updates;
+                    });
+                  }}
                   className="form-input"
                   style={{ padding: '7px 8px', fontSize: '0.85rem' }}
                 />
@@ -397,9 +417,15 @@ export default function Applications({
 
   const handleApplyDateModal = () => {
     if (dateDraft) {
+      const finalDraft = { ...dateDraft };
+      if (finalDraft.dateFilterMode === 'Range') {
+        if (finalDraft.dateStartRange && finalDraft.dateEndRange && finalDraft.dateStartRange > finalDraft.dateEndRange) {
+          finalDraft.dateEndRange = finalDraft.dateStartRange;
+        }
+      }
       setFilters(prev => ({
         ...prev,
-        ...dateDraft
+        ...finalDraft
       }));
     }
     setIsDateModalOpen(false);
