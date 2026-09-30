@@ -2,6 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { 
+  getFormattedStatusDate,
+  getLocalDateString,
+  getLocalFirstOfMonth,
+  ymdToDmy,
+  parseLocalDate,
+  dmyToYmd
+} from '../utils/dateUtils';
+import { 
   SearchIcon, 
   AddIcon, 
   EditIcon, 
@@ -18,52 +26,6 @@ import {
 } from '../components/Icons';
 import './Applications.css';
 
-const getFormattedStatusDate = (app) => {
-  const history = app.statusHistory || [];
-  const statusTimestamp = history.length > 0 ? history[history.length - 1].timestamp : app.createdAt;
-  const dateStr = new Date(statusTimestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  return `${app.status} on ${dateStr}`;
-};
-
-const getLocalDateString = (timestampOrDate = new Date()) => {
-  const date = new Date(timestampOrDate);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const getLocalFirstOfMonth = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}-01`;
-};
-
-const ymdToDmy = (ymd) => {
-  if (!ymd) return '';
-  const parts = ymd.split('-');
-  if (parts.length !== 3) return ymd;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-};
-
-const parseLocalDate = (dateStr) => {
-  if (!dateStr) return null;
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
-
-const dmyToYmd = (dmy) => {
-  if (!dmy) return '';
-  const parts = dmy.split('/');
-  if (parts.length !== 3) return '';
-  const [day, month, year] = parts;
-  if (day.length === 2 && month.length === 2 && year.length === 4) {
-    return `${year}-${month}-${day}`;
-  }
-  return '';
-};
 
 function DatePickerField({ value, onChange, placeholder = "dd/mm/yyyy", className = "form-input", style = {} }) {
   const [tempText, setTempText] = useState('');

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
+import { 
+  getLocalDateString, 
+  parseLocalDateStringToTimestamp, 
+  ymdToDmy, 
+  dmyToYmd 
+} from '../utils/dateUtils';
 import { ChevronIcon, FileIcon, DeleteIcon } from '../components/Icons';
 import './JobAddEdit.css';
 
@@ -48,51 +54,6 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
   );
 }
 
-const getLocalDateString = (timestampOrDate = new Date()) => {
-  const date = new Date(timestampOrDate);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const parseLocalDateStringToTimestamp = (selectedDateStr, originalTime = null) => {
-  if (!selectedDateStr) return Date.now();
-  
-  if (originalTime) {
-    const originalDateStr = getLocalDateString(originalTime);
-    if (selectedDateStr === originalDateStr) {
-      return originalTime;
-    }
-  }
-  
-  const todayStr = getLocalDateString(new Date());
-  if (selectedDateStr === todayStr) {
-    return Date.now();
-  }
-  
-  const [year, month, day] = selectedDateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).getTime();
-};
-
-const ymdToDmy = (ymd) => {
-  if (!ymd) return '';
-  const parts = ymd.split('-');
-  if (parts.length !== 3) return ymd;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-};
-
-const dmyToYmd = (dmy) => {
-  if (!dmy) return '';
-  const parts = dmy.split('/');
-  if (parts.length !== 3) return '';
-  const [day, month, year] = parts;
-  if (day.length === 2 && month.length === 2 && year.length === 4) {
-    return `${year}-${month}-${day}`;
-  }
-  return '';
-};
 
 function DatePickerField({ value, onChange, placeholder = "dd/mm/yyyy", className = "form-input", style = {} }) {
   const [tempText, setTempText] = useState('');

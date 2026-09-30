@@ -178,13 +178,13 @@ The app works immediately in **offline/guest mode** with the provided example fi
 ## 🧪 Automated Testing & CI
 
 Continuous Integration is powered by **GitHub Actions** (`.github/workflows/ci.yml`). Pull Requests trigger path-specific validation:
-* **Web changes (`WebApp/**`):** Runs `npm run lint` and `npm run build`.
-* **Android changes (`AndroidApp/**`):** Executes `./gradlew testDebugUnitTest`.
+* **Web changes (`WebApp/**`):** Runs `npm run lint`, `npm test` (Vitest), and `npm run build`.
+* **Android changes (`AndroidApp/**`):** Executes `./gradlew testDebugUnitTest` (70 automated tests).
 
 Run tests locally before submitting your contribution:
 ```bash
 # Test Web
-cd WebApp && npm run lint && npm run build
+cd WebApp && npm run lint && npm test && npm run build
 
 # Test Android
 cd AndroidApp/ApplyTrack && ./gradlew testDebugUnitTest

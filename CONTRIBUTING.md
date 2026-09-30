@@ -180,6 +180,7 @@ Before submitting your PR, ensure the corresponding tests pass:
 ```bash
 cd WebApp
 npm run lint     # Check for lint errors (oxlint)
+npm test         # Run automated unit tests (vitest)
 npm run build    # Verify production compilation
 ```
 

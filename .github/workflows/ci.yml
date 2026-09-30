@@ -57,6 +57,12 @@ jobs:
           cd WebApp
           npm run lint
 
+      - name: Run Unit Tests
+        if: steps.check_web.outputs.webapp == 'true'
+        run: |
+          cd WebApp
+          npm test
+
       - name: Run Build
         if: steps.check_web.outputs.webapp == 'true'
         run: |

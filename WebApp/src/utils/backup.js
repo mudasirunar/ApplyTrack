@@ -30,7 +30,7 @@ function uint8ArrayToDataUrl(bytes, mimeType) {
 }
 
 // Helper: Get MIME type from filename
-function getMimeType(filename) {
+export function getMimeType(filename) {
   const ext = filename.split('.').pop().toLowerCase();
   if (ext === 'pdf') return 'application/pdf';
   if (ext === 'png') return 'image/png';
