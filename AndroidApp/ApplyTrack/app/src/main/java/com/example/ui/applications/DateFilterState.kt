@@ -2,7 +2,13 @@ package com.example.ui.applications
 
 import java.util.Calendar
 
+enum class DateBasis {
+    DATE_ADDED,
+    STATUS_UPDATED
+}
+
 data class DateFilterState(
+    val basis: DateBasis = DateBasis.DATE_ADDED,
     val mode: DateFilterMode = DateFilterMode.MONTH,
     val month: Int = Calendar.getInstance().get(Calendar.MONTH) + 1, // 1..12
     val year: String = Calendar.getInstance().get(Calendar.YEAR).toString(),

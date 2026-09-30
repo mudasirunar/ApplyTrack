@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.JobViewModel
 import com.example.ui.applications.DateFilterMode
+import com.example.ui.applications.DateBasis
 import com.example.ui.dashboard.components.ActivityGridSection
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +86,11 @@ fun DashboardScreen(
                     onDayClick = { dayMillis ->
                         viewModel.statusFilter.value = "Date"
                         viewModel.updateDateFilter {
-                            copy(mode = DateFilterMode.DAY, specificDate = dayMillis)
+                            copy(
+                                basis = DateBasis.DATE_ADDED,
+                                mode = DateFilterMode.DAY,
+                                specificDate = dayMillis
+                            )
                         }
                         viewModel.shouldScrollToFilter.value = true
                         onNavigateToApplications()
@@ -104,6 +109,7 @@ fun DashboardScreen(
                         viewModel.statusFilter.value = "Date"
                         viewModel.updateDateFilter {
                             copy(
+                                basis = DateBasis.DATE_ADDED,
                                 mode = DateFilterMode.MONTH,
                                 month = month,
                                 year = dashboardYear

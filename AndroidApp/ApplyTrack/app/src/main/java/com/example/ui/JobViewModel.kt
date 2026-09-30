@@ -27,6 +27,7 @@ import android.content.Context
 import java.util.Calendar
 import com.example.ui.applications.DateFilterState
 import com.example.ui.applications.DateFilterMode
+import com.example.ui.applications.DateBasis
 import com.example.ui.dashboard.components.activityDayKey
 
 
@@ -258,8 +259,11 @@ class JobViewModel(
                 val dateState = params.dateFilterState
                 val cal = Calendar.getInstance()
                 result = result.filter { app ->
-                    val statusTimestamp = app.statusHistory?.lastOrNull()?.timestamp ?: app.createdAt
-                    cal.timeInMillis = statusTimestamp
+                    val targetTimestamp = when (dateState.basis) {
+                        DateBasis.DATE_ADDED -> app.createdAt
+                        DateBasis.STATUS_UPDATED -> app.statusHistory?.lastOrNull()?.timestamp ?: app.createdAt
+                    }
+                    cal.timeInMillis = targetTimestamp
                     when (dateState.mode) {
                         DateFilterMode.MONTH -> {
                             val targetYear = dateState.year.toIntOrNull()
@@ -291,7 +295,7 @@ class JobViewModel(
                                 set(Calendar.SECOND, 59)
                                 set(Calendar.MILLISECOND, 999)
                             }
-                            statusTimestamp >= startCal.timeInMillis && statusTimestamp <= endCal.timeInMillis
+                            targetTimestamp >= startCal.timeInMillis && targetTimestamp <= endCal.timeInMillis
                         }
                     }
                 }

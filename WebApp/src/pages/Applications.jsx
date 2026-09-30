@@ -172,7 +172,6 @@ export default function Applications({
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
-  const [showDateInfoModal, setShowDateInfoModal] = useState(false);
   const [appToDelete, setAppToDelete] = useState(null);
   const [appsToDeleteList, setAppsToDeleteList] = useState([]);
   const [deletingIds, setDeletingIds] = useState([]);
@@ -286,12 +285,12 @@ export default function Applications({
 
     // 5. Sub-filter: Date
     if (filters.statusFilter === 'Date') {
+      const isStatusBasis = filters.dateBasis === 'status';
       list = list.filter(a => {
-        const statusTimestamp = (a.statusHistory && a.statusHistory.length > 0) 
-          ? a.statusHistory[a.statusHistory.length - 1].timestamp 
+        const targetTimestamp = isStatusBasis
+          ? ((a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt)
           : a.createdAt;
-        
-        const date = new Date(statusTimestamp);
+        const date = new Date(targetTimestamp);
 
         if (filters.dateFilterMode === 'Month') {
           const appMonth = date.getMonth() + 1; // 1..12
@@ -313,7 +312,7 @@ export default function Applications({
           const startTimestamp = startTarget ? startTarget.setHours(0, 0, 0, 0) : 0;
           const endTarget = parseLocalDate(filters.dateEndRange);
           const endTimestamp = endTarget ? endTarget.setHours(23, 59, 59, 999) : Infinity;
-          return statusTimestamp >= startTimestamp && statusTimestamp <= endTimestamp;
+          return targetTimestamp >= startTimestamp && targetTimestamp <= endTimestamp;
         }
 
         return true;
@@ -368,13 +367,16 @@ export default function Applications({
       if (status === 'Resume' && (prev.selectedResume === 'All' || !prev.selectedResume)) {
         next.selectedResume = 'Select---';
       }
-      if (status === 'Date' && (prev.dateFilterMode === 'All' || !prev.dateFilterMode)) {
-        next.dateFilterMode = 'Month';
-        next.dateMonth = (new Date().getMonth() + 1).toString();
-        next.dateYear = new Date().getFullYear().toString();
-        next.dateSpecificDay = getLocalDateString();
-        next.dateStartRange = getLocalFirstOfMonth();
-        next.dateEndRange = getLocalDateString();
+      if (status === 'Date') {
+        if (!prev.dateBasis) next.dateBasis = 'created';
+        if (prev.dateFilterMode === 'All' || !prev.dateFilterMode) {
+          next.dateFilterMode = 'Month';
+          next.dateMonth = (new Date().getMonth() + 1).toString();
+          next.dateYear = new Date().getFullYear().toString();
+          next.dateSpecificDay = getLocalDateString();
+          next.dateStartRange = getLocalFirstOfMonth();
+          next.dateEndRange = getLocalDateString();
+        }
       }
       return next;
     });
@@ -614,21 +616,42 @@ export default function Applications({
           {filters.statusFilter === 'Date' && (
             <div className="sub-filter-panel animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               
-              {/* Filter Type Chips and Info button */}
+              {/* Date Basis Chips */}
+              <div className="date-filter-type-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Date Basis:</span>
+                </div>
+                
+                <div className="date-filter-toggle-scroll">
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      dateBasis: 'created'
+                    }))}
+                    className={`filter-chip ${(!filters.dateBasis || filters.dateBasis === 'created') ? 'active' : ''}`}
+                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+                  >
+                    Date Added
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      dateBasis: 'status'
+                    }))}
+                    className={`filter-chip ${filters.dateBasis === 'status' ? 'active' : ''}`}
+                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+                  >
+                    Status Updated
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter Type Chips */}
               <div className="date-filter-type-row">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filter Type:</span>
-                  <button 
-                    type="button"
-                    onClick={() => setShowDateInfoModal(true)}
-                    className="job-card-action-btn"
-                    style={{ padding: '2px', color: 'var(--brand-primary)', cursor: 'pointer' }}
-                    title="Date filtering info"
-                  >
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                    </svg>
-                  </button>
                 </div>
                 
                 <div className="date-filter-toggle-scroll">
@@ -978,6 +1001,7 @@ export default function Applications({
                 statusFilter: 'All',
                 selectedResume: 'Select---',
                 selectedPlatform: 'LinkedIn',
+                dateBasis: 'created',
                 dateFilterMode: 'Month',
                 dateMonth: (new Date().getMonth() + 1).toString(),
                 dateYear: new Date().getFullYear().toString(),
@@ -996,33 +1020,7 @@ export default function Applications({
 
     </div>
 
-    {/* Date Filtering Info Dialog Modal */}
-    {showDateInfoModal && createPortal(
-      <div className="modal-overlay" style={{ zIndex: 2000 }} onClick={() => setShowDateInfoModal(false)}>
-        <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
-          <h3 className="modal-title" style={{ margin: 0 }}>How Date Filtering Works</h3>
-          <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '4px 0' }}></div>
-          
-          <p className="modal-text" style={{ fontSize: '0.9rem', lineHeight: '1.6', color: 'var(--text-primary)' }}>
-            To help you track active timelines, date filters match the date of your most recent status change (such as when you originally applied, or when the role moved to Interview or Offer).
-          </p>
-          <p className="modal-text" style={{ fontSize: '0.8rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
-            Note: This can differ from the Dashboard, which counts application volumes strictly based on the date they were first added to the app.
-          </p>
-          
-          <div className="modal-actions" style={{ marginTop: '8px' }}>
-            <button 
-              onClick={() => setShowDateInfoModal(false)} 
-              className="btn-primary" 
-              style={{ padding: '6px 16px', fontSize: '0.85rem' }}
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      </div>,
-      document.body
-    )}
+
 
     {/* Delete Single Application Modal */}
     {appToDelete && createPortal(

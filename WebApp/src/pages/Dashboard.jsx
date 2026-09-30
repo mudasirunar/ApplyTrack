@@ -362,6 +362,7 @@ export default function Dashboard({ setActiveTab, setFilters }) {
         'Jul': '7', 'Aug': '8', 'Sep': '9', 'Oct': '10', 'Nov': '11', 'Dec': '12'
       };
       newFilters.statusFilter = 'Date';
+      newFilters.dateBasis = 'created';
       newFilters.dateFilterMode = 'Month';
       newFilters.dateMonth = monthMap[value.month] || (new Date().getMonth() + 1).toString();
       newFilters.dateYear = value.year ? value.year.toString() : new Date().getFullYear().toString();
@@ -378,6 +379,7 @@ export default function Dashboard({ setActiveTab, setFilters }) {
       statusFilter: 'Date',
       selectedResume: 'Select---',
       selectedPlatform: 'LinkedIn',
+      dateBasis: 'created',
       dateFilterMode: 'Day',
       dateMonth: (new Date().getMonth() + 1).toString(),
       dateYear: new Date().getFullYear().toString(),
