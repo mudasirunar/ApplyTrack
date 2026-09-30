@@ -293,6 +293,8 @@ button, input, textarea, select {
   backdrop-filter: blur(2px);
   padding: 16px;
   box-sizing: border-box;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .modal-content-card {
@@ -305,6 +307,8 @@ button, input, textarea, select {
   max-width: 400px;
   box-sizing: border-box;
   animation: scaleInGlobalModal 0.2s ease-out;
+  overscroll-behavior: contain;
+  touch-action: auto;
 }
 
 @keyframes scaleInGlobalModal {

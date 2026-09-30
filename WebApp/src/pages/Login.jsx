@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { auth } from '../utils/firebase';
+import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { AppIcon, GoogleIcon } from '../components/Icons';
 import loginBgMobileJpeg from '../assets/login_bg_mobile.jpeg';
 import loginBgDesktopJpeg from '../assets/login_bg_desktop.jpeg';
@@ -10,6 +11,7 @@ import './Login.css';
 
 export default function Login({ setActiveTab }) {
   const [isLoading, setIsLoading] = useState(false);
+  useBodyScrollLock(isLoading);
 
   const handleGoogleSignInClick = async () => {
     setIsLoading(true);

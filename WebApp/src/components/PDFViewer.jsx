@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { CloseIcon, FileIcon, DownloadIcon } from './Icons';
 import './ViewerModal.css';
 
@@ -12,17 +13,15 @@ export default function PDFViewer({ file, onClose }) {
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [error, setError] = useState(null);
 
+  useBodyScrollLock(Boolean(file));
+
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    
     const prevTitle = document.title;
     if (file && file.originalName) {
       document.title = file.originalName;
     }
 
     return () => {
-      document.body.style.overflow = originalOverflow;
       document.title = prevTitle;
     };
   }, [file]);

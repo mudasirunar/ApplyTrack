@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
+import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { 
   AppIcon, 
   DashboardIcon, 
@@ -11,6 +12,8 @@ import {
 import './MainLayout.css';
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
+  useBodyScrollLock(true);
+
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>

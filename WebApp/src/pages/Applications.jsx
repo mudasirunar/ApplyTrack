@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
+import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { 
   getFormattedStatusDate,
   getLocalDateString,
@@ -123,13 +124,7 @@ function DatePickerField({ value, onChange, placeholder = "dd/mm/yyyy", classNam
 }
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, []);
+  useBodyScrollLock(true);
 
   const modalContent = (
     <div className="modal-overlay" onClick={onCancel}>
@@ -167,14 +162,7 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
 }
 
 function DateFilterModal({ isOpen, onClose, dateDraft, setDateDraft, onApply }) {
-  useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isOpen]);
+  useBodyScrollLock(isOpen);
 
   if (!isOpen || !dateDraft) return null;
 

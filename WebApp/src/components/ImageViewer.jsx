@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { CloseIcon, ChevronIcon, DownloadIcon } from './Icons';
 import './ViewerModal.css';
 
@@ -8,17 +9,15 @@ export default function ImageViewer({ files, initialIndex, onClose }) {
 
   const file = (files && files.length > 0) ? files[activeIndex] : null;
 
+  useBodyScrollLock(Boolean(file));
+
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    
     const prevTitle = document.title;
     if (file && file.originalName) {
       document.title = file.originalName;
     }
 
     return () => {
-      document.body.style.overflow = originalOverflow;
       document.title = prevTitle;
     };
   }, [file]);

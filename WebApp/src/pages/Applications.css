@@ -811,6 +811,8 @@
   justify-content: center !important;
   padding: 16px;
   box-sizing: border-box;
+  overscroll-behavior: contain !important;
+  touch-action: none;
 }
 
 .date-filter-sheet-card {
@@ -822,6 +824,8 @@
   width: 100%;
   max-width: 440px;
   box-sizing: border-box;
+  overscroll-behavior: contain !important;
+  touch-action: pan-y;
 }
 
 .sheet-drag-handle {

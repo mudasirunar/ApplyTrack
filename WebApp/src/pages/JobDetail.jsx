@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
+import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { 
   ChevronIcon, 
   CalendarIcon, 
@@ -18,13 +19,7 @@ import PDFViewer from '../components/PDFViewer';
 import './JobDetail.css';
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel, hideCancel = false }) {
-  useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = originalStyle;
-    };
-  }, []);
+  useBodyScrollLock(true);
 
   return (
     <div className="modal-overlay" onClick={hideCancel ? undefined : onCancel}>

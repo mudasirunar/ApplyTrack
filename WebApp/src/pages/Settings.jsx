@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
+import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { LogoutIcon, AppIcon } from '../components/Icons';
 import packageJson from '../../package.json';
 import { exportBackupToZip, checkBackupConflicts, importBackup } from '../utils/backup';
@@ -13,13 +14,7 @@ const DialogOutcome = {
 };
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel, isLoading = false, loadingText = '' }) {
-  useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = originalStyle;
-    };
-  }, []);
+  useBodyScrollLock(true);
 
   const modalContent = (
     <div className="modal-overlay" onClick={isLoading ? undefined : onCancel}>
@@ -63,6 +58,8 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
 }
 
 function ConflictDialog({ importConflictsCount, onOverwriteClick, onKeepClick, onDismiss }) {
+  useBodyScrollLock(true);
+
   const modalContent = (
     <div className="modal-overlay" onClick={onDismiss}>
       <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
@@ -90,6 +87,8 @@ function ConflictDialog({ importConflictsCount, onOverwriteClick, onKeepClick, o
 }
 
 function BackupProgressDialog({ dialogTitle, dialogMessage, isWorking, dialogOutcome, onDismiss }) {
+  useBodyScrollLock(true);
+
   const modalContent = (
     <div className="modal-overlay" onClick={() => { if (!isWorking) onDismiss(); }}>
       <div className="modal-content-card" style={{ maxWidth: '320px', textAlign: 'center', padding: '24px' }} onClick={(e) => e.stopPropagation()}>
