@@ -14,6 +14,7 @@ ApplyTrack is an open-source, privacy-first career tracker designed to work offl
 2. [Prerequisites & Development Setup](#prerequisites--development-setup)
    - [Web App Setup](#web-app-setup)
    - [Android App Setup](#android-app-setup)
+   - [Cloud Backend Setup](#cloud-backend-setup)
 3. [Contribution Workflow](#contribution-workflow)
 4. [Commit Message Guidelines](#commit-message-guidelines)
 5. [Testing & Quality Verification](#testing--quality-verification)
@@ -67,7 +68,11 @@ You can contribute to **either** client without needing to set up both!
    ```
    *(Fill in your Firebase & Supabase test credentials, or use dummy values if running in offline mode).*
 
-5. **Start the local Vite development server:**
+5. **Configure Cloud Services (Optional for Local Offline Testing):**
+   - **Firestore Rules:** If using your own Firebase project, apply the security rules from [`firestore.rules`](firestore.rules) in your Firebase Console under **Firestore Database ➔ Rules**.
+   - **Supabase Storage:** If testing document uploads, create the storage bucket and policies by running the script in [`supabase/storage_rules.sql`](supabase/storage_rules.sql) in your Supabase project under **SQL Editor**.
+
+6. **Start the local Vite development server:**
    ```bash
    npm run dev
    ```
@@ -106,6 +111,15 @@ You can contribute to **either** client without needing to set up both!
      ```bash
      ./gradlew assembleDebug
      ```
+
+---
+
+### Cloud Backend Setup (Optional for Local Offline Testing)
+
+The project operates in **offline/guest mode** with the provided example files. If you want to connect your own cloud backend for cross-device sync:
+1. **Firebase Authentication:** In your Firebase Console under **Build ➔ Authentication ➔ Sign-in method**, enable both **Google** and **Anonymous** providers.
+2. **Cloud Firestore Rules:** Apply the security rules from [`firestore.rules`](firestore.rules) in your Firebase Console under **Firestore Database ➔ Rules**.
+3. **Supabase Storage Bucket & Policies:** In your Supabase project's **SQL Editor**, run the script in [`supabase/storage_rules.sql`](supabase/storage_rules.sql) to provision the `ApplyTrack` storage bucket and row-level security policies.
 
 ---
 

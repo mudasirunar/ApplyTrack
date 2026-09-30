@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the user is authenticated and owns the data
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Match the parent user document (for profile, preferences, or account metadata)
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Match all job applications under this specific user
+      match /job_applications/{jobUuid} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+    
+    // Default deny all other collections to prevent unauthorized access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -166,6 +166,15 @@ ApplyTrack/
 
 ---
 
+### 3. Cloud Backend Setup (Optional for Local Offline Testing)
+
+The app works immediately in **offline/guest mode** with the provided example files. If you wish to connect your own cloud accounts for multi-device sync:
+1. **Firebase Authentication:** In your Firebase Console under **Build ➔ Authentication ➔ Sign-in method**, enable both **Google** and **Anonymous** providers.
+2. **Cloud Firestore Rules:** Apply the security rules from [`firestore.rules`](firestore.rules) in your Firebase Console under **Firestore Database ➔ Rules**.
+3. **Supabase Storage Bucket & Policies:** Open your Supabase project's **SQL Editor** and run the SQL migration script in [`supabase/storage_rules.sql`](supabase/storage_rules.sql) to automatically provision the `ApplyTrack` storage bucket and user-scoped permissions.
+
+---
+
 ## 🧪 Automated Testing & CI
 
 Continuous Integration is powered by **GitHub Actions** (`.github/workflows/ci.yml`). Pull Requests trigger path-specific validation:
