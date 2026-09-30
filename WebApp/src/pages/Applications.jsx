@@ -123,7 +123,15 @@ function DatePickerField({ value, onChange, placeholder = "dd/mm/yyyy", classNam
 }
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
-  return (
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  const modalContent = (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
         <h3 className="modal-title" style={{ margin: 0, color: isDestructive ? 'var(--error-red)' : 'var(--brand-primary)' }}>
@@ -154,6 +162,214 @@ function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConf
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
+}
+
+function DateFilterModal({ isOpen, onClose, dateDraft, setDateDraft, onApply }) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !dateDraft) return null;
+
+  const modalContent = (
+    <div className="modal-overlay date-filter-overlay" onClick={onClose}>
+      <div 
+        className="modal-content-card date-filter-sheet-card animate-scale-in" 
+        style={{ maxWidth: '440px' }} 
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sheet-drag-handle" />
+
+        <div className="date-modal-header">
+          <h3 className="modal-title" style={{ margin: 0, color: 'var(--brand-primary)', fontSize: '1.1rem', fontWeight: 800 }}>
+            Filter by Date
+          </h3>
+          <button 
+            type="button" 
+            className="date-modal-close-btn" 
+            onClick={onClose}
+            title="Close"
+          >
+            <CloseIcon style={{ width: '18px', height: '18px' }} />
+          </button>
+        </div>
+        <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', margin: '10px 0 16px' }} />
+
+        {/* Date Basis Section */}
+        <div className="date-modal-section">
+          <span className="date-modal-section-label">Date Basis</span>
+          <div className="date-filter-toggle-scroll">
+            <button
+              type="button"
+              onClick={() => setDateDraft(prev => ({ ...prev, dateBasis: 'created' }))}
+              className={`filter-chip ${(!dateDraft.dateBasis || dateDraft.dateBasis === 'created') ? 'active' : ''}`}
+            >
+              Date Added
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateDraft(prev => ({ ...prev, dateBasis: 'status' }))}
+              className={`filter-chip ${dateDraft.dateBasis === 'status' ? 'active' : ''}`}
+            >
+              Status Updated
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Type Section */}
+        <div className="date-modal-section">
+          <span className="date-modal-section-label">Filter Type</span>
+          <div className="date-filter-toggle-scroll">
+            <button
+              type="button"
+              onClick={() => setDateDraft(prev => ({
+                ...prev,
+                dateFilterMode: 'Month',
+                dateMonth: prev.dateMonth || (new Date().getMonth() + 1).toString(),
+                dateYear: prev.dateYear || new Date().getFullYear().toString()
+              }))}
+              className={`filter-chip ${(!dateDraft.dateFilterMode || dateDraft.dateFilterMode === 'Month') ? 'active' : ''}`}
+            >
+              Month
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateDraft(prev => ({
+                ...prev,
+                dateFilterMode: 'Day',
+                dateSpecificDay: prev.dateSpecificDay || getLocalDateString()
+              }))}
+              className={`filter-chip ${dateDraft.dateFilterMode === 'Day' ? 'active' : ''}`}
+            >
+              Specific Day
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateDraft(prev => ({
+                ...prev,
+                dateFilterMode: 'Range',
+                dateStartRange: prev.dateStartRange || getLocalFirstOfMonth(),
+                dateEndRange: prev.dateEndRange || getLocalDateString()
+              }))}
+              className={`filter-chip ${dateDraft.dateFilterMode === 'Range' ? 'active' : ''}`}
+            >
+              Date Range
+            </button>
+          </div>
+        </div>
+
+        {/* Active Controls */}
+        <div className="date-modal-controls">
+          {(!dateDraft.dateFilterMode || dateDraft.dateFilterMode === 'Month') && (
+            <div className="date-modal-inputs-row">
+              <div className="sub-filter-group" style={{ flex: 2 }}>
+                <span className="sub-filter-label">Select Month</span>
+                <select
+                  className="sub-filter-select"
+                  value={dateDraft.dateMonth}
+                  onChange={(e) => setDateDraft(prev => ({ ...prev, dateMonth: e.target.value }))}
+                >
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+              
+              <div className="sub-filter-group" style={{ flex: 1 }}>
+                <span className="sub-filter-label">Year</span>
+                <input
+                  type="number"
+                  className="form-input"
+                  style={{ padding: '7px 10px', fontSize: '0.85rem' }}
+                  value={dateDraft.dateYear}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (/^\d*$/.test(value) && value.length <= 4) {
+                      setDateDraft(prev => ({ ...prev, dateYear: value }));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {dateDraft.dateFilterMode === 'Day' && (
+            <div className="sub-filter-group">
+              <span className="sub-filter-label">Selected Date</span>
+              <DatePickerField
+                value={dateDraft.dateSpecificDay}
+                onChange={(val) => setDateDraft(prev => ({ ...prev, dateSpecificDay: val }))}
+                className="form-input"
+                style={{ padding: '7px 10px', fontSize: '0.85rem' }}
+              />
+            </div>
+          )}
+
+          {dateDraft.dateFilterMode === 'Range' && (
+            <div className="date-modal-inputs-row">
+              <div className="sub-filter-group" style={{ flex: 1 }}>
+                <span className="sub-filter-label">Start Date</span>
+                <DatePickerField
+                  value={dateDraft.dateStartRange}
+                  onChange={(val) => setDateDraft(prev => ({ ...prev, dateStartRange: val }))}
+                  className="form-input"
+                  style={{ padding: '7px 8px', fontSize: '0.85rem' }}
+                />
+              </div>
+              
+              <div className="sub-filter-group" style={{ flex: 1 }}>
+                <span className="sub-filter-label">End Date</span>
+                <DatePickerField
+                  value={dateDraft.dateEndRange}
+                  onChange={(val) => setDateDraft(prev => ({ ...prev, dateEndRange: val }))}
+                  className="form-input"
+                  style={{ padding: '7px 8px', fontSize: '0.85rem' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Actions */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '18px' }}>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="btn-secondary" 
+            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+          >
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            onClick={onApply} 
+            className="btn-primary" 
+            style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+          >
+            Apply Filter
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return createPortal(modalContent, document.body);
 }
 
 export default function Applications({ 
@@ -171,10 +387,35 @@ export default function Applications({
   const [isFabVisible, setIsFabVisible] = useState(true);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [dateDraft, setDateDraft] = useState(null);
   
   const [appToDelete, setAppToDelete] = useState(null);
   const [appsToDeleteList, setAppsToDeleteList] = useState([]);
   const [deletingIds, setDeletingIds] = useState([]);
+
+  const handleOpenDateModal = () => {
+    setDateDraft({
+      dateBasis: filters.dateBasis || 'created',
+      dateFilterMode: filters.dateFilterMode || 'Month',
+      dateMonth: filters.dateMonth || (new Date().getMonth() + 1).toString(),
+      dateYear: filters.dateYear || new Date().getFullYear().toString(),
+      dateSpecificDay: filters.dateSpecificDay || getLocalDateString(),
+      dateStartRange: filters.dateStartRange || getLocalFirstOfMonth(),
+      dateEndRange: filters.dateEndRange || getLocalDateString()
+    });
+    setIsDateModalOpen(true);
+  };
+
+  const handleApplyDateModal = () => {
+    if (dateDraft) {
+      setFilters(prev => ({
+        ...prev,
+        ...dateDraft
+      }));
+    }
+    setIsDateModalOpen(false);
+  };
 
 
 
@@ -377,6 +618,8 @@ export default function Applications({
           next.dateStartRange = getLocalFirstOfMonth();
           next.dateEndRange = getLocalDateString();
         }
+      } else {
+        setIsDateModalOpen(false);
       }
       return next;
     });
@@ -515,6 +758,31 @@ export default function Applications({
     });
   });
 
+  const getDateFilterSummary = () => {
+    const basisLabel = filters.dateBasis === 'status' ? 'Status Updated' : 'Date Added';
+    if (filters.dateFilterMode === 'Month') {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const mIdx = parseInt(filters.dateMonth, 10) - 1;
+      const mName = monthNames[mIdx] || filters.dateMonth;
+      return { basis: basisLabel, detail: `${mName} ${filters.dateYear}` };
+    }
+    if (filters.dateFilterMode === 'Day') {
+      if (!filters.dateSpecificDay) return { basis: basisLabel, detail: 'Today' };
+      const parsed = parseLocalDate(filters.dateSpecificDay);
+      if (!parsed) return { basis: basisLabel, detail: filters.dateSpecificDay };
+      const formatted = parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      return { basis: basisLabel, detail: formatted };
+    }
+    if (filters.dateFilterMode === 'Range') {
+      const start = parseLocalDate(filters.dateStartRange);
+      const end = parseLocalDate(filters.dateEndRange);
+      const startStr = start ? start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : filters.dateStartRange;
+      const endStr = end ? end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : filters.dateEndRange;
+      return { basis: basisLabel, detail: `${startStr} – ${endStr}` };
+    }
+    return { basis: basisLabel, detail: 'All' };
+  };
+
   return (
     <>
       <div className="content-container animate-fade-in" style={{ position: 'relative' }}>
@@ -613,172 +881,41 @@ export default function Applications({
           )}
 
           {/* SUB-FILTER PANEL: DATE */}
-          {filters.statusFilter === 'Date' && (
-            <div className="sub-filter-panel animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              
-              {/* Date Basis Chips */}
-              <div className="date-filter-type-row">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Date Basis:</span>
-                </div>
-                
-                <div className="date-filter-toggle-scroll">
-                  <button
-                    type="button"
-                    onClick={() => setFilters(prev => ({
-                      ...prev,
-                      dateBasis: 'created'
-                    }))}
-                    className={`filter-chip ${(!filters.dateBasis || filters.dateBasis === 'created') ? 'active' : ''}`}
-                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+          {filters.statusFilter === 'Date' && (() => {
+            const summary = getDateFilterSummary();
+            return (
+              <div className="sub-filter-panel animate-fade-in" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div className="sub-filter-group" style={{ flex: 1 }}>
+                  <span className="sub-filter-label">Filter by Date</span>
+                  <div 
+                    className="sub-filter-select-trigger"
+                    onClick={handleOpenDateModal}
+                    title="Click to modify date filter"
                   >
-                    Date Added
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters(prev => ({
-                      ...prev,
-                      dateBasis: 'status'
-                    }))}
-                    className={`filter-chip ${filters.dateBasis === 'status' ? 'active' : ''}`}
-                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
-                  >
-                    Status Updated
-                  </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <CalendarIcon style={{ width: '15px', height: '15px', color: 'var(--brand-primary)', flexShrink: 0 }} />
+                      <span className="date-filter-summary-badge">
+                        <span className="summary-badge-dot" />
+                        {summary.basis}
+                      </span>
+                      <span className="date-filter-summary-divider">•</span>
+                      <span className="date-filter-summary-text">{summary.detail}</span>
+                    </div>
+                    <ChevronIcon direction="down" style={{ width: '14px', height: '14px', color: 'var(--text-secondary)', flexShrink: 0 }} />
+                  </div>
                 </div>
               </div>
+            );
+          })()}
 
-              {/* Filter Type Chips */}
-              <div className="date-filter-type-row">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filter Type:</span>
-                </div>
-                
-                <div className="date-filter-toggle-scroll">
-                  <button
-                    type="button"
-                    onClick={() => setFilters(prev => ({
-                      ...prev,
-                      dateFilterMode: 'Month',
-                      dateMonth: (new Date().getMonth() + 1).toString(),
-                      dateYear: new Date().getFullYear().toString()
-                    }))}
-                    className={`filter-chip ${filters.dateFilterMode === 'Month' ? 'active' : ''}`}
-                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
-                  >
-                    Month
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters(prev => ({
-                      ...prev,
-                      dateFilterMode: 'Day',
-                      dateSpecificDay: getLocalDateString()
-                    }))}
-                    className={`filter-chip ${filters.dateFilterMode === 'Day' ? 'active' : ''}`}
-                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
-                  >
-                    Specific Day
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters(prev => ({
-                      ...prev,
-                      dateFilterMode: 'Range',
-                      dateStartRange: getLocalFirstOfMonth(),
-                      dateEndRange: getLocalDateString()
-                    }))}
-                    className={`filter-chip ${filters.dateFilterMode === 'Range' ? 'active' : ''}`}
-                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
-                  >
-                    Date Range
-                  </button>
-                </div>
-              </div>
-
-              {/* Sub-filter Month inputs */}
-              {filters.dateFilterMode === 'Month' && (
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div className="sub-filter-group" style={{ flex: 1 }}>
-                    <span className="sub-filter-label">Select Month</span>
-                    <select
-                      className="sub-filter-select"
-                      value={filters.dateMonth}
-                      onChange={(e) => setFilters(prev => ({ ...prev, dateMonth: e.target.value }))}
-                    >
-                      <option value="1">January</option>
-                      <option value="2">February</option>
-                      <option value="3">March</option>
-                      <option value="4">April</option>
-                      <option value="5">May</option>
-                      <option value="6">June</option>
-                      <option value="7">July</option>
-                      <option value="8">August</option>
-                      <option value="9">September</option>
-                      <option value="10">October</option>
-                      <option value="11">November</option>
-                      <option value="12">December</option>
-                    </select>
-                  </div>
-                  
-                  <div className="sub-filter-group" style={{ width: '100px' }}>
-                    <span className="sub-filter-label">Year</span>
-                    <input
-                      type="number"
-                      className="form-input"
-                      style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                      value={filters.dateYear}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^\d*$/.test(value) && value.length <= 4) {
-                          setFilters(prev => ({ ...prev, dateYear: value }));
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Sub-filter Day inputs */}
-              {filters.dateFilterMode === 'Day' && (
-                <div className="sub-filter-group">
-                  <span className="sub-filter-label">Selected Date</span>
-                  <DatePickerField
-                    value={filters.dateSpecificDay}
-                    onChange={(val) => setFilters(prev => ({ ...prev, dateSpecificDay: val }))}
-                    className="form-input"
-                    style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                  />
-                </div>
-              )}
-
-              {/* Sub-filter Range inputs */}
-              {filters.dateFilterMode === 'Range' && (
-                <div className="date-filter-grid">
-                  <div className="sub-filter-group">
-                    <span className="sub-filter-label">Start Date</span>
-                    <DatePickerField
-                      value={filters.dateStartRange}
-                      onChange={(val) => setFilters(prev => ({ ...prev, dateStartRange: val }))}
-                      className="form-input"
-                      style={{ padding: '6px 8px', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                  
-                  <div className="sub-filter-group">
-                    <span className="sub-filter-label">End Date</span>
-                    <DatePickerField
-                      value={filters.dateEndRange}
-                      onChange={(val) => setFilters(prev => ({ ...prev, dateEndRange: val }))}
-                      className="form-input"
-                      style={{ padding: '6px 8px', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                </div>
-              )}
-
-            </div>
-          )}
+          {/* DATE FILTER MODAL */}
+          <DateFilterModal 
+            isOpen={isDateModalOpen} 
+            onClose={() => setIsDateModalOpen(false)} 
+            dateDraft={dateDraft} 
+            setDateDraft={setDateDraft} 
+            onApply={handleApplyDateModal} 
+          />
           
           {/* SORTING INFO ROW */}
           <div className="sort-info-row">

@@ -96,6 +96,7 @@ fun ApplicationsScreen(
     }
     var previousIndex by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemIndex) }
     var previousScrollOffset by rememberSaveable { mutableStateOf(lazyListState.firstVisibleItemScrollOffset) }
+    var showDateFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
     val isFabVisible by viewModel.isFabVisible.collectAsStateWithLifecycle()
     val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
@@ -233,16 +234,19 @@ fun ApplicationsScreen(
                                 resumeNames = stats.resumeStats.map { it.resumeName }
                             )
 
-                            // Date Sub-filter
+                            // Date Sub-filter Summary Bar with proper spacing
                             AnimatedVisibility(
                                 visible = statusFilter == "Date",
                                 enter = expandVertically() + fadeIn(),
                                 exit = shrinkVertically() + fadeOut()
                             ) {
-                                DateSubFilterPanel(
-                                    dateFilterState = dateFilterState,
-                                    onUpdateFilter = { update -> viewModel.updateDateFilter(update) }
-                                )
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    DateFilterSummaryBar(
+                                        dateFilterState = dateFilterState,
+                                        onClick = { showDateFilterBottomSheet = true }
+                                    )
+                                }
                             }
                         }
                     }
@@ -359,6 +363,22 @@ fun ApplicationsScreen(
                         lazyListState.scrollToItem(currentIndex, currentOffset)
                     }
                 }
+            )
+        }
+    }
+
+    // Date Filter Bottom Sheet
+    if (showDateFilterBottomSheet) {
+        val dateSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showDateFilterBottomSheet = false },
+            sheetState = dateSheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            DateFilterBottomSheetContent(
+                dateFilterState = dateFilterState,
+                onDismiss = { showDateFilterBottomSheet = false },
+                onUpdateFilter = { update -> viewModel.updateDateFilter(update) }
             )
         }
     }

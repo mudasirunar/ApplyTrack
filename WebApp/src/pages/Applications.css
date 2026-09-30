@@ -142,6 +142,29 @@
   padding-right: 38px;
 }
 
+.sub-filter-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  min-height: 38px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--brand-outline);
+  background-color: var(--bg-surface-variant);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.sub-filter-select-trigger:hover {
+  background-color: var(--bg-surface);
+  border-color: var(--brand-primary);
+}
+
 .date-filter-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -670,4 +693,236 @@
 .job-card.animating-exit {
   animation: cardExit 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   pointer-events: none;
+}
+
+/* Date Filter Summary Bar */
+.date-filter-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  padding: 8px 14px;
+  background-color: var(--bg-surface-variant);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.date-filter-summary-bar:hover {
+  background-color: var(--bg-surface);
+  border-color: var(--brand-primary);
+}
+
+.date-filter-summary-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Upgraded Tonal Basis Chip (Matching Android App Design Language) */
+.date-filter-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2.5px 8px;
+  border-radius: 16px;
+  background-color: rgba(47, 58, 74, 0.12);
+  border: 1px solid rgba(47, 58, 74, 0.25);
+  color: var(--brand-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+[data-theme='dark'] .date-filter-summary-badge {
+  background-color: rgba(182, 201, 215, 0.15);
+  border-color: rgba(182, 201, 215, 0.3);
+}
+
+.summary-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--brand-primary);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.date-filter-summary-divider {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  font-size: 0.8rem;
+  user-select: none;
+}
+
+.date-filter-summary-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.date-filter-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.date-filter-toggle-btn:hover {
+  background-color: rgba(47, 58, 74, 0.08);
+}
+
+/* Date Filter Modal (Centered Desktop / Mobile Bottom Sheet) */
+.date-filter-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  background-color: rgba(0, 0, 0, 0.55) !important;
+  backdrop-filter: blur(2px) !important;
+  z-index: 10000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.date-filter-sheet-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 22px 24px;
+  width: 100%;
+  max-width: 440px;
+  box-sizing: border-box;
+}
+
+.sheet-drag-handle {
+  display: none;
+}
+
+/* Mobile Bottom Sheet (Screen width <= 640px) */
+@media (max-width: 640px) {
+  .date-filter-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .date-filter-sheet-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 14px 20px 32px !important;
+    max-height: 85dvh;
+    overflow-y: auto;
+    animation: sheetSlideUpMobile 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+
+  .sheet-drag-handle {
+    display: block !important;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: var(--brand-outline);
+    margin: 0 auto 14px;
+    opacity: 0.7;
+  }
+}
+
+@keyframes sheetSlideUpMobile {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.date-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.date-modal-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.date-modal-close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.date-modal-close-btn:hover {
+  background-color: var(--bg-surface-variant);
+  color: var(--text-primary);
+}
+
+.date-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.date-modal-section-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.date-modal-controls {
+  margin-bottom: 8px;
+}
+
+.date-modal-inputs-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
