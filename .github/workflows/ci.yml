@@ -1,0 +1,105 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------
+  # Web Application Job: Lint & Production Build
+  # -------------------------------------------------------------
+  web-ci:
+    name: Web App (Lint & Build)
+    runs-on: ubuntu-latest
+    # Run only if WebApp or CI workflow files were modified
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for WebApp changes
+        id: check_web
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            webapp:
+              - 'WebApp/**'
+              - '.github/workflows/ci.yml'
+
+      - name: Setup Node.js
+        if: steps.check_web.outputs.webapp == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: WebApp/package-lock.json
+
+      - name: Install dependencies
+        if: steps.check_web.outputs.webapp == 'true'
+        run: |
+          cd WebApp
+          npm ci
+
+      - name: Prepare environment configuration
+        if: steps.check_web.outputs.webapp == 'true'
+        run: |
+          cd WebApp
+          cp .env.example .env.local
+
+      - name: Run Linter
+        if: steps.check_web.outputs.webapp == 'true'
+        run: |
+          cd WebApp
+          npm run lint
+
+      - name: Run Build
+        if: steps.check_web.outputs.webapp == 'true'
+        run: |
+          cd WebApp
+          npm run build
+
+  # -------------------------------------------------------------
+  # Android Application Job: Unit Tests & Build Verification
+  # -------------------------------------------------------------
+  android-ci:
+    name: Android App (Unit Tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for AndroidApp changes
+        id: check_android
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            android:
+              - 'AndroidApp/**'
+              - '.github/workflows/ci.yml'
+
+      - name: Set up JDK 17
+        if: steps.check_android.outputs.android == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup dummy configuration for CI build
+        if: steps.check_android.outputs.android == 'true'
+        run: |
+          cd AndroidApp/ApplyTrack
+          cp local.properties.example local.properties
+          cp app/google-services.json.example app/google-services.json
+          chmod +x gradlew
+
+      - name: Run Unit Tests
+        if: steps.check_android.outputs.android == 'true'
+        run: |
+          cd AndroidApp/ApplyTrack
+          ./gradlew testDebugUnitTest --no-daemon

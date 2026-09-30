@@ -25,7 +25,7 @@ android {
     if (localPropertiesFile.exists()) {
         localProperties.load(localPropertiesFile.inputStream())
     }
-    val supabaseUrl = localProperties.getProperty("supabase.url") ?: "https://glrjlwwggnpzrsrakdzx.supabase.co"
+    val supabaseUrl = localProperties.getProperty("supabase.url") ?: "https://your-project-id.supabase.co"
     val supabaseKey = localProperties.getProperty("supabase.anonkey") ?: ""
     buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
     buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")

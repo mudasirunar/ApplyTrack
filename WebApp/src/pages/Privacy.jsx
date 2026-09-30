@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { AppIcon } from '../components/Icons';
-import packageJson from '../../package.json';
 import './Privacy.css';
 
 export default function Privacy({ setActiveTab, user, fromTab }) {
@@ -125,6 +124,9 @@ export default function Privacy({ setActiveTab, user, fromTab }) {
               <li>
                 <strong>Document Attachments:</strong> Resumes, cover letters, and document snapshots (PDF and image files) that you explicitly upload to attach to specific job applications.
               </li>
+              <li>
+                <strong>Diagnostics &amp; Anonymous Telemetry:</strong> Aggregated, non-personally identifiable diagnostic events via Google Firebase Analytics (e.g. app launch, crash occurrence, screen rendering) to maintain application reliability. We do not collect advertising IDs (IDFA/GAID) or track across external websites.
+              </li>
             </ul>
           </section>
 
@@ -134,10 +136,10 @@ export default function Privacy({ setActiveTab, user, fromTab }) {
             <p>ApplyTrack utilizes a dual-cloud architecture to provide synchronization between the native Android app and the Web dashboard:</p>
             <ul>
               <li>
-                <strong>Google Firebase Authentication &amp; Cloud Firestore:</strong> Used for managing secure user authentication sessions and synchronizing structured application metadata. All records in Firestore are strictly partitioned by authenticated user ID (under <code>/users/{'{'}userId{'}'}/job_applications</code>).
+                <strong>Google Firebase Authentication &amp; Cloud Firestore:</strong> Used for managing secure user authentication sessions and synchronizing structured application metadata. All records in Firestore are strictly partitioned by authenticated user ID (under <code>/users/{'{'}userId{'}'}/job_applications</code>). Learn more in the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="privacy-inline-link">Google Privacy Policy</a>.
               </li>
               <li>
-                <strong>Supabase Storage:</strong> Physical resume PDFs and document attachments are stored securely in Supabase Storage. File storage is strictly isolated to your authenticated account directory (under <code>/users/{'{'}userId{'}'}/{'{'}type{'}'}/{'{'}fileName{'}'}</code>).
+                <strong>Supabase Storage:</strong> Physical resume PDFs and document attachments are stored securely in Supabase Storage. File storage is strictly isolated to your authenticated account directory (under <code>/users/{'{'}userId{'}'}/{'{'}type{'}'}/{'{'}fileName{'}'}</code>). Learn more in the <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" className="privacy-inline-link">Supabase Privacy Policy</a>.
               </li>
               <li>
                 <strong>Local Device Cache:</strong> To provide instant UI responsiveness and offline capability, copies of your data are cached locally on your device (using browser <code>localStorage</code> on the Web and Room SQLite database on Android).
@@ -173,9 +175,17 @@ export default function Privacy({ setActiveTab, user, fromTab }) {
 
           {/* Section 6 */}
           <section className="privacy-section">
-            <h2 className="privacy-section-heading">6. Open Source Transparency</h2>
+            <h2 className="privacy-section-heading">6. Children's Privacy</h2>
             <p>
-              ApplyTrack is open-source software licensed under the <strong>MIT License</strong>. The complete source code for both the Web application and the Android application is publicly inspectable and auditable on GitHub:
+              ApplyTrack is designed for job seekers and career professionals. Our services are not directed to children under the age of 13 (or under 16 in the European Economic Area). We do not knowingly collect or solicit personal information from minors.
+            </p>
+          </section>
+
+          {/* Section 7 */}
+          <section className="privacy-section">
+            <h2 className="privacy-section-heading">7. Open Source Transparency &amp; Policy Updates</h2>
+            <p>
+              ApplyTrack is open-source software licensed under the <strong>MIT License</strong>. The complete source code and all changes to this Privacy Policy are transparently tracked via public Git history on GitHub:
             </p>
             <p>
               <a 
@@ -189,9 +199,9 @@ export default function Privacy({ setActiveTab, user, fromTab }) {
             </p>
           </section>
 
-          {/* Section 7 */}
+          {/* Section 8 */}
           <section className="privacy-section">
-            <h2 className="privacy-section-heading">7. Contact Information</h2>
+            <h2 className="privacy-section-heading">8. Contact Information</h2>
             <p>
               If you have any questions, feedback, or data requests regarding this Privacy Policy, you may contact the developer directly:
             </p>
