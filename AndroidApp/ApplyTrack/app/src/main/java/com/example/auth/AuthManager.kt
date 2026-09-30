@@ -79,6 +79,7 @@ class AuthManager(
             _currentUser.value = user
             try {
                 com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().setUserId(user?.uid ?: "guest")
+                com.google.firebase.analytics.FirebaseAnalytics.getInstance(applicationContext).setUserId(user?.uid)
             } catch (ignored: Exception) {
                 // Safe fallback for unit tests or offline execution
             }

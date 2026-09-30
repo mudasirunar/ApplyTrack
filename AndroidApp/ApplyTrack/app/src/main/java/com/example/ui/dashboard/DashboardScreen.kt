@@ -94,8 +94,6 @@ fun DashboardScreen(
 
                 ConversionFunnelRow(analytics = analytics)
 
-                ConversionFunnelRow(analytics = analytics)
-
                 StatusDistributionSection(slices = analytics.statusDistribution)
 
                 MonthlyActivitySection(

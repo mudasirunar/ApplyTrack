@@ -16,8 +16,8 @@ android {
     applicationId = "com.applytrack"
     minSdk = 24
     targetSdk = 36
-    versionCode = 7
-    versionName = "3.2.1"
+    versionCode = 8
+    versionName = "3.2.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -70,6 +70,7 @@ dependencies {
   implementation(libs.firebase.firestore)
   implementation(libs.firebase.auth)
   implementation(libs.firebase.crashlytics)
+  implementation(libs.firebase.analytics)
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services.auth)
   implementation(libs.googleid)
