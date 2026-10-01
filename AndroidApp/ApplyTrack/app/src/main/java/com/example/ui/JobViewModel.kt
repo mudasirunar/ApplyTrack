@@ -239,17 +239,18 @@ class JobViewModel(
         var result = apps.filter { it.id !in pendingIds && it.id !in inFlightIds }
 
         // Apply Search (Search by company, role, job description, notes, attachment names, urls, or emails)
-        if (params.query.isNotBlank()) {
+        val query = params.query.trim()
+        if (query.isNotBlank()) {
             result = result.filter {
-                it.companyName?.contains(params.query, ignoreCase = true) == true ||
-                it.role?.contains(params.query, ignoreCase = true) == true ||
-                it.jobDescription?.contains(params.query, ignoreCase = true) == true ||
-                it.notes?.contains(params.query, ignoreCase = true) == true ||
-                it.resume?.originalName?.contains(params.query, ignoreCase = true) == true ||
-                it.coverLetter?.originalName?.contains(params.query, ignoreCase = true) == true ||
-                it.additionalDocument?.originalName?.contains(params.query, ignoreCase = true) == true ||
-                it.url?.contains(params.query, ignoreCase = true) == true ||
-                it.email?.contains(params.query, ignoreCase = true) == true
+                it.role?.contains(query, ignoreCase = true) == true ||
+                it.companyName?.contains(query, ignoreCase = true) == true ||
+                it.jobDescription?.contains(query, ignoreCase = true) == true ||
+                it.notes?.contains(query, ignoreCase = true) == true ||
+                it.resume?.originalName?.contains(query, ignoreCase = true) == true ||
+                it.coverLetter?.originalName?.contains(query, ignoreCase = true) == true ||
+                it.additionalDocument?.originalName?.contains(query, ignoreCase = true) == true ||
+                it.url?.contains(query, ignoreCase = true) == true ||
+                it.email?.contains(query, ignoreCase = true) == true
             }
         }
 
@@ -338,12 +339,93 @@ class JobViewModel(
             }
         }
 
-        // Apply Sort
-        result = when (params.sortOption) {
-            SortOption.STATUS_LATEST -> result.sortedByDescending { it.statusHistory?.lastOrNull()?.timestamp ?: it.createdAt }
-            SortOption.STATUS_OLDEST -> result.sortedBy { it.statusHistory?.lastOrNull()?.timestamp ?: it.createdAt }
-            SortOption.CREATION_LATEST -> result.sortedByDescending { it.createdAt }
-            SortOption.CREATION_OLDEST -> result.sortedBy { it.createdAt }
+        // Apply Sort or Search Relevance Ranking
+        if (query.isNotBlank()) {
+            val wordDelimiterRegex = Regex("[\\s/\\-,()\\[\\]_.:]+")
+
+            fun startsWithQuery(text: String?): Boolean {
+                if (text.isNullOrBlank()) return false
+                return text.trim().startsWith(query, ignoreCase = true)
+            }
+
+            fun wordStartsWithQuery(text: String?): Boolean {
+                if (text.isNullOrBlank()) return false
+                val words = text.split(wordDelimiterRegex)
+                return words.any { it.startsWith(query, ignoreCase = true) }
+            }
+
+            fun containsQuery(text: String?): Boolean {
+                if (text.isNullOrBlank()) return false
+                return text.contains(query, ignoreCase = true)
+            }
+
+            fun getTier(app: JobApplication): Int {
+                val role = app.role
+                val company = app.companyName
+                return when {
+                    startsWithQuery(role) -> 1
+                    wordStartsWithQuery(role) -> 2
+                    startsWithQuery(company) -> 3
+                    wordStartsWithQuery(company) -> 4
+                    containsQuery(role) -> 5
+                    containsQuery(company) -> 6
+                    else -> 7
+                }
+            }
+
+            result = result.sortedWith { a, b ->
+                val tierA = getTier(a)
+                val tierB = getTier(b)
+
+                if (tierA != tierB) {
+                    tierA.compareTo(tierB)
+                } else {
+                    val roleA = a.role?.trim()?.ifBlank { null } ?: "Position unassigned"
+                    val roleB = b.role?.trim()?.ifBlank { null } ?: "Position unassigned"
+                    val compA = a.companyName?.trim()?.ifBlank { null } ?: "Unknown Company"
+                    val compB = b.companyName?.trim()?.ifBlank { null } ?: "Unknown Company"
+
+                    when (tierA) {
+                        1, 2, 5 -> {
+                            // Job Title priority: Role A-Z, then Company A-Z, then Date desc
+                            val roleComp = String.CASE_INSENSITIVE_ORDER.compare(roleA, roleB)
+                            if (roleComp != 0) {
+                                roleComp
+                            } else {
+                                val compComp = String.CASE_INSENSITIVE_ORDER.compare(compA, compB)
+                                if (compComp != 0) compComp else b.createdAt.compareTo(a.createdAt)
+                            }
+                        }
+                        3, 4, 6 -> {
+                            // Company Name priority: Company A-Z, then Role A-Z, then Date desc
+                            val compComp = String.CASE_INSENSITIVE_ORDER.compare(compA, compB)
+                            if (compComp != 0) {
+                                compComp
+                            } else {
+                                val roleComp = String.CASE_INSENSITIVE_ORDER.compare(roleA, roleB)
+                                if (roleComp != 0) roleComp else b.createdAt.compareTo(a.createdAt)
+                            }
+                        }
+                        else -> {
+                            // Other matches priority: Role A-Z, then Company A-Z, then Date desc
+                            val roleComp = String.CASE_INSENSITIVE_ORDER.compare(roleA, roleB)
+                            if (roleComp != 0) {
+                                roleComp
+                            } else {
+                                val compComp = String.CASE_INSENSITIVE_ORDER.compare(compA, compB)
+                                if (compComp != 0) compComp else b.createdAt.compareTo(a.createdAt)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            result = when (params.sortOption) {
+                SortOption.STATUS_LATEST -> result.sortedByDescending { it.statusHistory?.lastOrNull()?.timestamp ?: it.createdAt }
+                SortOption.STATUS_OLDEST -> result.sortedBy { it.statusHistory?.lastOrNull()?.timestamp ?: it.createdAt }
+                SortOption.CREATION_LATEST -> result.sortedByDescending { it.createdAt }
+                SortOption.CREATION_OLDEST -> result.sortedBy { it.createdAt }
+            }
         }
 
         result

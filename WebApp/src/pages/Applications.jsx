@@ -491,11 +491,11 @@ export default function Applications({
     let list = [...applications];
 
     // 1. Search Query
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
+    const query = filters.searchQuery ? filters.searchQuery.trim().toLowerCase() : '';
+    if (query) {
       list = list.filter(a => 
-        ((a.companyName || 'Unknown Company').toLowerCase().includes(query)) ||
         ((a.role || 'Position unassigned').toLowerCase().includes(query)) ||
+        ((a.companyName || 'Unknown Company').toLowerCase().includes(query)) ||
         (a.jobDescription && a.jobDescription.toLowerCase().includes(query)) ||
         (a.notes && a.notes.toLowerCase().includes(query)) ||
         (a.resume && a.resume.originalName && a.resume.originalName.toLowerCase().includes(query)) ||
@@ -574,35 +574,101 @@ export default function Applications({
       });
     }
 
-    // Sort list
-    switch (sortOption) {
-      case 'STATUS_LATEST':
-        list.sort((a, b) => {
-          const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
-          const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
-          return tB - tA;
-        });
-        break;
-      case 'STATUS_OLDEST':
-        list.sort((a, b) => {
-          const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
-          const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
-          return tA - tB;
-        });
-        break;
-      case 'CREATION_LATEST':
-        list.sort((a, b) => b.createdAt - a.createdAt);
-        break;
-      case 'CREATION_OLDEST':
-        list.sort((a, b) => a.createdAt - b.createdAt);
-        break;
-      default:
-        list.sort((a, b) => {
-          const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
-          const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
-          return tB - tA;
-        });
-        break;
+    // Sort list or Apply Search Relevance Ranking
+    if (query) {
+      const WORD_DELIMITER_REGEX = /[\s/\-,()[\]_.:]+/;
+
+      const startsWithQuery = (text) => {
+        if (!text) return false;
+        return text.trim().toLowerCase().startsWith(query);
+      };
+
+      const wordStartsWithQuery = (text) => {
+        if (!text) return false;
+        const words = text.split(WORD_DELIMITER_REGEX);
+        return words.some(w => w.toLowerCase().startsWith(query));
+      };
+
+      const containsQuery = (text) => {
+        if (!text) return false;
+        return text.toLowerCase().includes(query);
+      };
+
+      const getTier = (app) => {
+        const role = app.role || '';
+        const company = app.companyName || '';
+        if (startsWithQuery(role)) return 1;
+        if (wordStartsWithQuery(role)) return 2;
+        if (startsWithQuery(company)) return 3;
+        if (wordStartsWithQuery(company)) return 4;
+        if (containsQuery(role)) return 5;
+        if (containsQuery(company)) return 6;
+        return 7;
+      };
+
+      list.sort((a, b) => {
+        const tierA = getTier(a);
+        const tierB = getTier(b);
+        if (tierA !== tierB) return tierA - tierB;
+
+        const roleA = (a.role || '').trim() || 'Position unassigned';
+        const roleB = (b.role || '').trim() || 'Position unassigned';
+        const compA = (a.companyName || '').trim() || 'Unknown Company';
+        const compB = (b.companyName || '').trim() || 'Unknown Company';
+
+        if (tierA === 1 || tierA === 2 || tierA === 5) {
+          // Job Title priority: Role A-Z, then Company A-Z, then createdAt desc
+          const roleComp = roleA.localeCompare(roleB, undefined, { sensitivity: 'base' });
+          if (roleComp !== 0) return roleComp;
+          const compComp = compA.localeCompare(compB, undefined, { sensitivity: 'base' });
+          if (compComp !== 0) return compComp;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        } else if (tierA === 3 || tierA === 4 || tierA === 6) {
+          // Company Name priority: Company A-Z, then Role A-Z, then createdAt desc
+          const compComp = compA.localeCompare(compB, undefined, { sensitivity: 'base' });
+          if (compComp !== 0) return compComp;
+          const roleComp = roleA.localeCompare(roleB, undefined, { sensitivity: 'base' });
+          if (roleComp !== 0) return roleComp;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        } else {
+          // Other matches priority: Role A-Z, then Company A-Z, then createdAt desc
+          const roleComp = roleA.localeCompare(roleB, undefined, { sensitivity: 'base' });
+          if (roleComp !== 0) return roleComp;
+          const compComp = compA.localeCompare(compB, undefined, { sensitivity: 'base' });
+          if (compComp !== 0) return compComp;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        }
+      });
+    } else {
+      switch (sortOption) {
+        case 'STATUS_LATEST':
+          list.sort((a, b) => {
+            const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
+            const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
+            return tB - tA;
+          });
+          break;
+        case 'STATUS_OLDEST':
+          list.sort((a, b) => {
+            const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
+            const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
+            return tA - tB;
+          });
+          break;
+        case 'CREATION_LATEST':
+          list.sort((a, b) => b.createdAt - a.createdAt);
+          break;
+        case 'CREATION_OLDEST':
+          list.sort((a, b) => a.createdAt - b.createdAt);
+          break;
+        default:
+          list.sort((a, b) => {
+            const tA = (a.statusHistory && a.statusHistory.length > 0) ? a.statusHistory[a.statusHistory.length - 1].timestamp : a.createdAt;
+            const tB = (b.statusHistory && b.statusHistory.length > 0) ? b.statusHistory[b.statusHistory.length - 1].timestamp : b.createdAt;
+            return tB - tA;
+          });
+          break;
+      }
     }
 
     return list;
