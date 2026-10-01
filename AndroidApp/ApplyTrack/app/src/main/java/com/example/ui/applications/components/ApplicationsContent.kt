@@ -52,6 +52,7 @@ fun ApplicationsContent(
     selectedResume: String,
     totalAppsCount: Int,
     resumeStatsEmpty: Boolean,
+    filterKey: Any = Unit,
     onJobClick: (JobApplication) -> Unit,
     onJobLongClick: (JobApplication) -> Unit,
     onEditClick: (Long) -> Unit,
@@ -154,7 +155,7 @@ fun ApplicationsContent(
                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottomPadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(apps, key = { it.id }) { job ->
+                items(apps, key = { "${filterKey}_${it.id}" }) { job ->
                     val isSelected = selectedJobIds.contains(job.id)
                     JobCard(
                         job = job,

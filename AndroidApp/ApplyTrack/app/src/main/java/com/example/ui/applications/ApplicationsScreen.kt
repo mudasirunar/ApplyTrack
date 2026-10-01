@@ -144,11 +144,20 @@ fun ApplicationsScreen(
 
     val currentFilters = listOf(searchQuery, statusFilter, selectedResume, selectedPlatform, dateFilterState, sortOption)
     var lastFilters by remember { mutableStateOf(currentFilters) }
+    var pendingScrollToTop by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentFilters) {
         if (lastFilters != currentFilters) {
             lazyListState.scrollToItem(0)
             lastFilters = currentFilters
+            pendingScrollToTop = true
+        }
+    }
+
+    LaunchedEffect(apps) {
+        if (pendingScrollToTop) {
+            lazyListState.scrollToItem(0)
+            pendingScrollToTop = false
         }
     }
 
@@ -279,6 +288,7 @@ fun ApplicationsScreen(
                     selectedResume = selectedResume,
                     totalAppsCount = stats.total,
                     resumeStatsEmpty = stats.resumeStats.isEmpty(),
+                    filterKey = currentFilters.hashCode(),
                     onJobClick = { job ->
                         if (isSelectionModeActive) {
                             viewModel.toggleJobSelection(job.id)
@@ -302,6 +312,9 @@ fun ApplicationsScreen(
                     onClearFilters = {
                         viewModel.searchQuery.value = ""
                         viewModel.statusFilter.value = "All"
+                        viewModel.selectedResume.value = "Select---"
+                        viewModel.selectedPlatform.value = "LinkedIn"
+                        viewModel.dateFilterState.value = DateFilterState()
                         viewModel.isSearchFocused.value = false
                         focusManager.clearFocus()
                         coroutineScope.launch {
@@ -352,16 +365,10 @@ fun ApplicationsScreen(
             SortOptionsSheet(
                 sortOption = sortOption,
                 onOptionSelect = { option ->
-                    val currentIndex = lazyListState.firstVisibleItemIndex
-                    val currentOffset = lazyListState.firstVisibleItemScrollOffset
-                    
-                    viewModel.sortOption.value = option
-                    showSortBottomSheet = false
-                    
-                    coroutineScope.launch {
-                        kotlinx.coroutines.delay(10)
-                        lazyListState.scrollToItem(currentIndex, currentOffset)
+                    if (sortOption != option) {
+                        viewModel.sortOption.value = option
                     }
+                    showSortBottomSheet = false
                 }
             )
         }
