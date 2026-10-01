@@ -73,9 +73,9 @@ describe('Job Analytics & Funnel Calculations', () => {
   });
 
   it('handles empty job lists safely without NaN or division by zero', () => {
-    const emptyList = [];
-    const total = emptyList.length;
-    const rate = total > 0 ? (0 / total) * 100 : 0;
+    const total = 0;
+    const count = 0;
+    const rate = total > 0 ? (count / total) * 100 : 0;
 
     expect(rate).toBe(0);
     expect(Number.isNaN(rate)).toBe(false);

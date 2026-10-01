@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  AppIcon, 
-  DashboardIcon, 
-  ListIcon, 
-  SettingsIcon 
-} from '../components/Icons';
+import { AppIcon } from '../components/Icons';
 import { db } from '../utils/db';
 import packageJson from '../../package.json';
 import './Landing.css';
@@ -72,7 +67,7 @@ const ArchiveExportFeatureIcon = () => (
 );
 
 export default function Landing({ setActiveTab, user }) {
-  const [currentTheme, setCurrentTheme] = useState(
+  const [, setCurrentTheme] = useState(
     document.documentElement.getAttribute('data-theme') || 'system'
   );
   const [copiedEmail, setCopiedEmail] = useState(false);

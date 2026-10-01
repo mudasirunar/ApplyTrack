@@ -70,3 +70,7 @@ export const getFormattedStatusDate = (app) => {
   const dateStr = new Date(statusTimestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   return `${app.status} on ${dateStr}`;
 };
+
+export const getActivityDates = (applications = []) => {
+  return applications.map(a => a.createdAt);
+};

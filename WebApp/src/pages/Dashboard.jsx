@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../utils/db';
-import { AppIcon } from '../components/Icons';
 import { getDashboardMessage } from '../utils/dashboardMessageProvider';
-import ActivityGrid, { getActivityDates } from '../components/ActivityGrid';
+import ActivityGrid from '../components/ActivityGrid';
+import { getActivityDates } from '../utils/dateUtils';
 import './Dashboard.css';
 
 // Custom Hook for smooth animation mimicking Jetpack Compose FastOutSlowInEasing (easeOutCubic)
@@ -226,9 +226,8 @@ export default function Dashboard({ setActiveTab, setFilters }) {
   const [analytics, setAnalytics] = useState(db.getAnalytics());
   const [isSyncing, setIsSyncing] = useState(() => db.getSyncState() === 'SYNCING');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
-  const [user, setUser] = useState(db.getCurrentUser());
   const [dashboardMessage, setDashboardMessage] = useState('');
-  const [activityDates, setActivityDates] = useState(() => getActivityDates());
+  const [activityDates, setActivityDates] = useState(() => getActivityDates(db.getApplications()));
   const scrollRef = useRef(null);
   const legendScrollRef = useRef(null);
 
@@ -307,7 +306,7 @@ export default function Dashboard({ setActiveTab, setFilters }) {
   useEffect(() => {
     const handleDataChange = () => {
       setAnalytics(db.getAnalytics());
-      setActivityDates(getActivityDates());
+      setActivityDates(getActivityDates(db.getApplications()));
     };
     const handleSyncState = (e) => {
       setIsSyncing(e.detail?.state === 'SYNCING');

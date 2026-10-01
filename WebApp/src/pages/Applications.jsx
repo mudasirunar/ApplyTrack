@@ -19,9 +19,7 @@ import {
   ChevronIcon,
   CalendarIcon,
   LinkIcon,
-  EmailIcon,
   FileIcon,
-  CheckIcon,
   SelectAllIcon,
   DeselectAllIcon
 } from '../components/Icons';
@@ -434,7 +432,6 @@ export default function Applications({
 
 
   const lastScrollY = useRef(0);
-  const scrollContainerRef = useRef(null);
   const chipContainerRef = useRef(null);
 
   // Sorting options
@@ -827,7 +824,6 @@ export default function Applications({
   };
 
   // Populate sub-filter options
-  const uniquePlatforms = analytics.platforms.map(p => p.name);
   const uniqueResumes = analytics.resumeStats.map(r => r.resumeName);
   const uniqueMonthsAndYears = [];
   

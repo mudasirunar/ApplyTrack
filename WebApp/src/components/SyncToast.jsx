@@ -14,13 +14,14 @@ export default function SyncToast() {
     let hideTimeout;
     let syncingTimeout;
 
-    // Safety auto-dismiss if mounted while state is SYNCING
-    if (state === 'SYNCING') {
+    // Safety auto-dismiss if mounted while active
+    const initialState = db.getSyncState();
+    if (initialState === 'SYNCING') {
       syncingTimeout = setTimeout(() => {
         setVisible(false);
         setState('IDLE');
       }, 3500);
-    } else if (state === 'SUCCESS' || state === 'ERROR') {
+    } else if (initialState === 'SUCCESS' || initialState === 'ERROR') {
       hideTimeout = setTimeout(() => {
         setVisible(false);
         setState('IDLE');

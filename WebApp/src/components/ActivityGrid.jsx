@@ -1,13 +1,8 @@
 import React, { useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { db } from '../utils/db';
 import './ActivityGrid.css';
 import { createPortal } from 'react-dom';
 
-/* ───────── DATA SOURCE (edit this to match your db) ───────── */
-export function getActivityDates() {
-    return db.getApplications().map(a => a.createdAt);
-}
-/* ──────────────────────────────────────────────────────────── */
+
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const pad = (n) => String(n).padStart(2, '0');

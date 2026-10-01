@@ -56,12 +56,12 @@ const parsePath = (path) => {
     return { tab: 'settings', jobId: null };
   }
   
-  const editMatch = p.match(/^\/applications\/([^\/]+)\/edit$/);
+  const editMatch = p.match(/^\/applications\/([^/]+)\/edit$/);
   if (editMatch) {
     return { tab: 'edit-job', jobId: editMatch[1] };
   }
   
-  const detailMatch = p.match(/^\/applications\/([^\/]+)$/);
+  const detailMatch = p.match(/^\/applications\/([^/]+)$/);
   if (detailMatch) {
     return { tab: 'job-detail', jobId: detailMatch[1] };
   }

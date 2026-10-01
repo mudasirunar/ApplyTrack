@@ -4,10 +4,6 @@ import { db } from '../utils/db';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { 
   ChevronIcon, 
-  CalendarIcon, 
-  LinkIcon, 
-  EmailIcon, 
-  FileIcon,
   EditIcon,
   DeleteIcon,
   WorkIcon,

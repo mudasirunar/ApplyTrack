@@ -61,7 +61,7 @@ async function checkFileExistsOnSupabase(userId, type, fileName) {
       }
     });
     return checkResponse.ok;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -601,7 +601,7 @@ export const db = {
     URL.revokeObjectURL(url);
   },
 
-  importData(jsonString) {
+  importData(_jsonString) {
     // Keep signature for JSON backups (used in settings checks)
     return { success: false, error: 'ZIP backup matches native format' };
   },

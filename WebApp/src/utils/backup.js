@@ -3,32 +3,6 @@ import { db } from './db';
 import { auth, firestore } from './firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
-// Helper: Convert base64 data URL to Uint8Array (fallback)
-function dataUrlToUint8Array(dataUrl) {
-  if (!dataUrl) return new Uint8Array(0);
-  const parts = dataUrl.split(',');
-  if (parts.length < 2) return new Uint8Array(0);
-  const base64 = parts[1];
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
-// Helper: Convert Uint8Array to base64 data URL (fallback)
-function uint8ArrayToDataUrl(bytes, mimeType) {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  const base64 = btoa(binary);
-  return `data:${mimeType};base64,${base64}`;
-}
-
 // Helper: Get MIME type from filename
 export function getMimeType(filename) {
   const ext = filename.split('.').pop().toLowerCase();
@@ -281,7 +255,7 @@ export async function importBackup(importedApps, unzipped, overwrite, onProgress
           }
         });
         if (checkRes.ok) return true;
-      } catch (e) {}
+      } catch {}
 
       const mimeType = getMimeType(fileName);
       const blob = new Blob([bytes], { type: mimeType });
