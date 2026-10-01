@@ -79,7 +79,6 @@ fun ApplicationsScreen(
 
     val lazyListState = rememberLazyListState()
     val filterScrollState = rememberScrollState()
-    val chipPositions = remember { mutableStateMapOf<Int, Int>() }
     val coroutineScope = rememberCoroutineScope()
 
     val scrollToTopEvent by viewModel.applicationsScrollToTop.collectAsStateWithLifecycle()
@@ -128,19 +127,6 @@ fun ApplicationsScreen(
         previousScrollOffset = currentOffset
     }
 
-    LaunchedEffect(shouldScrollToFilter) {
-        if (shouldScrollToFilter) {
-            val selectedIndex = filterStatuses.indexOf(statusFilter)
-            if (selectedIndex >= 0) {
-                val targetOffset = chipPositions[selectedIndex] ?: 0
-                filterScrollState.animateScrollTo(
-                    value = targetOffset,
-                    animationSpec = tween(durationMillis = 400)
-                )
-            }
-            viewModel.shouldScrollToFilter.value = false
-        }
-    }
 
     val currentFilters = listOf(searchQuery, statusFilter, selectedResume, selectedPlatform, dateFilterState, sortOption)
     var lastFilters by remember { mutableStateOf(currentFilters) }
@@ -228,7 +214,8 @@ fun ApplicationsScreen(
                                     }
                                 },
                                 scrollState = filterScrollState,
-                                chipPositions = chipPositions
+                                shouldScrollToFilter = shouldScrollToFilter,
+                                onScrollToFilterConsumed = { viewModel.shouldScrollToFilter.value = false }
                             )
 
                             // Resume & Platform Sub-filters
