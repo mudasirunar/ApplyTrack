@@ -62,6 +62,7 @@ android {
 tasks.withType<Test> {
     systemProperty("java.io.tmpdir", "${project.layout.buildDirectory.asFile.get().absolutePath}/tmp")
     systemProperty("net.bytebuddy.experimental", "true")
+    systemProperty("java.awt.headless", "true")
 }
 
 dependencies {
