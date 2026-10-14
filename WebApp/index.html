@@ -222,11 +222,40 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
+  <style>
+    .app-initial-loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #F8FAFC;
+      z-index: 99999;
+    }
+    .app-initial-spinner {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid #2F3A4A;
+      border-top-color: transparent;
+      animation: initial-spin 0.8s linear infinite;
+    }
+    @keyframes initial-spin {
+      to { transform: rotate(360deg); }
+    }
+    [data-theme='dark'] .app-initial-loader {
+      background-color: #0F172A;
+    }
+    [data-theme='dark'] .app-initial-spinner {
+      border-color: #38BDF8;
+      border-top-color: transparent;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="root">
-    <!-- Static Semantic Pre-rendered Content for Instant Wave 1 Search Engine Crawlers & AI Knowledge Engines -->
+  <!-- Static Semantic Content for Search Engines & Non-JS Crawlers (Never bleeds on JS-enabled browsers) -->
+  <noscript>
     <main style="max-width: 1100px; margin: 0 auto; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
       <header style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px;">
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -285,6 +314,12 @@
         </div>
       </footer>
     </main>
+  </noscript>
+
+  <div id="root">
+    <div class="app-initial-loader">
+      <div class="app-initial-spinner"></div>
+    </div>
   </div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
