@@ -105,6 +105,8 @@
   color: var(--text-secondary);
   cursor: pointer;
   padding: 6px 0;
+  text-decoration: none;
+  display: inline-block;
   transition: color var(--transition-fast);
 }
 
@@ -255,6 +257,8 @@
   padding: 10px 12px;
   border-radius: var(--border-radius-sm);
   cursor: pointer;
+  text-decoration: none;
+  display: block;
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
@@ -1155,6 +1159,8 @@
   cursor: pointer;
   padding: 0;
   text-align: left;
+  text-decoration: none;
+  display: inline-block;
   transition: color var(--transition-fast);
 }
 

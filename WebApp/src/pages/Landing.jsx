@@ -168,27 +168,60 @@ export default function Landing({ setActiveTab, user }) {
       {/* HEADER / NAVIGATION */}
       <header className="landing-header">
         <div className="landing-header-inner">
-          <div className="landing-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <a 
+            href="/" 
+            className="landing-brand" 
+            onClick={(e) => {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            style={{ textDecoration: 'none' }}
+          >
             <AppIcon size={34} className="landing-brand-logo" />
             <span className="landing-brand-title">ApplyTrack</span>
-          </div>
+          </a>
 
           <nav className="landing-nav-links" aria-label="Main Navigation">
-            <button type="button" onClick={() => scrollToSection('features')} className="landing-nav-link">
+            <a 
+              href="#features" 
+              onClick={(e) => { e.preventDefault(); scrollToSection('features'); }} 
+              className="landing-nav-link"
+              style={{ textDecoration: 'none' }}
+            >
               Features
-            </button>
-            <button type="button" onClick={() => scrollToSection('how-it-works')} className="landing-nav-link">
+            </a>
+            <a 
+              href="#how-it-works" 
+              onClick={(e) => { e.preventDefault(); scrollToSection('how-it-works'); }} 
+              className="landing-nav-link"
+              style={{ textDecoration: 'none' }}
+            >
               How It Works
-            </button>
-            <button type="button" onClick={() => scrollToSection('ecosystem')} className="landing-nav-link">
+            </a>
+            <a 
+              href="#ecosystem" 
+              onClick={(e) => { e.preventDefault(); scrollToSection('ecosystem'); }} 
+              className="landing-nav-link"
+              style={{ textDecoration: 'none' }}
+            >
               Platforms
-            </button>
-            <button type="button" onClick={() => scrollToSection('faq')} className="landing-nav-link">
+            </a>
+            <a 
+              href="#faq" 
+              onClick={(e) => { e.preventDefault(); scrollToSection('faq'); }} 
+              className="landing-nav-link"
+              style={{ textDecoration: 'none' }}
+            >
               FAQ
-            </button>
-            <button type="button" onClick={() => scrollToSection('creator')} className="landing-nav-link">
+            </a>
+            <a 
+              href="#creator" 
+              onClick={(e) => { e.preventDefault(); scrollToSection('creator'); }} 
+              className="landing-nav-link"
+              style={{ textDecoration: 'none' }}
+            >
               Creator
-            </button>
+            </a>
           </nav>
 
           <div className="landing-header-actions">
@@ -206,24 +239,26 @@ export default function Landing({ setActiveTab, user }) {
             </button>
 
             {user ? (
-              <button 
-                type="button" 
-                onClick={() => setActiveTab('dashboard')} 
+              <a 
+                href="/dashboard" 
+                onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); }} 
                 className="btn-primary landing-cta-btn"
+                style={{ textDecoration: 'none' }}
               >
                 <span>Dashboard</span>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                   <path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z" />
                 </svg>
-              </button>
+              </a>
             ) : (
-              <button 
-                type="button" 
-                onClick={() => setActiveTab('login')} 
+              <a 
+                href="/login" 
+                onClick={(e) => { e.preventDefault(); setActiveTab('login'); }} 
                 className="btn-primary landing-cta-btn"
+                style={{ textDecoration: 'none' }}
               >
                 Sign In
-              </button>
+              </a>
             )}
 
             {/* Mobile Hamburger Toggle Button */}
@@ -257,51 +292,56 @@ export default function Landing({ setActiveTab, user }) {
             />
             <div className="landing-mobile-drawer card-base animate-scale-in">
             <nav className="mobile-drawer-nav" aria-label="Mobile Navigation Menu">
-              <button 
-                type="button" 
-                onClick={() => { scrollToSection('features'); setIsMobileMenuOpen(false); }} 
+              <a 
+                href="#features" 
+                onClick={(e) => { e.preventDefault(); scrollToSection('features'); setIsMobileMenuOpen(false); }} 
                 className="mobile-drawer-link"
+                style={{ textDecoration: 'none' }}
               >
                 Features
-              </button>
-              <button 
-                type="button" 
-                onClick={() => { scrollToSection('how-it-works'); setIsMobileMenuOpen(false); }} 
+              </a>
+              <a 
+                href="#how-it-works" 
+                onClick={(e) => { e.preventDefault(); scrollToSection('how-it-works'); setIsMobileMenuOpen(false); }} 
                 className="mobile-drawer-link"
+                style={{ textDecoration: 'none' }}
               >
                 How It Works
-              </button>
-              <button 
-                type="button" 
-                onClick={() => { scrollToSection('ecosystem'); setIsMobileMenuOpen(false); }} 
+              </a>
+              <a 
+                href="#ecosystem" 
+                onClick={(e) => { e.preventDefault(); scrollToSection('ecosystem'); }} 
                 className="mobile-drawer-link"
+                style={{ textDecoration: 'none' }}
               >
                 Platforms
-              </button>
-              <button 
-                type="button" 
-                onClick={() => { scrollToSection('faq'); setIsMobileMenuOpen(false); }} 
+              </a>
+              <a 
+                href="#faq" 
+                onClick={(e) => { e.preventDefault(); scrollToSection('faq'); setIsMobileMenuOpen(false); }} 
                 className="mobile-drawer-link"
+                style={{ textDecoration: 'none' }}
               >
                 FAQ
-              </button>
-              <button 
-                type="button" 
-                onClick={() => { scrollToSection('creator'); setIsMobileMenuOpen(false); }} 
+              </a>
+              <a 
+                href="#creator" 
+                onClick={(e) => { e.preventDefault(); scrollToSection('creator'); setIsMobileMenuOpen(false); }} 
                 className="mobile-drawer-link"
+                style={{ textDecoration: 'none' }}
               >
                 Creator
-              </button>
+              </a>
             </nav>
             <div className="mobile-drawer-cta">
-              <button 
-                type="button" 
-                onClick={() => { setActiveTab(user ? 'dashboard' : 'login'); setIsMobileMenuOpen(false); }}
+              <a 
+                href={user ? "/dashboard" : "/login"} 
+                onClick={(e) => { e.preventDefault(); setActiveTab(user ? 'dashboard' : 'login'); setIsMobileMenuOpen(false); }}
                 className="btn-primary"
-                style={{ width: '100%', justifyContent: 'center' }}
+                style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}
               >
                 {user ? 'Open Dashboard' : 'Sign In with Google'}
-              </button>
+              </a>
             </div>
           </div>
         </>
@@ -327,24 +367,26 @@ export default function Landing({ setActiveTab, user }) {
             </p>
 
             <div className="landing-hero-cta-group">
-              <button 
-                type="button" 
-                onClick={() => setActiveTab(user ? 'dashboard' : 'login')} 
+              <a 
+                href={user ? "/dashboard" : "/login"} 
+                onClick={(e) => { e.preventDefault(); setActiveTab(user ? 'dashboard' : 'login'); }} 
                 className="btn-primary hero-main-btn"
+                style={{ textDecoration: 'none' }}
               >
                 <span>{user ? 'Open Dashboard' : 'Start Tracking Free'}</span>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                   <path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z" />
                 </svg>
-              </button>
+              </a>
 
-              <button 
-                type="button" 
-                onClick={() => scrollToSection('how-it-works')} 
+              <a 
+                href="#how-it-works" 
+                onClick={(e) => { e.preventDefault(); scrollToSection('how-it-works'); }} 
                 className="btn-secondary hero-secondary-btn"
+                style={{ textDecoration: 'none' }}
               >
                 <span>See How It Works</span>
-              </button>
+              </a>
             </div>
 
             {/* Quick App Pillars */}
@@ -634,14 +676,14 @@ export default function Landing({ setActiveTab, user }) {
                 <li><CheckIcon /> In-browser document &amp; attachment viewer</li>
                 <li><CheckIcon /> Bulk selection, batch status updates, and ZIP export</li>
               </ul>
-              <button 
-                type="button" 
-                onClick={() => setActiveTab(user ? 'dashboard' : 'login')} 
+              <a 
+                href={user ? "/dashboard" : "/login"} 
+                onClick={(e) => { e.preventDefault(); setActiveTab(user ? 'dashboard' : 'login'); }} 
                 className="btn-primary"
-                style={{ width: '100%', marginTop: '16px' }}
+                style={{ width: '100%', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
               >
                 Launch Web App
-              </button>
+              </a>
             </div>
 
             <div className="platform-box card-base">
@@ -765,16 +807,17 @@ export default function Landing({ setActiveTab, user }) {
               Join job seekers who manage their career journey with ApplyTrack. Free to use, no credit card required.
             </p>
             <div className="cta-buttons">
-              <button 
-                type="button" 
-                onClick={() => setActiveTab(user ? 'dashboard' : 'login')} 
+              <a 
+                href={user ? "/dashboard" : "/login"} 
+                onClick={(e) => { e.preventDefault(); setActiveTab(user ? 'dashboard' : 'login'); }} 
                 className="btn-primary hero-main-btn"
+                style={{ textDecoration: 'none' }}
               >
                 <span>{user ? 'Open Dashboard' : 'Get Started with Google'}</span>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                   <path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z" />
                 </svg>
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -816,12 +859,12 @@ export default function Landing({ setActiveTab, user }) {
             <div className="footer-col-nav">
               <h4 className="footer-heading">Navigation</h4>
               <ul className="footer-links">
-                <li><button type="button" onClick={() => scrollToSection('features')} className="footer-link-action">Features</button></li>
-                <li><button type="button" onClick={() => scrollToSection('how-it-works')} className="footer-link-action">How It Works</button></li>
-                <li><button type="button" onClick={() => scrollToSection('ecosystem')} className="footer-link-action">Platforms</button></li>
-                <li><button type="button" onClick={() => scrollToSection('faq')} className="footer-link-action">FAQs</button></li>
-                <li><button type="button" onClick={() => setActiveTab('privacy')} className="footer-link-action">Privacy Policy</button></li>
-                <li><button type="button" onClick={() => setActiveTab('login')} className="footer-link-action">Sign In</button></li>
+                <li><a href="#features" onClick={(e) => { e.preventDefault(); scrollToSection('features'); }} className="footer-link-action" style={{ textDecoration: 'none' }}>Features</a></li>
+                <li><a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollToSection('how-it-works'); }} className="footer-link-action" style={{ textDecoration: 'none' }}>How It Works</a></li>
+                <li><a href="#ecosystem" onClick={(e) => { e.preventDefault(); scrollToSection('ecosystem'); }} className="footer-link-action" style={{ textDecoration: 'none' }}>Platforms</a></li>
+                <li><a href="#faq" onClick={(e) => { e.preventDefault(); scrollToSection('faq'); }} className="footer-link-action" style={{ textDecoration: 'none' }}>FAQs</a></li>
+                <li><a href="/privacy" onClick={(e) => { e.preventDefault(); setActiveTab('privacy'); }} className="footer-link-action" style={{ textDecoration: 'none' }}>Privacy Policy</a></li>
+                <li><a href="/login" onClick={(e) => { e.preventDefault(); setActiveTab('login'); }} className="footer-link-action" style={{ textDecoration: 'none' }}>Sign In</a></li>
               </ul>
             </div>
 
@@ -893,14 +936,14 @@ export default function Landing({ setActiveTab, user }) {
           <div className="footer-bottom-line">
             <span>&copy; {new Date().getFullYear()} ApplyTrack. Designed and engineered by Mudasir Ali.</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <button 
-                type="button" 
-                onClick={() => setActiveTab('privacy')} 
+              <a 
+                href="/privacy" 
+                onClick={(e) => { e.preventDefault(); setActiveTab('privacy'); }} 
                 className="scroll-top-link"
-                style={{ opacity: 0.85 }}
+                style={{ opacity: 0.85, textDecoration: 'none' }}
               >
                 Privacy Policy
-              </button>
+              </a>
               <button 
                 type="button" 
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 

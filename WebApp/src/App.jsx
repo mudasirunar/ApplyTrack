@@ -368,6 +368,16 @@ export default function App() {
         page_path: window.location.pathname
       });
     }
+
+    // Dynamically synchronize canonical tag to match current page route
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+    canonical.setAttribute('href', `https://apply-track-web.vercel.app${currentPath === '/' ? '/' : currentPath}`);
   }, [activeTab]);
 
   // Render correct page content
