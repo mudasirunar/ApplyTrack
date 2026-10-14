@@ -304,20 +304,44 @@ export default function Dashboard({ setActiveTab, setFilters }) {
   };
 
   useEffect(() => {
-    const handleDataChange = () => {
+    // Immediately synchronize latest state on mount in case data loaded during route transition
+    const syncLatest = () => {
       setAnalytics(db.getAnalytics());
       setActivityDates(getActivityDates(db.getApplications()));
+      setIsSyncing(db.getSyncState() === 'SYNCING');
+    };
+
+    syncLatest();
+
+    const handleDataChange = () => {
+      syncLatest();
     };
     const handleSyncState = (e) => {
       setIsSyncing(e.detail?.state === 'SYNCING');
+      syncLatest();
     };
+
     window.addEventListener('applytrack_data_change', handleDataChange);
     window.addEventListener('applytrack_sync_state', handleSyncState);
+    window.addEventListener('applytrack_auth_change', syncLatest);
     return () => {
       window.removeEventListener('applytrack_data_change', handleDataChange);
       window.removeEventListener('applytrack_sync_state', handleSyncState);
+      window.removeEventListener('applytrack_auth_change', syncLatest);
     };
   }, []);
+
+  // Safety auto-settle: Never let Dashboard stay stuck in isSyncing if sync settled or timed out
+  useEffect(() => {
+    if (isSyncing) {
+      const timer = setTimeout(() => {
+        setIsSyncing(false);
+        setAnalytics(db.getAnalytics());
+        setActivityDates(getActivityDates(db.getApplications()));
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [isSyncing]);
 
   useEffect(() => {
     if (isSyncing && analytics.total === 0) {

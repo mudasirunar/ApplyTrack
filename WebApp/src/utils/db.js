@@ -266,6 +266,7 @@ function stopFirestoreListener() {
     unsubscribeFirestore();
     unsubscribeFirestore = null;
   }
+  currentSyncState = 'IDLE';
 }
 
 // Firebase Auth Observer Integration
