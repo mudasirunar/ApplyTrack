@@ -272,8 +272,10 @@ export default function App() {
       }
 
       setUser(currentUser);
+      const currentPath = window.location.pathname;
+      const parsed = parsePath(currentPath);
+
       if (currentUser) {
-        const currentPath = window.location.pathname;
         const isStandaloneMode = typeof window !== 'undefined' && (
           window.navigator.standalone === true || 
           window.matchMedia('(display-mode: standalone)').matches
@@ -288,8 +290,6 @@ export default function App() {
           setSelectedJobIdState(parsed.jobId);
         }
       } else {
-        const currentPath = window.location.pathname;
-        const parsed = parsePath(currentPath);
         if (parsed.tab === 'landing' || parsed.tab === 'login' || parsed.tab === 'privacy' || parsed.tab === 'not-found') {
           setActiveTabState(parsed.tab);
           selectedJobIdRef.current = null;
