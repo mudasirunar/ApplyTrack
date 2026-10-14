@@ -16,8 +16,8 @@ android {
     applicationId = "com.applytrack"
     minSdk = 24
     targetSdk = 36
-    versionCode = 9
-    versionName = "3.2.3"
+    versionCode = 10
+    versionName = "3.3.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
