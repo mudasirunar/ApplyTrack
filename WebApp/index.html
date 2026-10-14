@@ -222,35 +222,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
-  <style>
-    .app-initial-loader {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #F8FAFC;
-      z-index: 99999;
-    }
-    .app-initial-spinner {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 3px solid #2F3A4A;
-      border-top-color: transparent;
-      animation: initial-spin 0.8s linear infinite;
-    }
-    @keyframes initial-spin {
-      to { transform: rotate(360deg); }
-    }
-    [data-theme='dark'] .app-initial-loader {
-      background-color: #0F172A;
-    }
-    [data-theme='dark'] .app-initial-spinner {
-      border-color: #38BDF8;
-      border-top-color: transparent;
-    }
-  </style>
 </head>
 
 <body>
@@ -316,11 +287,7 @@
     </main>
   </noscript>
 
-  <div id="root">
-    <div class="app-initial-loader">
-      <div class="app-initial-spinner"></div>
-    </div>
-  </div>
+  <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
