@@ -379,3 +379,42 @@
     transform: rotate(360deg);
   }
 }
+
+/* Dedicated Bottom Footer Bar for Clean Layout & SEO */
+.login-footer-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 20;
+}
+
+.login-footer-link {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.login-footer-link:hover {
+  color: #FFFFFF;
+}
+
+.login-footer-dot {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.75rem;
+  user-select: none;
+}
+
+@media (max-width: 600px) {
+  .login-footer-bar {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+}

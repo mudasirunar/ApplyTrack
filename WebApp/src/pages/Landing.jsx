@@ -29,6 +29,43 @@ const CheckIcon = () => (
   </svg>
 );
 
+// Dynamic Theme Toggle Icons with Micro-Interaction CSS Classes
+const SunIcon = () => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width="19" 
+    height="19" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className="theme-toggle-icon sun-icon"
+  >
+    <circle cx="12" cy="12" r="4" fill="currentColor" fillOpacity="0.2" />
+    <path d="M12 2v2" />
+    <path d="M12 20v2" />
+    <path d="M4.93 4.93l1.41 1.41" />
+    <path d="M17.66 17.66l1.41 1.41" />
+    <path d="M2 12h2" />
+    <path d="M20 12h2" />
+    <path d="M6.34 17.66l-1.41 1.41" />
+    <path d="M19.07 4.93l-1.41 1.41" />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width="19" 
+    height="19" 
+    fill="currentColor" 
+    className="theme-toggle-icon moon-icon"
+  >
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+);
+
 // Semantic Feature Icons (Consistent 22x22 vector paths tailored to each feature)
 const PipelineFeatureIcon = () => (
   <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
@@ -67,9 +104,9 @@ const ArchiveExportFeatureIcon = () => (
 );
 
 export default function Landing({ setActiveTab, user }) {
-  const [, setCurrentTheme] = useState(
-    document.documentElement.getAttribute('data-theme') || 'system'
-  );
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+  });
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [selectedSampleIndex, setSelectedSampleIndex] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -77,7 +114,7 @@ export default function Landing({ setActiveTab, user }) {
   // Sync theme changes with the rest of ApplyTrack
   useEffect(() => {
     const handleThemeChange = () => {
-      const active = document.documentElement.getAttribute('data-theme') || 'system';
+      const active = document.documentElement.getAttribute('data-theme') || 'dark';
       setCurrentTheme(active);
     };
     window.addEventListener('applytrack_theme_change', handleThemeChange);
@@ -103,8 +140,8 @@ export default function Landing({ setActiveTab, user }) {
   }, [isMobileMenuOpen]);
 
   const toggleTheme = () => {
-    const saved = db.getTheme();
-    const nextTheme = saved === 'dark' ? 'light' : 'dark';
+    const active = document.documentElement.getAttribute('data-theme') || currentTheme;
+    const nextTheme = active === 'dark' ? 'light' : 'dark';
     db.setTheme(nextTheme);
     setCurrentTheme(nextTheme);
   };
@@ -225,17 +262,19 @@ export default function Landing({ setActiveTab, user }) {
           </nav>
 
           <div className="landing-header-actions">
-            {/* Theme Toggle */}
+            {/* Theme Toggle with Dynamic Mode Icon & Tactile Animation */}
             <button 
               type="button" 
               onClick={toggleTheme} 
               className="landing-theme-btn" 
-              title="Toggle Theme"
-              aria-label="Toggle Theme"
+              title={currentTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={currentTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.23c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.62-.62C8.01 20.25 9.92 21 12 21c4.97 0 9-4.03 9-9 0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" />
-              </svg>
+              {currentTheme === 'dark' ? (
+                <SunIcon key="sun-icon" />
+              ) : (
+                <MoonIcon key="moon-icon" />
+              )}
             </button>
 
             {user ? (

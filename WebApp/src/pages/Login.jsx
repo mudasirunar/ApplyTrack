@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signInWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
@@ -12,6 +12,13 @@ import './Login.css';
 export default function Login({ setActiveTab }) {
   const [isLoading, setIsLoading] = useState(false);
   useBodyScrollLock(isLoading);
+
+  useEffect(() => {
+    document.title = 'Sign In | ApplyTrack';
+    return () => {
+      document.title = 'ApplyTrack | Modern Job Application, Resume & Career Tracker';
+    };
+  }, []);
 
   const handleGoogleSignInClick = async () => {
     setIsLoading(true);
@@ -37,27 +44,29 @@ export default function Login({ setActiveTab }) {
       {/* Top Header Navigation */}
       {setActiveTab && (
         <header className="login-header-bar">
-          <button 
-            type="button" 
-            onClick={() => setActiveTab('landing')}
+          <a 
+            href="/" 
+            onClick={(e) => { e.preventDefault(); setActiveTab('landing'); }}
             className="login-header-brand"
             title="ApplyTrack Overview"
+            style={{ textDecoration: 'none' }}
           >
             <AppIcon size={28} />
             <span className="login-header-brand-name">ApplyTrack</span>
-          </button>
+          </a>
 
-          <button 
-            type="button" 
-            onClick={() => setActiveTab('landing')}
+          <a 
+            href="/" 
+            onClick={(e) => { e.preventDefault(); setActiveTab('landing'); }}
             className="login-header-explore-btn"
             title="Explore features and overview"
+            style={{ textDecoration: 'none' }}
           >
             <span>Explore ApplyTrack</span>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <path d="M5 13h11.86l-5.43 5.43 1.42 1.41L21.14 12l-8.29-8.29-1.42 1.41L16.86 11H5v2z" />
+              <path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z" />
             </svg>
-          </button>
+          </a>
         </header>
       )}
 
@@ -93,17 +102,46 @@ export default function Login({ setActiveTab }) {
           </button>
 
           {setActiveTab && (
-            <button 
-              type="button" 
-              onClick={() => setActiveTab('landing')}
+            <a 
+              href="/" 
+              onClick={(e) => { e.preventDefault(); setActiveTab('landing'); }}
               className="login-card-learn-more"
+              style={{ textDecoration: 'none' }}
             >
               <span>New to ApplyTrack?</span>
               <span className="learn-more-accent">See how it works &rarr;</span>
-            </button>
+            </a>
           )}
         </div>
       </div>
+
+      {/* Dedicated Bottom Footer Bar */}
+      <footer className="login-footer-bar">
+        <a 
+          href="/" 
+          onClick={(e) => { e.preventDefault(); setActiveTab('landing'); }}
+          className="login-footer-link"
+        >
+          Home
+        </a>
+        <span className="login-footer-dot">•</span>
+        <a 
+          href="/privacy" 
+          onClick={(e) => { e.preventDefault(); setActiveTab('privacy'); }}
+          className="login-footer-link"
+        >
+          Privacy Policy
+        </a>
+        <span className="login-footer-dot">•</span>
+        <a 
+          href="https://github.com/mudasirunar/ApplyTrack" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="login-footer-link"
+        >
+          GitHub
+        </a>
+      </footer>
 
       {/* TRANSLUCENT OVERLAY LOADER */}
       {isLoading && (

@@ -27,7 +27,7 @@ export default function Privacy({ setActiveTab, user, fromTab }) {
   const getReturnLabel = () => {
     switch (sourceTab) {
       case 'landing':
-        return 'Back to Home';
+        return 'Back';
       case 'settings':
         return 'Back to Settings';
       case 'dashboard':
@@ -35,7 +35,7 @@ export default function Privacy({ setActiveTab, user, fromTab }) {
       case 'applications':
         return 'Back to Applications';
       default:
-        return user ? 'Back to Dashboard' : 'Back to Home';
+        return user ? 'Back to Dashboard' : 'Back';
     }
   };
 
