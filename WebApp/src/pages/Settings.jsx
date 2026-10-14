@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
-import { LogoutIcon, AppIcon } from '../components/Icons';
+import { LogoutIcon, AppIcon, AndroidIcon } from '../components/Icons';
 import packageJson from '../../package.json';
 import { exportBackupToZip, checkBackupConflicts, importBackup } from '../utils/backup';
 import './Settings.css';
@@ -480,43 +480,65 @@ export default function Settings({ setActiveTab }) {
           <h3 className="section-title" style={{ fontWeight: 800, color: 'var(--brand-primary)', marginBottom: '12px' }}>About Application</h3>
           <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '16px' }}></div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-            <div 
-              style={{ 
-                width: '48px', 
-                height: '48px', 
-                borderRadius: '50%', 
-                overflow: 'hidden', 
-                backgroundColor: 'rgba(47, 58, 74, 0.08)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <AppIcon size={36} />
+          <div className="about-app-header">
+            <div className="about-app-branding">
+              <div 
+                style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '50%', 
+                  overflow: 'hidden', 
+                  backgroundColor: 'rgba(47, 58, 74, 0.08)',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  flexShrink: 0 
+                }}
+              >
+                <AppIcon size={36} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--brand-primary)' }}>ApplyTrack</span>
+                  <span style={{ 
+                    fontFamily: 'var(--font-mono, monospace)', 
+                    fontSize: '0.72rem', 
+                    fontWeight: 700, 
+                    backgroundColor: 'var(--bg-surface-variant)', 
+                    border: '1px solid var(--brand-outline)', 
+                    padding: '2px 8px', 
+                    borderRadius: '9999px',
+                    color: 'var(--text-secondary)',
+                    letterSpacing: '0.03em'
+                  }}>
+                    v{appVersion}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Web Dashboard Edition
+                </div>
+              </div>
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--brand-primary)' }}>ApplyTrack</span>
-                <span style={{ 
-                  fontFamily: 'var(--font-mono, monospace)', 
-                  fontSize: '0.72rem', 
-                  fontWeight: 700, 
-                  backgroundColor: 'var(--bg-surface-variant)', 
-                  border: '1px solid var(--brand-outline)', 
-                  padding: '2px 8px', 
-                  borderRadius: '9999px',
-                  color: 'var(--text-secondary)',
-                  letterSpacing: '0.03em'
-                }}>
-                  v{appVersion}
+
+            <a 
+              href="https://github.com/mudasirunar/ApplyTrack/releases/latest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="about-android-download-btn"
+              title="Download latest ApplyTrack Android APK from GitHub Releases"
+            >
+              <AndroidIcon size={20} className="about-android-icon" />
+              <div className="about-android-btn-text">
+                <span className="about-android-btn-title">Download Android App</span>
+                <span className="about-android-btn-sub">
+                  <span>Latest Release</span>
+                  <span className="about-android-badge">APK</span>
                 </span>
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                Web Dashboard Edition
-              </div>
-            </div>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" className="about-android-arrow">
+                <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+              </svg>
+            </a>
           </div>
           
           <p style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text-secondary)', margin: 0 }}>
