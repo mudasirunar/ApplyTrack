@@ -410,6 +410,12 @@ class MainActivity : ComponentActivity() {
                                         popUpTo("dashboard") { inclusive = false }
                                         launchSingleTop = true
                                     }
+                                },
+                                onNavigateToPdfViewer = { fileName, originalName, fileUri ->
+                                    val encFileName = java.net.URLEncoder.encode(fileName ?: "", "UTF-8")
+                                    val encOriginalName = java.net.URLEncoder.encode(originalName ?: "", "UTF-8")
+                                    val encFileUri = java.net.URLEncoder.encode(fileUri ?: "", "UTF-8")
+                                    navController.navigate("pdf_viewer?fileName=$encFileName&originalName=$encOriginalName&fileUri=$encFileUri")
                                 }
                             )
                         }
@@ -432,7 +438,9 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("add_edit?jobId=$id")
                                 },
                                 onNavigateToPdfViewer = { fileName, originalName ->
-                                    navController.navigate("pdf_viewer?fileName=$fileName&originalName=$originalName")
+                                    val encFileName = java.net.URLEncoder.encode(fileName ?: "", "UTF-8")
+                                    val encOriginalName = java.net.URLEncoder.encode(originalName ?: "", "UTF-8")
+                                    navController.navigate("pdf_viewer?fileName=$encFileName&originalName=$encOriginalName")
                                 },
                                 onNavigateToImageViewer = { id, index ->
                                     navController.navigate("image_viewer?jobId=$id&initialIndex=$index")
@@ -451,21 +459,34 @@ class MainActivity : ComponentActivity() {
 
                         // 4. PDF Viewer fullscreen screen
                         composable(
-                            route = "pdf_viewer?fileName={fileName}&originalName={originalName}",
+                            route = "pdf_viewer?fileName={fileName}&originalName={originalName}&fileUri={fileUri}",
                             arguments = listOf(
                                 navArgument("fileName") {
                                     type = NavType.StringType
+                                    defaultValue = ""
                                 },
                                 navArgument("originalName") {
                                     type = NavType.StringType
+                                    defaultValue = ""
+                                },
+                                navArgument("fileUri") {
+                                    type = NavType.StringType
+                                    defaultValue = ""
                                 }
                             )
                         ) { backStackEntry ->
-                            val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
-                            val originalName = backStackEntry.arguments?.getString("originalName") ?: ""
+                            val rawFileName = backStackEntry.arguments?.getString("fileName") ?: ""
+                            val rawOriginalName = backStackEntry.arguments?.getString("originalName") ?: ""
+                            val rawFileUri = backStackEntry.arguments?.getString("fileUri") ?: ""
+
+                            val fileName = java.net.URLDecoder.decode(rawFileName, "UTF-8")
+                            val originalName = java.net.URLDecoder.decode(rawOriginalName, "UTF-8")
+                            val fileUri = java.net.URLDecoder.decode(rawFileUri, "UTF-8").takeIf { it.isNotBlank() }
+
                             com.example.ui.viewer.PdfViewerScreen(
                                 fileName = fileName,
                                 originalName = originalName,
+                                fileUri = fileUri,
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 }

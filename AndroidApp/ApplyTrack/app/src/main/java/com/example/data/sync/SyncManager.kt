@@ -13,4 +13,5 @@ interface SyncManager {
     fun triggerUpload()
     suspend fun runFullSync(): Result<Unit>
     suspend fun migrateLocalDataToCloud()
+    fun downloadJobAttachments(job: com.example.model.JobApplication)
 }

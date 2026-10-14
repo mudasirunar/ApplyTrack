@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.JobViewModel
 import com.example.ui.components.DeletedAlertDialog
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
@@ -55,7 +56,7 @@ fun DetailScreen(
     val downloadingFiles by viewModel.downloadingFiles.collectAsStateWithLifecycle()
     var isDescriptionExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    
+
     var hasLoadedOnce by remember(jobId) { mutableStateOf(false) }
     LaunchedEffect(selectedApp, jobId) {
         if (selectedApp != null && selectedApp?.id == jobId) {

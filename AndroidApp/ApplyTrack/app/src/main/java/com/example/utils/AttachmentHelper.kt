@@ -142,7 +142,8 @@ object AttachmentHelper {
      * Checks if a file exists locally in the attachments folder.
      */
     fun fileExists(context: Context, fileName: String): Boolean {
-        return File(File(context.filesDir, "attachments"), fileName).exists()
+        val file = File(File(context.filesDir, "attachments"), fileName)
+        return file.exists() && file.length() > 0L
     }
 
     /**
@@ -152,6 +153,41 @@ object AttachmentHelper {
         val attachmentsDir = File(context.filesDir, "attachments")
         if (attachmentsDir.exists()) {
             attachmentsDir.deleteRecursively()
+        }
+    }
+
+    /**
+     * Copies a source File to a user-selected SAF destination Uri.
+     */
+    fun saveToUri(context: Context, sourceFile: File, targetUri: Uri): Boolean {
+        if (!sourceFile.exists() || sourceFile.length() == 0L) return false
+        return try {
+            val bytesCopied = context.contentResolver.openOutputStream(targetUri)?.use { outputStream ->
+                sourceFile.inputStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            } ?: 0L
+            bytesCopied > 0L
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * Copies a source Uri to a user-selected SAF destination Uri.
+     */
+    fun saveUriToUri(context: Context, sourceUri: Uri, targetUri: Uri): Boolean {
+        return try {
+            val bytesCopied = context.contentResolver.openOutputStream(targetUri)?.use { outputStream ->
+                context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            } ?: 0L
+            bytesCopied > 0L
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 }

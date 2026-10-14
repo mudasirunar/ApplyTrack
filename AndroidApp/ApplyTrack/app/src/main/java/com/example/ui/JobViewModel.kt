@@ -634,14 +634,21 @@ class JobViewModel(
     val syncState: StateFlow<SyncState> = syncManager.syncState
     val downloadingFiles: StateFlow<Set<String>> = syncManager.downloadingFiles
 
+    fun downloadJobAttachments(job: JobApplication) {
+        syncManager.downloadJobAttachments(job)
+    }
+
     private var loadJob: Job? = null
 
     // Fetch and observe direct updates for detail view
     fun loadApplicationById(id: Long) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            repository.getApplicationById(id).collect {
-                _selectedApplication.value = it
+            repository.getApplicationById(id).collect { app ->
+                _selectedApplication.value = app
+                if (app != null) {
+                    syncManager.downloadJobAttachments(app)
+                }
             }
         }
     }

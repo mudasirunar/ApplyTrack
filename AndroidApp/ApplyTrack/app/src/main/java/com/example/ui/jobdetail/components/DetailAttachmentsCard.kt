@@ -37,6 +37,7 @@ import coil.compose.AsyncImage
 import com.example.model.JobApplication
 import com.example.utils.AttachmentHelper
 
+
 @Composable
 fun DetailAttachmentsCard(
     job: JobApplication,

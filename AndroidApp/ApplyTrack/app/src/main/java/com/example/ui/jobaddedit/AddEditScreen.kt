@@ -42,6 +42,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.model.Attachment
 import com.example.ui.components.DeletedAlertDialog
 import com.example.ui.JobViewModel
@@ -62,16 +67,14 @@ fun AddEditScreen(
     viewModel: JobViewModel,
     jobId: Long?,
     onNavigateBack: () -> Unit,
-    onNavigateToApplications: () -> Unit
+    onNavigateToApplications: () -> Unit,
+    onNavigateToPdfViewer: ((String?, String?, String?) -> Unit)? = null
 ) {
     val selectedApp by viewModel.selectedApplication.collectAsStateWithLifecycle()
+    var previewScreenshotIndex by remember { mutableStateOf<Int?>(null) }
+    var previewDocumentState by remember { mutableStateOf<ScreenAttachment?>(null) }
 
     var hasLoadedOnce by remember(jobId) { mutableStateOf(false) }
-    LaunchedEffect(selectedApp, jobId) {
-        if (jobId != null && selectedApp != null && selectedApp?.id == jobId) {
-            hasLoadedOnce = true
-        }
-    }
 
     // Load job data if editing
     LaunchedEffect(jobId) {
@@ -117,9 +120,10 @@ fun AddEditScreen(
 
     // Sync state when loading existing values
     LaunchedEffect(selectedApp, jobId) {
-        if (jobId != null) {
+        if (jobId != null && !hasLoadedOnce) {
             selectedApp?.let { app ->
                 if (app.id == jobId) {
+                    hasLoadedOnce = true
                     companyName = app.companyName ?: ""
                     role = app.role ?: ""
                     val rawPlatform = app.platform ?: "LinkedIn"
@@ -146,22 +150,6 @@ fun AddEditScreen(
                     screenshotsList = app.screenshots?.map { ScreenAttachment(attachment = it) } ?: emptyList()
                 }
             }
-        } else {
-            companyName = ""
-            role = ""
-            platform = "LinkedIn"
-            customPlatformName = ""
-            url = ""
-            email = ""
-            status = "Applied"
-            jobDescription = ""
-            notes = ""
-            appliedDateEpoch = System.currentTimeMillis()
-
-            resumeState = null
-            coverLetterState = null
-            additionalDocumentState = null
-            screenshotsList = emptyList()
         }
     }
 
@@ -312,16 +300,34 @@ fun AddEditScreen(
                     resumeState = resumeState,
                     onPickResume = { resumeLauncher.launch("application/pdf") },
                     onRemoveResume = { resumeState = null },
+                    onViewResume = {
+                        if (resumeState != null) {
+                            previewDocumentState = resumeState
+                        }
+                    },
                     coverLetterState = coverLetterState,
                     onPickCoverLetter = { coverLetterLauncher.launch("application/pdf") },
                     onRemoveCoverLetter = { coverLetterState = null },
+                    onViewCoverLetter = {
+                        if (coverLetterState != null) {
+                            previewDocumentState = coverLetterState
+                        }
+                    },
                     additionalDocumentState = additionalDocumentState,
                     onPickAdditionalDoc = { additionalDocLauncher.launch("application/pdf") },
                     onRemoveAdditionalDoc = { additionalDocumentState = null },
+                    onViewAdditionalDoc = {
+                        if (additionalDocumentState != null) {
+                            previewDocumentState = additionalDocumentState
+                        }
+                    },
                     screenshotsList = screenshotsList,
                     onAddScreenshot = { screenshotsLauncher.launch("image/*") },
                     onRemoveScreenshot = { index ->
                         screenshotsList = screenshotsList.toMutableList().apply { removeAt(index) }
+                    },
+                    onViewScreenshot = { index ->
+                        previewScreenshotIndex = index
                     }
                 )
             }
@@ -496,5 +502,71 @@ fun AddEditScreen(
         DeletedAlertDialog(
             onConfirm = onNavigateToApplications
         )
+    }
+
+    if (previewScreenshotIndex != null) {
+        val idx = previewScreenshotIndex!!
+        val item = screenshotsList.getOrNull(idx)
+        if (item != null) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { previewScreenshotIndex = null },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                ) {
+                    val model = if (item.attachment != null) {
+                        AttachmentHelper.getAttachmentFile(context, item.attachment.fileName)
+                    } else {
+                        item.uri
+                    }
+                    AsyncImage(
+                        model = model,
+                        contentDescription = "Screenshot Preview",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    IconButton(
+                        onClick = { previewScreenshotIndex = null },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Preview",
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (previewDocumentState != null) {
+        val att = previewDocumentState!!
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { previewDocumentState = null },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            val fileName = att.attachment?.fileName ?: ""
+            val originalName = att.attachment?.originalName
+                ?: att.uri?.let { AttachmentHelper.getFileName(context, it) }
+                ?: "Document"
+            val fileUri = att.uri?.toString()
+
+            com.example.ui.viewer.PdfViewerScreen(
+                fileName = fileName,
+                originalName = originalName,
+                fileUri = fileUri,
+                onNavigateBack = { previewDocumentState = null }
+            )
+        }
     }
 }

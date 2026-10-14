@@ -50,7 +50,7 @@ class SyncWorker(
 
                     for ((type, fileName) in downloads) {
                         val destFile = AttachmentHelper.getAttachmentFile(applicationContext, fileName)
-                        if (!destFile.exists()) {
+                        if (!destFile.exists() || destFile.length() == 0L) {
                             try {
                                 supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
                             } catch (e: Exception) {

@@ -42,7 +42,8 @@ fun AttachmentRow(
     label: String,
     attachment: ScreenAttachment?,
     onPickFile: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onView: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -83,15 +84,33 @@ fun AttachmentRow(
         }
         Spacer(modifier = Modifier.width(8.dp))
         if (attachment != null) {
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier.testTag("remove_${label.replace(" ", "_").lowercase()}")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remove $label",
-                    tint = MaterialTheme.colorScheme.error
-                )
+                if (onView != null) {
+                    Button(
+                        onClick = onView,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("View", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.testTag("remove_${label.replace(" ", "_").lowercase()}")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Remove $label",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         } else {
             Button(

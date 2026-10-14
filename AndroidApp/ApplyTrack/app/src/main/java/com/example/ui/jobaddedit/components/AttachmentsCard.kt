@@ -54,6 +54,10 @@ fun AttachmentsCard(
     screenshotsList: List<ScreenAttachment>,
     onAddScreenshot: () -> Unit,
     onRemoveScreenshot: (Int) -> Unit,
+    onViewResume: (() -> Unit)? = null,
+    onViewCoverLetter: (() -> Unit)? = null,
+    onViewAdditionalDoc: (() -> Unit)? = null,
+    onViewScreenshot: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -91,7 +95,8 @@ fun AttachmentsCard(
                 label = "Resume / CV",
                 attachment = resumeState,
                 onPickFile = onPickResume,
-                onRemove = onRemoveResume
+                onRemove = onRemoveResume,
+                onView = onViewResume
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
@@ -100,7 +105,8 @@ fun AttachmentsCard(
                 label = "Cover Letter",
                 attachment = coverLetterState,
                 onPickFile = onPickCoverLetter,
-                onRemove = onRemoveCoverLetter
+                onRemove = onRemoveCoverLetter,
+                onView = onViewCoverLetter
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
@@ -109,7 +115,8 @@ fun AttachmentsCard(
                 label = "Additional Document",
                 attachment = additionalDocumentState,
                 onPickFile = onPickAdditionalDoc,
-                onRemove = onRemoveAdditionalDoc
+                onRemove = onRemoveAdditionalDoc,
+                onView = onViewAdditionalDoc
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
@@ -142,6 +149,11 @@ fun AttachmentsCard(
                                 .size(80.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                .then(
+                                    if (onViewScreenshot != null) {
+                                        Modifier.clickable { onViewScreenshot(index) }
+                                    } else Modifier
+                                )
                         ) {
                             if (item.attachment != null) {
                                 val file = AttachmentHelper.getAttachmentFile(context, item.attachment.fileName)

@@ -412,27 +412,29 @@ class SyncManagerImpl(
                                         scope.launch(Dispatchers.IO) {
                                             downloads.forEach { (type, fileName) ->
                                                 val destFile = AttachmentHelper.getAttachmentFile(context, fileName)
-                                                if (!destFile.exists()) {
-                                                    _downloadingFiles.update { it + fileName }
-                                                    try {
-                                                        var success = false
-                                                        var attempt = 1
-                                                        val maxAttempts = 3
-                                                        var delayMs = 1000L
-                                                        while (!success && attempt <= maxAttempts) {
-                                                            success = supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
-                                                            if (!success) {
-                                                                if (attempt < maxAttempts) {
-                                                                    kotlinx.coroutines.delay(delayMs)
-                                                                    delayMs *= 2
+                                                if (!destFile.exists() || destFile.length() == 0L) {
+                                                    launch {
+                                                        _downloadingFiles.update { it + fileName }
+                                                        try {
+                                                            var success = false
+                                                            var attempt = 1
+                                                            val maxAttempts = 3
+                                                            var delayMs = 1000L
+                                                            while (!success && attempt <= maxAttempts) {
+                                                                success = supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
+                                                                if (!success) {
+                                                                    if (attempt < maxAttempts) {
+                                                                        kotlinx.coroutines.delay(delayMs)
+                                                                        delayMs *= 2
+                                                                    }
+                                                                    attempt++
                                                                 }
-                                                                attempt++
                                                             }
+                                                        } catch (e: Exception) {
+                                                            e.printStackTrace()
+                                                        } finally {
+                                                            _downloadingFiles.update { it - fileName }
                                                         }
-                                                    } catch (e: Exception) {
-                                                        e.printStackTrace()
-                                                    } finally {
-                                                        _downloadingFiles.update { it - fileName }
                                                     }
                                                 }
                                             }
@@ -511,6 +513,48 @@ class SyncManagerImpl(
         }
     }
 
+    override fun downloadJobAttachments(job: JobApplication) {
+        val userId = activeUserId ?: return
+        val downloads = listOfNotNull(
+            job.resume?.let { "resumes" to it.fileName },
+            job.coverLetter?.let { "cover_letters" to it.fileName },
+            job.additionalDocument?.let { "additional_documents" to it.fileName }
+        ) + (job.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+
+        if (downloads.isEmpty()) return
+
+        scope.launch(Dispatchers.IO) {
+            downloads.forEach { (type, fileName) ->
+                val destFile = AttachmentHelper.getAttachmentFile(context, fileName)
+                if (!destFile.exists() || destFile.length() == 0L) {
+                    launch {
+                        _downloadingFiles.update { it + fileName }
+                        try {
+                            var success = false
+                            var attempt = 1
+                            val maxAttempts = 3
+                            var delayMs = 1000L
+                            while (!success && attempt <= maxAttempts) {
+                                success = supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)
+                                if (!success) {
+                                    if (attempt < maxAttempts) {
+                                        kotlinx.coroutines.delay(delayMs)
+                                        delayMs *= 2
+                                    }
+                                    attempt++
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        } finally {
+                            _downloadingFiles.update { it - fileName }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private suspend fun downloadMissingFiles(userId: String) = withContext(Dispatchers.IO) {
         try {
             val apps = dao.getAllApplicationsList()
@@ -523,7 +567,7 @@ class SyncManagerImpl(
 
                 for ((type, fileName) in downloads) {
                     val destFile = AttachmentHelper.getAttachmentFile(context, fileName)
-                    if (!destFile.exists()) {
+                    if (!destFile.exists() || destFile.length() == 0L) {
                         _downloadingFiles.update { it + fileName }
                         try {
                             supabaseStorageHelper.downloadFile(userId, type, fileName, destFile)

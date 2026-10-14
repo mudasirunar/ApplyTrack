@@ -91,6 +91,24 @@ class JobRepositoryImpl(
             localFilesToDelete.forEach { fileName ->
                 AttachmentHelper.deleteFile(context, fileName)
             }
+
+            // Immediately delete remote attachments from Supabase Storage if authenticated
+            val currentUserId = authManager.currentUser?.takeIf { !it.isAnonymous }?.uid
+            if (currentUserId != null) {
+                val remoteFilesToDelete = listOfNotNull(
+                    app.resume?.let { "resumes" to it.fileName },
+                    app.coverLetter?.let { "cover_letters" to it.fileName },
+                    app.additionalDocument?.let { "additional_documents" to it.fileName }
+                ) + (app.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+
+                if (remoteFilesToDelete.isNotEmpty()) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        remoteFilesToDelete.forEach { (type, fileName) ->
+                            supabaseStorageHelper.deleteFile(currentUserId, type, fileName)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -114,6 +132,24 @@ class JobRepositoryImpl(
                     
                     localFilesToDelete.forEach { fileName ->
                         AttachmentHelper.deleteFile(context, fileName)
+                    }
+
+                    // Immediately delete remote attachments from Supabase Storage if authenticated
+                    val currentUserId = authManager.currentUser?.takeIf { !it.isAnonymous }?.uid
+                    if (currentUserId != null) {
+                        val remoteFilesToDelete = listOfNotNull(
+                            app.resume?.let { "resumes" to it.fileName },
+                            app.coverLetter?.let { "cover_letters" to it.fileName },
+                            app.additionalDocument?.let { "additional_documents" to it.fileName }
+                        ) + (app.screenshots?.map { "screenshots" to it.fileName } ?: emptyList())
+
+                        if (remoteFilesToDelete.isNotEmpty()) {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                remoteFilesToDelete.forEach { (type, fileName) ->
+                                    supabaseStorageHelper.deleteFile(currentUserId, type, fileName)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -479,10 +515,45 @@ class JobRepositoryImpl(
     override suspend fun deleteAllApplications() = withContext(Dispatchers.IO) {
         // Collect all existing local application records first
         val allApps = dao.getAllApplicationsList()
-        
-        // Record their deletions in the deleted_jobs table first so we propagate this wipe to Firestore on next sync
-        for (app in allApps) {
-            dao.insertDeletedJob(DeletedJob(uuid = app.uuid))
+        val userId = authManager.currentUser?.takeIf { !it.isAnonymous }?.uid
+
+        if (userId != null) {
+            // 1. Wipe all Supabase Storage files for this user
+            try {
+                supabaseStorageHelper.wipeAllUserData(userId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // 2. Wipe Firestore records directly
+            firestore?.let { fs ->
+                try {
+                    val snapshot = fs.collection("users")
+                        .document(userId)
+                        .collection("job_applications")
+                        .get()
+                        .await()
+
+                    if (!snapshot.isEmpty) {
+                        val batch = fs.batch()
+                        for (doc in snapshot.documents) {
+                            batch.delete(doc.reference)
+                        }
+                        batch.delete(fs.collection("users").document(userId))
+                        batch.commit().await()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Fallback: record in deleted_jobs so sync can retry
+                    for (app in allApps) {
+                        dao.insertDeletedJob(DeletedJob(uuid = app.uuid))
+                    }
+                }
+            }
+        } else {
+            for (app in allApps) {
+                dao.insertDeletedJob(DeletedJob(uuid = app.uuid))
+            }
         }
         
         // Wipes local database table instantly

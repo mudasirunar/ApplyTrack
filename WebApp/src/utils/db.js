@@ -1,6 +1,6 @@
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, firestore } from './firebase';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
 
 const KEYS = {
   USER: 'applytrack_user',
@@ -105,19 +105,105 @@ async function deleteFileFromSupabase(userId, type, fileName) {
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    const deleteUrl = `${supabaseUrl}/storage/v1/object/ApplyTrack/users/${userId}/${type}/${fileName}`;
+    const fullPath = `users/${userId}/${type}/${fileName}`;
 
+    // Standard Supabase Storage REST endpoint for file deletion (with JSON prefixes payload)
+    const deleteUrl = `${supabaseUrl}/storage/v1/object/ApplyTrack`;
+    console.log('[Supabase Delete] Requesting deletion of:', fullPath);
     const deleteResponse = await fetch(deleteUrl, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${anonKey}`,
-        'apikey': anonKey
-      }
+        'apikey': anonKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prefixes: [fullPath] })
     });
+
+    const result = await deleteResponse.json();
+    console.log('[Supabase Delete] Response:', deleteResponse.status, result);
     return deleteResponse.ok;
   } catch (e) {
     console.error('Supabase delete failed:', e);
     return false;
+  }
+}
+
+async function deleteApplicationAttachments(userId, app) {
+  if (!app || !userId) return;
+  const deleteTasks = [];
+  if (app.resume && app.resume.fileName) {
+    deleteTasks.push(deleteFileFromSupabase(userId, 'resumes', app.resume.fileName));
+  }
+  if (app.coverLetter && app.coverLetter.fileName) {
+    deleteTasks.push(deleteFileFromSupabase(userId, 'cover_letters', app.coverLetter.fileName));
+  }
+  if (app.additionalDocument && app.additionalDocument.fileName) {
+    deleteTasks.push(deleteFileFromSupabase(userId, 'additional_documents', app.additionalDocument.fileName));
+  }
+  if (app.screenshots && app.screenshots.length > 0) {
+    for (let j = 0; j < app.screenshots.length; j++) {
+      const scr = app.screenshots[j];
+      if (scr && scr.fileName) {
+        deleteTasks.push(deleteFileFromSupabase(userId, 'screenshots', scr.fileName));
+      }
+    }
+  }
+  if (deleteTasks.length > 0) {
+    try {
+      await Promise.all(deleteTasks);
+    } catch (e) {
+      console.error('Failed to delete application files from Supabase:', e);
+    }
+  }
+}
+
+async function wipeAllUserSupabaseStorage(userId) {
+  if (!userId) return;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const folders = ['resumes', 'cover_letters', 'additional_documents', 'screenshots', 'documents'];
+
+  const allFilesToDelete = [];
+  for (const folder of folders) {
+    try {
+      const listRes = await fetch(`${supabaseUrl}/storage/v1/object/list/ApplyTrack`, {
+        method: 'POST',
+        headers: {
+          'apikey': anonKey,
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prefix: `users/${userId}/${folder}`, limit: 500 })
+      });
+      if (listRes.ok) {
+        const items = await listRes.json();
+        for (const item of items) {
+          if (item && item.name && item.id) {
+            allFilesToDelete.push(`users/${userId}/${folder}/${item.name}`);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[Wipe All] Could not list ${folder}:`, e);
+    }
+  }
+
+  if (allFilesToDelete.length > 0) {
+    try {
+      await fetch(`${supabaseUrl}/storage/v1/object/ApplyTrack`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': anonKey,
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prefixes: allFilesToDelete })
+      });
+      console.log(`[Wipe All] Purged ${allFilesToDelete.length} files from Supabase Storage for user: ${userId}`);
+    } catch (e) {
+      console.error('[Wipe All] Error deleting storage files:', e);
+    }
   }
 }
 
@@ -376,6 +462,35 @@ export const db = {
         await Promise.all(uploadTasks);
       }
 
+      // 1b. Delete removed or replaced attachments from Supabase Storage
+      const deleteTasks = [];
+      if (originalApp.resume && originalApp.resume.fileName && (!updatedData.resume || updatedData.resume.fileName !== originalApp.resume.fileName)) {
+        deleteTasks.push(deleteFileFromSupabase(userId, 'resumes', originalApp.resume.fileName));
+      }
+      if (originalApp.coverLetter && originalApp.coverLetter.fileName && (!updatedData.coverLetter || updatedData.coverLetter.fileName !== originalApp.coverLetter.fileName)) {
+        deleteTasks.push(deleteFileFromSupabase(userId, 'cover_letters', originalApp.coverLetter.fileName));
+      }
+      if (originalApp.additionalDocument && originalApp.additionalDocument.fileName && (!updatedData.additionalDocument || updatedData.additionalDocument.fileName !== originalApp.additionalDocument.fileName)) {
+        deleteTasks.push(deleteFileFromSupabase(userId, 'additional_documents', originalApp.additionalDocument.fileName));
+      }
+      if (originalApp.screenshots && originalApp.screenshots.length > 0) {
+        const newScreenshots = updatedData.screenshots || [];
+        for (let sIdx = 0; sIdx < originalApp.screenshots.length; sIdx++) {
+          const oldScr = originalApp.screenshots[sIdx];
+          const stillExists = newScreenshots.some(s => s.fileName === oldScr.fileName);
+          if (!stillExists && oldScr.fileName) {
+            deleteTasks.push(deleteFileFromSupabase(userId, 'screenshots', oldScr.fileName));
+          }
+        }
+      }
+      if (deleteTasks.length > 0) {
+        try {
+          await Promise.all(deleteTasks);
+        } catch (err) {
+          console.error('Supabase old attachment cleanup failed:', err);
+        }
+      }
+
       // 2. Compute status history changes
       let oldHistory = originalApp.statusHistory || [];
       let newHistory = [];
@@ -440,6 +555,9 @@ export const db = {
       const userDocRef = doc(firestore, 'users', userId, 'job_applications', app.uuid);
       await deleteDoc(userDocRef);
 
+      // Delete attachments from Supabase Storage
+      await deleteApplicationAttachments(userId, app);
+
       return true;
     } catch (e) {
       console.error('Delete application failed:', e);
@@ -472,6 +590,9 @@ export const db = {
         batch.delete(docRef);
       });
       await batch.commit();
+
+      // Delete attachments from Supabase Storage for all deleted apps
+      await Promise.all(appsToDelete.map(app => deleteApplicationAttachments(userId, app)));
 
       return true;
     } catch (e) {
@@ -574,38 +695,33 @@ export const db = {
     try {
       const apps = this.getApplications();
       
-      // 1. Delete all attachments in Supabase Storage
-      for (let i = 0; i < apps.length; i++) {
-        const app = apps[i];
-        if (app.resume && app.resume.fileName) {
-          await deleteFileFromSupabase(userId, 'resumes', app.resume.fileName);
-        }
-        if (app.coverLetter && app.coverLetter.fileName) {
-          await deleteFileFromSupabase(userId, 'cover_letters', app.coverLetter.fileName);
-        }
-        if (app.additionalDocument && app.additionalDocument.fileName) {
-          await deleteFileFromSupabase(userId, 'additional_documents', app.additionalDocument.fileName);
-        }
-        if (app.screenshots && app.screenshots.length > 0) {
-          for (let j = 0; j < app.screenshots.length; j++) {
-            const scr = app.screenshots[j];
-            await deleteFileFromSupabase(userId, 'screenshots', scr.fileName);
-          }
-        }
-      }
+      // 1. Delete all attachments in Supabase Storage for known applications
+      await Promise.all(apps.map(app => deleteApplicationAttachments(userId, app)));
 
-      // 2. Delete all Firestore records
+      // 1b. Deep purge all remaining/orphaned files in Supabase Storage for this user
+      await wipeAllUserSupabaseStorage(userId);
+
+      // 2. Fetch and delete all Firestore records under users/{userId}/job_applications
+      const querySnapshot = await getDocs(collection(firestore, 'users', userId, 'job_applications'));
       const batch = writeBatch(firestore);
-      apps.forEach(app => {
-        const docRef = doc(firestore, 'users', userId, 'job_applications', app.uuid);
-        batch.delete(docRef);
+      querySnapshot.forEach(docSnap => {
+        batch.delete(docSnap.ref);
       });
+      // Also delete user parent doc if present
+      batch.delete(doc(firestore, 'users', userId));
       await batch.commit();
 
+      // 3. Clear all local application caches
       localStorage.removeItem(KEYS.APPLICATIONS);
+      localStorage.removeItem(KEYS.DELETED_TEMP);
+      
+      // Dispatch data change to update UI
+      window.dispatchEvent(new Event('applytrack_data_change'));
+      triggerSyncState('SUCCESS');
     } catch (e) {
       console.error('Reset database failed:', e);
       triggerSyncState('ERROR', e.message || 'Failed to wipe database');
+      throw e;
     }
   },
 
