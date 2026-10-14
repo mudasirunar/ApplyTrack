@@ -77,6 +77,11 @@ export default function App() {
   
   let initialTab = parsedInitial.tab;
   let initialJobId = parsedInitial.jobId;
+
+  const isStandalone = typeof window !== 'undefined' && (
+    window.navigator.standalone === true || 
+    window.matchMedia('(display-mode: standalone)').matches
+  );
   
   // Resolve protected routes on initial load
   if (!initialUser) {
@@ -91,7 +96,7 @@ export default function App() {
         window.history.replaceState(null, '', '/login');
       }
     }
-  } else if (initialTab === 'login') {
+  } else if (initialTab === 'login' || (isStandalone && initialTab === 'landing')) {
     initialTab = 'dashboard';
     initialJobId = null;
     window.history.replaceState(null, '', '/dashboard');
@@ -269,8 +274,11 @@ export default function App() {
       setUser(currentUser);
       if (currentUser) {
         const currentPath = window.location.pathname;
-        const parsed = parsePath(currentPath);
-        if (parsed.tab === 'login') {
+        const isStandaloneMode = typeof window !== 'undefined' && (
+          window.navigator.standalone === true || 
+          window.matchMedia('(display-mode: standalone)').matches
+        );
+        if (parsed.tab === 'login' || (isStandaloneMode && parsed.tab === 'landing')) {
           triggerLoader();
           window.history.replaceState(null, '', '/dashboard');
           setActiveTabState('dashboard');
