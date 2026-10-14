@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { signInWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult, 
+  GoogleAuthProvider, 
+  setPersistence, 
+  browserLocalPersistence 
+} from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { AppIcon, GoogleIcon } from '../components/Icons';
@@ -15,7 +22,26 @@ export default function Login({ setActiveTab }) {
 
   useEffect(() => {
     document.title = 'Sign In | ApplyTrack';
+
+    // Handle incoming redirect from Google sign-in (e.g. on iOS standalone PWA)
+    let isMounted = true;
+    getRedirectResult(auth)
+      .then((result) => {
+        if (!isMounted) return;
+        if (result && result.user) {
+          // Firebase onAuthStateChanged in db.js handles session setup
+        }
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        console.error('Redirect sign-in error:', error);
+        if (error.code !== 'auth/credential-already-in-use') {
+          alert(error.message || 'Failed to complete sign in');
+        }
+      });
+
     return () => {
+      isMounted = false;
       document.title = 'ApplyTrack | Modern Job Application, Resume & Career Tracker';
     };
   }, []);
@@ -28,14 +54,36 @@ export default function Login({ setActiveTab }) {
       const provider = new GoogleAuthProvider();
       provider.addScope('profile');
       provider.addScope('email');
-      // Enforce account selection popup
+      // Enforce account selection
       provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider);
+
+      // Detect iOS or Standalone PWA container where popups are blocked by OS policy
+      const isStandalone = window.navigator.standalone === true || 
+                           window.matchMedia('(display-mode: standalone)').matches ||
+                           /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      if (isStandalone) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (popupError) {
+        console.warn('Popup sign in failed, attempting redirect fallback:', popupError);
+        if (
+          popupError.code === 'auth/popup-blocked' ||
+          popupError.code === 'auth/cancelled-popup-request' ||
+          popupError.code === 'auth/operation-not-supported-in-this-environment'
+        ) {
+          await signInWithRedirect(auth, provider);
+        } else if (popupError.code !== 'auth/popup-closed-by-user') {
+          throw popupError;
+        }
+      }
     } catch (error) {
       console.error('Google sign in failed:', error);
-      if (error.code === 'auth/popup-blocked') {
-        alert('Google Sign-In popup was blocked by your browser. Please allow popups for ApplyTrack and try again.');
-      } else if (error.code !== 'auth/popup-closed-by-user') {
+      if (error.code !== 'auth/popup-closed-by-user') {
         alert(error.message || 'Failed to sign in with Google');
       }
     } finally {
