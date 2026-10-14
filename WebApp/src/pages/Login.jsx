@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  signInWithPopup, 
-  signInWithRedirect, 
-  getRedirectResult, 
-  GoogleAuthProvider, 
-  setPersistence, 
-  browserLocalPersistence 
-} from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { AppIcon, GoogleIcon } from '../components/Icons';
@@ -22,55 +15,31 @@ export default function Login({ setActiveTab }) {
 
   useEffect(() => {
     document.title = 'Sign In | ApplyTrack';
-
-    // Handle incoming redirect from Google sign-in (e.g. on iOS standalone PWA)
-    let isMounted = true;
-    getRedirectResult(auth)
-      .then((result) => {
-        if (!isMounted) return;
-        if (result && result.user) {
-          // Firebase onAuthStateChanged in db.js handles session setup
-        }
-      })
-      .catch((error) => {
-        if (!isMounted) return;
-        console.error('Redirect sign-in error:', error);
-        if (error.code !== 'auth/credential-already-in-use') {
-          alert(error.message || 'Failed to complete sign in');
-        }
-      });
-
     return () => {
-      isMounted = false;
       document.title = 'ApplyTrack | Modern Job Application, Resume & Career Tracker';
     };
   }, []);
 
-  const handleGoogleSignInClick = () => {
+  const handleGoogleSignInClick = async () => {
     setIsLoading(true);
     try {
+      // Explicitly set persistence to local to remember the user across sessions
+      await setPersistence(auth, browserLocalPersistence);
       const provider = new GoogleAuthProvider();
       provider.addScope('profile');
       provider.addScope('email');
+      // Enforce account selection popup
       provider.setCustomParameters({ prompt: 'select_account' });
-
-      // In iOS / WebKit, signInWithPopup MUST be initiated synchronously in the direct click turn.
-      // Any preceding 'await' drops the browser's User Gesture token, causing iOS to block the popup.
-      signInWithPopup(auth, provider)
-        .then(() => {
-          setIsLoading(false);
-          // onAuthStateChanged in db.js automatically transitions to dashboard
-        })
-        .catch((error) => {
-          setIsLoading(false);
-          console.error('Google sign in failed:', error);
-          if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-            alert(error.message || 'Failed to sign in with Google');
-          }
-        });
-    } catch (e) {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error('Google sign in failed:', error);
+      if (error.code === 'auth/popup-blocked') {
+        alert('Google Sign-In popup was blocked by your browser. Please allow popups for ApplyTrack and try again.');
+      } else if (error.code !== 'auth/popup-closed-by-user') {
+        alert(error.message || 'Failed to sign in with Google');
+      }
+    } finally {
       setIsLoading(false);
-      console.error('Sign in trigger error:', e);
     }
   };
 
