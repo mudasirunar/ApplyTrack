@@ -46,48 +46,31 @@ export default function Login({ setActiveTab }) {
     };
   }, []);
 
-  const handleGoogleSignInClick = async () => {
+  const handleGoogleSignInClick = () => {
     setIsLoading(true);
     try {
-      // Explicitly set persistence to local to remember the user across sessions
-      await setPersistence(auth, browserLocalPersistence);
       const provider = new GoogleAuthProvider();
       provider.addScope('profile');
       provider.addScope('email');
-      // Enforce account selection
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      // Detect iOS or Standalone PWA container where popups are blocked by OS policy
-      const isStandalone = window.navigator.standalone === true || 
-                           window.matchMedia('(display-mode: standalone)').matches ||
-                           /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      if (isStandalone) {
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (popupError) {
-        console.warn('Popup sign in failed, attempting redirect fallback:', popupError);
-        if (
-          popupError.code === 'auth/popup-blocked' ||
-          popupError.code === 'auth/cancelled-popup-request' ||
-          popupError.code === 'auth/operation-not-supported-in-this-environment'
-        ) {
-          await signInWithRedirect(auth, provider);
-        } else if (popupError.code !== 'auth/popup-closed-by-user') {
-          throw popupError;
-        }
-      }
-    } catch (error) {
-      console.error('Google sign in failed:', error);
-      if (error.code !== 'auth/popup-closed-by-user') {
-        alert(error.message || 'Failed to sign in with Google');
-      }
-    } finally {
+      // In iOS / WebKit, signInWithPopup MUST be initiated synchronously in the direct click turn.
+      // Any preceding 'await' drops the browser's User Gesture token, causing iOS to block the popup.
+      signInWithPopup(auth, provider)
+        .then(() => {
+          setIsLoading(false);
+          // onAuthStateChanged in db.js automatically transitions to dashboard
+        })
+        .catch((error) => {
+          setIsLoading(false);
+          console.error('Google sign in failed:', error);
+          if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+            alert(error.message || 'Failed to sign in with Google');
+          }
+        });
+    } catch (e) {
       setIsLoading(false);
+      console.error('Sign in trigger error:', e);
     }
   };
 
