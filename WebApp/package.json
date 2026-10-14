@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "fflate": "^0.8.3",
     "firebase": "^12.16.0",
     "react": "^19.2.7",

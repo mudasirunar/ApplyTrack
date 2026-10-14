@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import SyncToast from './components/SyncToast';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from './utils/firebase';
+import { Analytics } from '@vercel/analytics/react';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Privacy = React.lazy(() => import('./pages/Privacy'));
@@ -556,6 +557,7 @@ export default function App() {
           {renderContent()}
         </div>
       </MainLayout>
+      <Analytics />
     </>
   );
 }
