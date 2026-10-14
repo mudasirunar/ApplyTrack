@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  z-index: 1000;
+  z-index: 20000;
   backdrop-filter: blur(4px);
   animation: fadeIn 0.2s forwards;
   overscroll-behavior: contain;
