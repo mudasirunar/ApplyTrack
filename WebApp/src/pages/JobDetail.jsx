@@ -8,7 +8,8 @@ import {
   DeleteIcon,
   WorkIcon,
   InfoIcon,
-  NotesIcon
+  NotesIcon,
+  FileIcon
 } from '../components/Icons';
 import ImageViewer from '../components/ImageViewer';
 import PDFViewer from '../components/PDFViewer';
@@ -83,12 +84,14 @@ function InfoRow({ label, value, isLink, href }) {
   );
 }
 
-// Helper component to render thumbnail images with loader spinner
+// Helper component to render thumbnail images with loader spinner and error handling
 function ThumbnailImage({ src, alt }) {
   const [loaded, setLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {!loaded && (
+    <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: 'var(--bg-surface-variant)' }}>
+      {!loaded && !hasError && (
         <div style={{
           position: 'absolute',
           top: 0,
@@ -97,27 +100,36 @@ function ThumbnailImage({ src, alt }) {
           height: '100%',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.03)'
+          justifyContent: 'center'
         }}>
           <div className="signin-spinner-container" style={{ width: '18px', height: '18px', margin: 0 }}>
             <div className="signin-spinner-ring" style={{ borderWidth: '2px', borderColor: 'var(--brand-primary) transparent transparent transparent' }} />
           </div>
         </div>
       )}
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        onLoad={() => setLoaded(true)}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          opacity: loaded ? 1 : 0,
-          transition: 'opacity 0.2s ease-in-out'
-        }}
-      />
+      {hasError ? (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <FileIcon style={{ width: '20px', height: '20px', fill: 'var(--text-secondary)' }} />
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          onError={() => {
+            setLoaded(true);
+            setHasError(true);
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: loaded ? 1 : 0,
+            transition: 'opacity 0.2s ease-in-out'
+          }}
+        />
+      )}
     </div>
   );
 }

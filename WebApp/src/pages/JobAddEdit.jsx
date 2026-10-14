@@ -9,6 +9,8 @@ import {
   dmyToYmd 
 } from '../utils/dateUtils';
 import { ChevronIcon, FileIcon, DeleteIcon } from '../components/Icons';
+import PDFViewer from '../components/PDFViewer';
+import ImageViewer from '../components/ImageViewer';
 import './JobAddEdit.css';
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel, hideCancel = false }) {
@@ -169,6 +171,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
   const [additionalDocument, setAdditionalDocument] = useState(null);
   const [screenshots, setScreenshots] = useState([]); // Array of attachment objects
   const [showRemoteDeleteModal, setShowRemoteDeleteModal] = useState(false);
+  const [activePdfFile, setActivePdfFile] = useState(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(null);
 
 
 
@@ -307,7 +311,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSaving) return;
     setIsSaving(true);
@@ -338,24 +342,22 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       screenshots
     };
 
-    setTimeout(async () => {
-      try {
-        if (isEditMode) {
-          await db.updateApplication(jobId, appData);
-          // Navigate to previous view
-          setActiveTab(editSource || 'job-detail');
-        } else {
-          await db.addApplication(appData);
-          // Reset selected job and go to Applications
-          setSelectedJobId(null);
-          setActiveTab('applications');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Failed to save application. Please try again.');
-        setIsSaving(false);
+    try {
+      if (isEditMode) {
+        await db.updateApplication(jobId, appData);
+        // Navigate to previous view
+        setActiveTab(editSource || 'job-detail');
+      } else {
+        await db.addApplication(appData);
+        // Reset selected job and go to Applications
+        setSelectedJobId(null);
+        setActiveTab('applications');
       }
-    }, 600);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save application. Please try again.');
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -531,9 +533,20 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                   </div>
                 </div>
                 {resume ? (
-                  <button type="button" onClick={() => handleDeleteAttachment('resume')} className="file-delete-btn" title="Delete attachment" style={{ flexShrink: 0 }}>
-                    <DeleteIcon />
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setActivePdfFile(resume)} 
+                      className="btn-secondary" 
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', height: '30px' }}
+                      title="Preview document"
+                    >
+                      View
+                    </button>
+                    <button type="button" onClick={() => handleDeleteAttachment('resume')} className="file-delete-btn" title="Delete attachment">
+                      <DeleteIcon />
+                    </button>
+                  </div>
                 ) : (
                   <label className="file-upload-btn" style={{ flexShrink: 0 }}>
                     Upload
@@ -563,9 +576,20 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                   </div>
                 </div>
                 {coverLetter ? (
-                  <button type="button" onClick={() => handleDeleteAttachment('coverLetter')} className="file-delete-btn" title="Delete attachment" style={{ flexShrink: 0 }}>
-                    <DeleteIcon />
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setActivePdfFile(coverLetter)} 
+                      className="btn-secondary" 
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', height: '30px' }}
+                      title="Preview document"
+                    >
+                      View
+                    </button>
+                    <button type="button" onClick={() => handleDeleteAttachment('coverLetter')} className="file-delete-btn" title="Delete attachment">
+                      <DeleteIcon />
+                    </button>
+                  </div>
                 ) : (
                   <label className="file-upload-btn" style={{ flexShrink: 0 }}>
                     Upload
@@ -595,9 +619,20 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                   </div>
                 </div>
                 {additionalDocument ? (
-                  <button type="button" onClick={() => handleDeleteAttachment('additionalDocument')} className="file-delete-btn" title="Delete attachment" style={{ flexShrink: 0 }}>
-                    <DeleteIcon />
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setActivePdfFile(additionalDocument)} 
+                      className="btn-secondary" 
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', height: '30px' }}
+                      title="Preview document"
+                    >
+                      View
+                    </button>
+                    <button type="button" onClick={() => handleDeleteAttachment('additionalDocument')} className="file-delete-btn" title="Delete attachment">
+                      <DeleteIcon />
+                    </button>
+                  </div>
                 ) : (
                   <label className="file-upload-btn" style={{ flexShrink: 0 }}>
                     Upload
@@ -622,14 +657,18 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                   {screenshots.map((shot, index) => (
                     <div 
                       key={index}
+                      onClick={() => setActiveImageIndex(index)}
                       style={{
                         position: 'relative',
                         width: '70px',
                         height: '70px',
                         borderRadius: '8px',
                         border: '1px solid var(--brand-outline)',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        cursor: 'pointer'
                       }}
+                      className="screenshot-thumbnail-hover"
+                      title="Click to preview image"
                     >
                       <img 
                         src={shot.url || shot.dataUrl} 
@@ -638,7 +677,10 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                       />
                       <button
                         type="button"
-                        onClick={() => handleDeleteAttachment('screenshot', index)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAttachment('screenshot', index);
+                        }}
                         style={{
                           position: 'absolute',
                           top: '4px',
@@ -653,7 +695,8 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                           alignItems: 'center',
                           justifyContent: 'center',
                           cursor: 'pointer',
-                          padding: '3px'
+                          padding: '3px',
+                          zIndex: 2
                         }}
                         title="Delete image"
                       >
@@ -740,6 +783,20 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           }}
           onCancel={() => {}}
         />,
+        document.body
+      )}
+
+      {activeImageIndex !== null && screenshots && screenshots.length > 0 && createPortal(
+        <ImageViewer 
+          files={screenshots} 
+          initialIndex={activeImageIndex} 
+          onClose={() => setActiveImageIndex(null)} 
+        />,
+        document.body
+      )}
+
+      {activePdfFile && createPortal(
+        <PDFViewer file={activePdfFile} onClose={() => setActivePdfFile(null)} />,
         document.body
       )}
     </div>

@@ -161,3 +161,47 @@
   height: 24px;
   fill: currentColor;
 }
+
+@media (max-width: 600px) {
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .viewer-modal-card {
+    height: 94vh;
+    border-radius: var(--border-radius-md);
+  }
+
+  .viewer-header {
+    height: 52px;
+    padding: 0 12px;
+  }
+
+  .viewer-title {
+    max-width: 50%;
+    font-size: 0.88rem;
+  }
+
+  .viewer-content {
+    padding: 8px;
+  }
+
+  .viewer-nav-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .viewer-nav-btn.prev {
+    left: 8px;
+  }
+
+  .viewer-nav-btn.next {
+    right: 8px;
+  }
+
+  .viewer-nav-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+

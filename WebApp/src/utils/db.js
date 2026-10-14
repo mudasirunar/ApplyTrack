@@ -47,35 +47,33 @@ function resolveRemoteAttachment(att, userId, type) {
 }
 
 // Supabase REST operations
-async function checkFileExistsOnSupabase(userId, type, fileName) {
+function dataUrlToBlob(dataUrl) {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    const checkUrl = `${supabaseUrl}/storage/v1/object/ApplyTrack/users/${userId}/${type}/${fileName}`;
-
-    const checkResponse = await fetch(checkUrl, {
-      method: 'HEAD',
-      headers: {
-        'Authorization': `Bearer ${anonKey}`,
-        'apikey': anonKey
-      }
-    });
-    return checkResponse.ok;
+    const parts = dataUrl.split(',');
+    if (parts.length < 2) return null;
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
   } catch {
-    return false;
+    return null;
   }
 }
 
 async function uploadFileToSupabase(userId, type, fileName, dataUrl) {
-  if (!dataUrl) return false;
-  
-  // Check if file already exists first (avoid duplicate uploads)
-  const exists = await checkFileExistsOnSupabase(userId, type, fileName);
-  if (exists) return true;
+  if (!dataUrl) return true;
 
   try {
-    const response = await fetch(dataUrl);
-    const blob = await response.blob();
+    let blob = dataUrlToBlob(dataUrl);
+    if (!blob) {
+      const response = await fetch(dataUrl);
+      blob = await response.blob();
+    }
     
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -86,15 +84,20 @@ async function uploadFileToSupabase(userId, type, fileName, dataUrl) {
       headers: {
         'Authorization': `Bearer ${anonKey}`,
         'apikey': anonKey,
-        'Content-Type': blob.type || 'application/octet-stream'
+        'Content-Type': blob.type || 'application/octet-stream',
+        'x-upsert': 'true'
       },
       body: blob
     });
 
-    return uploadResponse.ok;
+    if (!uploadResponse.ok && uploadResponse.status !== 409) {
+      throw new Error(`Upload to Supabase failed (${uploadResponse.status}): ${uploadResponse.statusText}`);
+    }
+
+    return true;
   } catch (e) {
     console.error('Supabase upload failed:', e);
-    return false;
+    throw e;
   }
 }
 
@@ -183,11 +186,24 @@ function stopFirestoreListener() {
 onAuthStateChanged(auth, (firebaseUser) => {
   isAuthInitialized = true;
   if (firebaseUser) {
+    const googleProvider = firebaseUser.providerData?.find(p => p.providerId === 'google.com') || firebaseUser.providerData?.[0];
+    const displayName = firebaseUser.displayName || googleProvider?.displayName || firebaseUser.email?.split('@')[0] || 'Google User';
+    const email = firebaseUser.email || googleProvider?.email || '';
+    
+    let photoURL = firebaseUser.photoURL || googleProvider?.photoURL;
+    if (photoURL && photoURL.includes('googleusercontent.com')) {
+      // Upgrade from low-res 96px thumbnail to crisp 256px resolution for Retina displays
+      photoURL = photoURL.replace(/=s\d+(-c)?$/, '=s256-c');
+    }
+    if (!photoURL) {
+      photoURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=2F3A4A&color=fff&bold=true`;
+    }
+
     const formattedUser = {
       uid: firebaseUser.uid,
-      displayName: firebaseUser.displayName || 'Google User',
-      email: firebaseUser.email,
-      photoURL: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'User')}&background=2F3A4A&color=fff&bold=true`
+      displayName,
+      email,
+      photoURL
     };
     
     localStorage.setItem(KEYS.USER, JSON.stringify(formattedUser));
@@ -265,23 +281,27 @@ export const db = {
       const apps = this.getApplications();
       const nextId = apps.length > 0 ? Math.max(...apps.map(a => a.id)) + 1 : 1;
 
-      // 1. Upload files to Supabase Storage if they contain new binary contents (dataUrl)
+      // 1. Upload files to Supabase Storage concurrently in parallel if they contain new binary contents (dataUrl)
+      const uploadTasks = [];
       if (appData.resume && appData.resume.dataUrl) {
-        await uploadFileToSupabase(userId, 'resumes', appData.resume.fileName, appData.resume.dataUrl);
+        uploadTasks.push(uploadFileToSupabase(userId, 'resumes', appData.resume.fileName, appData.resume.dataUrl));
       }
       if (appData.coverLetter && appData.coverLetter.dataUrl) {
-        await uploadFileToSupabase(userId, 'cover_letters', appData.coverLetter.fileName, appData.coverLetter.dataUrl);
+        uploadTasks.push(uploadFileToSupabase(userId, 'cover_letters', appData.coverLetter.fileName, appData.coverLetter.dataUrl));
       }
       if (appData.additionalDocument && appData.additionalDocument.dataUrl) {
-        await uploadFileToSupabase(userId, 'additional_documents', appData.additionalDocument.fileName, appData.additionalDocument.dataUrl);
+        uploadTasks.push(uploadFileToSupabase(userId, 'additional_documents', appData.additionalDocument.fileName, appData.additionalDocument.dataUrl));
       }
       if (appData.screenshots && appData.screenshots.length > 0) {
         for (let i = 0; i < appData.screenshots.length; i++) {
           const scr = appData.screenshots[i];
           if (scr.dataUrl) {
-            await uploadFileToSupabase(userId, 'screenshots', scr.fileName, scr.dataUrl);
+            uploadTasks.push(uploadFileToSupabase(userId, 'screenshots', scr.fileName, scr.dataUrl));
           }
         }
+      }
+      if (uploadTasks.length > 0) {
+        await Promise.all(uploadTasks);
       }
 
       // 2. Create the Firestore model mapping (strictly metadata filenames, no dataUrl)
@@ -330,15 +350,16 @@ export const db = {
       const originalApp = this.getApplicationById(id);
       if (!originalApp) throw new Error('Application not found');
 
-      // 1. Upload new attachments if they have dataUrl and don't match the original file
+      // 1. Upload new attachments concurrently in parallel if they have dataUrl and don't match the original file
+      const uploadTasks = [];
       if (updatedData.resume && updatedData.resume.dataUrl && (!originalApp.resume || originalApp.resume.fileName !== updatedData.resume.fileName)) {
-        await uploadFileToSupabase(userId, 'resumes', updatedData.resume.fileName, updatedData.resume.dataUrl);
+        uploadTasks.push(uploadFileToSupabase(userId, 'resumes', updatedData.resume.fileName, updatedData.resume.dataUrl));
       }
       if (updatedData.coverLetter && updatedData.coverLetter.dataUrl && (!originalApp.coverLetter || originalApp.coverLetter.fileName !== updatedData.coverLetter.fileName)) {
-        await uploadFileToSupabase(userId, 'cover_letters', updatedData.coverLetter.fileName, updatedData.coverLetter.dataUrl);
+        uploadTasks.push(uploadFileToSupabase(userId, 'cover_letters', updatedData.coverLetter.fileName, updatedData.coverLetter.dataUrl));
       }
       if (updatedData.additionalDocument && updatedData.additionalDocument.dataUrl && (!originalApp.additionalDocument || originalApp.additionalDocument.fileName !== updatedData.additionalDocument.fileName)) {
-        await uploadFileToSupabase(userId, 'additional_documents', updatedData.additionalDocument.fileName, updatedData.additionalDocument.dataUrl);
+        uploadTasks.push(uploadFileToSupabase(userId, 'additional_documents', updatedData.additionalDocument.fileName, updatedData.additionalDocument.dataUrl));
       }
       if (updatedData.screenshots && updatedData.screenshots.length > 0) {
         for (let i = 0; i < updatedData.screenshots.length; i++) {
@@ -346,10 +367,13 @@ export const db = {
           if (scr.dataUrl) {
             const hasMatch = originalApp.screenshots && originalApp.screenshots.some(s => s.fileName === scr.fileName);
             if (!hasMatch) {
-              await uploadFileToSupabase(userId, 'screenshots', scr.fileName, scr.dataUrl);
+              uploadTasks.push(uploadFileToSupabase(userId, 'screenshots', scr.fileName, scr.dataUrl));
             }
           }
         }
+      }
+      if (uploadTasks.length > 0) {
+        await Promise.all(uploadTasks);
       }
 
       // 2. Compute status history changes

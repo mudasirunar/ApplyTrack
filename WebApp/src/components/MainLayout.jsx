@@ -9,6 +9,7 @@ import {
   SettingsIcon, 
   LogoutIcon 
 } from './Icons';
+import UserAvatar from './UserAvatar';
 import './MainLayout.css';
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel }) {
@@ -151,16 +152,13 @@ export default function MainLayout({ activeTab, setActiveTab, isSelectionMode, c
 
         <div className="app-sidebar-bottom">
           <div className="app-sidebar-footer">
-            <img 
-              src={user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-              alt={user.displayName} 
+            <UserAvatar 
+              user={user}
+              size={40}
               className="user-avatar"
               onClick={() => isSidebarCollapsed && setActiveTab('settings')}
               style={{ cursor: isSidebarCollapsed ? 'pointer' : 'default' }}
               title={isSidebarCollapsed ? `${user.displayName} (Click for Settings)` : undefined}
-              onError={(e) => {
-                e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
-              }}
             />
             <div className="user-info">
               <span className="user-name">{user.displayName}</span>

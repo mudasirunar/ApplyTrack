@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { LogoutIcon, AppIcon, AndroidIcon } from '../components/Icons';
+import UserAvatar from '../components/UserAvatar';
 import packageJson from '../../package.json';
 import { exportBackupToZip, checkBackupConflicts, importBackup } from '../utils/backup';
 import './Settings.css';
@@ -337,13 +338,10 @@ export default function Settings({ setActiveTab }) {
           <div style={{ borderBottom: '1px solid var(--brand-outline)', width: '100%', marginBottom: '16px' }}></div>
           
           <div className="profile-settings-content" style={{ marginBottom: '16px' }}>
-            <img 
-              src={user?.photoURL} 
-              alt={user?.displayName} 
+            <UserAvatar 
+              user={user}
+              size={64}
               className="profile-avatar-large"
-              onError={(e) => {
-                e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
-              }}
             />
             <div className="profile-details-large">
               <span className="profile-name-large">{user?.displayName}</span>
