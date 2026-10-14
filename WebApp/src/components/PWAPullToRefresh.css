@@ -1,0 +1,63 @@
+/* PWA-Only Pull To Refresh Indicator */
+.pwa-pull-indicator {
+  position: fixed;
+  left: 50%;
+  top: max(14px, env(safe-area-inset-top, 14px));
+  transform: translateX(-50%) translateY(-100px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color, rgba(140, 150, 165, 0.2));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.1s cubic-bezier(0.2, 0.8, 0.4, 1);
+  will-change: transform, opacity;
+}
+
+[data-theme='dark'] .pwa-pull-indicator {
+  background: #1A2028;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.pwa-pull-indicator.active {
+  opacity: 1;
+}
+
+.pwa-pull-indicator.refreshing {
+  opacity: 1;
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.2s ease;
+}
+
+.pwa-pull-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2.5px solid var(--border-color, rgba(140, 150, 165, 0.25));
+  border-top-color: var(--brand-primary, #2F3A4A);
+  transition: transform 0.05s linear;
+}
+
+[data-theme='dark'] .pwa-pull-spinner {
+  border-color: rgba(255, 255, 255, 0.15);
+  border-top-color: #6C8DFF;
+}
+
+.pwa-pull-spinner.spinning {
+  animation: pwa-pull-spin 0.75s linear infinite;
+}
+
+.pwa-pull-spinner.ready {
+  border-top-color: var(--accent-green, #4CAF50);
+}
+
+@keyframes pwa-pull-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

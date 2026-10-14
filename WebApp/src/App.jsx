@@ -3,6 +3,7 @@ import { db } from './utils/db';
 import MainLayout from './components/MainLayout';
 import Login from './pages/Login';
 import SyncToast from './components/SyncToast';
+import PWAPullToRefresh from './components/PWAPullToRefresh';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from './utils/firebase';
 import { Analytics } from '@vercel/analytics/react';
@@ -545,6 +546,7 @@ export default function App() {
 
   return (
     <>
+      <PWAPullToRefresh />
       {loadingProgress > 0 && (
         <div 
           className="app-loader-bar" 
