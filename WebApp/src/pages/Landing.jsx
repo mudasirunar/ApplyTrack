@@ -951,7 +951,7 @@ export default function Landing({ setActiveTab, user }) {
                   </a>
 
                   <a 
-                    href="http://github.com/mudasirunar" 
+                    href="https://github.com/mudasirunar" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="creator-link-chip"

@@ -5,6 +5,8 @@
       "use": "@vercel/static-build"
     }
   ],
+  "cleanUrls": true,
+  "trailingSlash": false,
   "headers": [
     {
       "source": "/assets/(.*)",

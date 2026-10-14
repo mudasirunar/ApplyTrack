@@ -370,7 +370,7 @@ export default function App() {
       });
     }
 
-    // Dynamically synchronize SEO metadata (canonical, description, og:url, robots) per route
+    // Dynamically synchronize SEO metadata (canonical, description, og:url, og:title, twitter:title, robots, title) per route
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) {
       canonical = document.createElement('link');
@@ -387,19 +387,35 @@ export default function App() {
 
     let metaDesc = document.querySelector('meta[name="description"]');
     let robotsMeta = document.querySelector('meta[name="robots"]');
+    let ogTitle = document.querySelector('meta[property="og:title"]');
+    let twitterTitle = document.querySelector('meta[name="twitter:title"]');
 
     if (activeTab === 'privacy') {
+      document.title = 'Privacy Policy | ApplyTrack';
       if (metaDesc) metaDesc.setAttribute('content', 'ApplyTrack Privacy Policy - Understand how your personal job application data, resumes, and document attachments are stored securely with zero data monetization.');
       if (robotsMeta) robotsMeta.setAttribute('content', 'index, follow');
+      if (ogTitle) ogTitle.setAttribute('content', 'Privacy Policy | ApplyTrack');
+      if (twitterTitle) twitterTitle.setAttribute('content', 'Privacy Policy | ApplyTrack');
     } else if (activeTab === 'login') {
+      document.title = 'Sign In | ApplyTrack';
       if (metaDesc) metaDesc.setAttribute('content', 'Sign in to your ApplyTrack dashboard to track your job applications, tailored resumes, and review interview conversion analytics.');
       if (robotsMeta) robotsMeta.setAttribute('content', 'index, follow');
+      if (ogTitle) ogTitle.setAttribute('content', 'Sign In | ApplyTrack');
+      if (twitterTitle) twitterTitle.setAttribute('content', 'Sign In | ApplyTrack');
     } else if (activeTab === 'not-found') {
+      document.title = '404: Page Not Found | ApplyTrack';
       if (metaDesc) metaDesc.setAttribute('content', 'The requested page could not be found on ApplyTrack.');
       if (robotsMeta) robotsMeta.setAttribute('content', 'noindex, nofollow');
+      if (ogTitle) ogTitle.setAttribute('content', '404: Page Not Found | ApplyTrack');
+      if (twitterTitle) twitterTitle.setAttribute('content', '404: Page Not Found | ApplyTrack');
     } else {
+      if (activeTab === 'landing') {
+        document.title = 'ApplyTrack | Modern Job Application, Resume & Career Tracker';
+      }
       if (metaDesc) metaDesc.setAttribute('content', 'Track job applications, tailored resume variations, interview milestones, and conversion rate analytics with real-time Android and Web cloud sync. Free, private, and secure.');
       if (robotsMeta) robotsMeta.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+      if (ogTitle) ogTitle.setAttribute('content', 'ApplyTrack | Modern Job Application & Resume Tracker');
+      if (twitterTitle) twitterTitle.setAttribute('content', 'ApplyTrack | Modern Job Application & Resume Tracker');
     }
   }, [activeTab]);
 

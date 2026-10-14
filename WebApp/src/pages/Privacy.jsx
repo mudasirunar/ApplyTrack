@@ -223,7 +223,7 @@ export default function Privacy({ setActiveTab, user, fromTab }) {
                 <span>•</span>
                 <a href="https://www.linkedin.com/in/mudasir-ali-442196261" target="_blank" rel="noopener noreferrer">LinkedIn</a>
                 <span>•</span>
-                <a href="http://github.com/mudasirunar" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="https://github.com/mudasirunar" target="_blank" rel="noopener noreferrer">GitHub</a>
               </div>
             </div>
           </section>
