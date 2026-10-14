@@ -66,7 +66,7 @@ const parsePath = (path) => {
     return { tab: 'job-detail', jobId: detailMatch[1] };
   }
   
-  return { tab: 'landing', jobId: null };
+  return { tab: 'not-found', jobId: null };
 };
 
 export default function App() {
@@ -79,7 +79,7 @@ export default function App() {
   
   // Resolve protected routes on initial load
   if (!initialUser) {
-    if (initialTab === 'landing' || initialTab === 'login' || initialTab === 'privacy') {
+    if (initialTab === 'landing' || initialTab === 'login' || initialTab === 'privacy' || initialTab === 'not-found') {
       // Public routes allowed without auth
       initialJobId = null;
     } else {
@@ -236,6 +236,7 @@ export default function App() {
     else if (tab === 'add-job') path = '/applications/new';
     else if (tab === 'job-detail') path = `/applications/${jobId}`;
     else if (tab === 'edit-job') path = `/applications/${jobId}/edit`;
+    else if (tab === 'not-found') path = window.location.pathname;
 
     if (window.location.pathname !== path) {
       triggerLoader();
@@ -280,7 +281,7 @@ export default function App() {
       } else {
         const currentPath = window.location.pathname;
         const parsed = parsePath(currentPath);
-        if (parsed.tab === 'landing' || parsed.tab === 'login' || parsed.tab === 'privacy') {
+        if (parsed.tab === 'landing' || parsed.tab === 'login' || parsed.tab === 'privacy' || parsed.tab === 'not-found') {
           setActiveTabState(parsed.tab);
           selectedJobIdRef.current = null;
           setSelectedJobIdState(null);
@@ -369,7 +370,7 @@ export default function App() {
       });
     }
 
-    // Dynamically synchronize canonical tag to match current page route
+    // Dynamically synchronize SEO metadata (canonical, description, og:url, robots) per route
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) {
       canonical = document.createElement('link');
@@ -378,6 +379,28 @@ export default function App() {
     }
     const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
     canonical.setAttribute('href', `https://apply-track-web.vercel.app${currentPath === '/' ? '/' : currentPath}`);
+
+    let ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) {
+      ogUrl.setAttribute('content', `https://apply-track-web.vercel.app${currentPath === '/' ? '/' : currentPath}`);
+    }
+
+    let metaDesc = document.querySelector('meta[name="description"]');
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+
+    if (activeTab === 'privacy') {
+      if (metaDesc) metaDesc.setAttribute('content', 'ApplyTrack Privacy Policy - Understand how your personal job application data, resumes, and document attachments are stored securely with zero data monetization.');
+      if (robotsMeta) robotsMeta.setAttribute('content', 'index, follow');
+    } else if (activeTab === 'login') {
+      if (metaDesc) metaDesc.setAttribute('content', 'Sign in to your ApplyTrack dashboard to track your job applications, tailored resumes, and review interview conversion analytics.');
+      if (robotsMeta) robotsMeta.setAttribute('content', 'index, follow');
+    } else if (activeTab === 'not-found') {
+      if (metaDesc) metaDesc.setAttribute('content', 'The requested page could not be found on ApplyTrack.');
+      if (robotsMeta) robotsMeta.setAttribute('content', 'noindex, nofollow');
+    } else {
+      if (metaDesc) metaDesc.setAttribute('content', 'Track job applications, tailored resume variations, interview milestones, and conversion rate analytics with real-time Android and Web cloud sync. Free, private, and secure.');
+      if (robotsMeta) robotsMeta.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    }
   }, [activeTab]);
 
   // Render correct page content
@@ -395,6 +418,34 @@ export default function App() {
         <React.Suspense fallback={renderFullScreenSpinner()}>
           <Privacy setActiveTab={setActiveTab} user={user} fromTab={fromTab} />
         </React.Suspense>
+      );
+    }
+
+    if (activeTab === 'not-found') {
+      return (
+        <div style={{
+          minHeight: '70vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          padding: '40px 20px'
+        }}>
+          <h1 style={{ fontSize: '4.5rem', fontWeight: 900, color: 'var(--brand-primary)', margin: 0, letterSpacing: '-0.04em' }}>404</h1>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '12px 0 8px 0' }}>Page Not Found</h2>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', marginBottom: '24px', lineHeight: 1.5 }}>
+            The page you are looking for doesn't exist or has been moved.
+          </p>
+          <a
+            href="/"
+            onClick={(e) => { e.preventDefault(); setActiveTab('landing'); }}
+            className="btn-primary"
+            style={{ textDecoration: 'none', padding: '10px 22px' }}
+          >
+            Back to Home
+          </a>
+        </div>
       );
     }
 
@@ -479,9 +530,9 @@ export default function App() {
           }}
         />
       )}
-      {user && activeTab !== 'login' && activeTab !== 'landing' && activeTab !== 'privacy' && <SyncToast />}
+      {user && activeTab !== 'login' && activeTab !== 'landing' && activeTab !== 'privacy' && activeTab !== 'not-found' && <SyncToast />}
       <MainLayout 
-        activeTab={user ? activeTab : (activeTab === 'landing' || activeTab === 'privacy' ? activeTab : 'login')} 
+        activeTab={user ? activeTab : (activeTab === 'landing' || activeTab === 'privacy' || activeTab === 'not-found' ? activeTab : 'login')} 
         setActiveTab={setActiveTab}
         isSelectionMode={isSelectionMode}
       >
