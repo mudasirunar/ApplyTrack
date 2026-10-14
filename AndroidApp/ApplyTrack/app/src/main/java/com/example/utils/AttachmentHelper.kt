@@ -8,6 +8,49 @@ import java.io.FileOutputStream
 
 object AttachmentHelper {
 
+    const val MAX_ATTACHMENT_SIZE_BYTES: Long = 10L * 1024L * 1024L // 10MB
+
+    /**
+     * Resolves the size in bytes of a Uri using ContentResolver or File.
+     * Returns -1L if size cannot be determined.
+     */
+    fun getFileSize(context: Context, uri: Uri): Long {
+        if (uri.scheme == "content") {
+            try {
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val index = cursor.getColumnIndex(OpenableColumns.SIZE)
+                        if (index != -1 && !cursor.isNull(index)) {
+                            val size = cursor.getLong(index)
+                            if (size > 0) return size
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            try {
+                context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+                    val len = afd.length
+                    if (len > 0) return len
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        if (uri.scheme == "file") {
+            try {
+                uri.path?.let { path ->
+                    val file = File(path)
+                    if (file.exists()) return file.length()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return -1L
+    }
+
     /**
      * Resolves the display name of a Uri using ContentResolver.
      */
@@ -61,12 +104,17 @@ object AttachmentHelper {
         return try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 FileOutputStream(destFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
+                    val bytesCopied = inputStream.copyTo(outputStream)
+                    if (bytesCopied > MAX_ATTACHMENT_SIZE_BYTES) {
+                        destFile.delete()
+                        return null
+                    }
                 }
             }
             destFile
         } catch (e: Exception) {
             e.printStackTrace()
+            if (destFile.exists()) destFile.delete()
             null
         }
     }

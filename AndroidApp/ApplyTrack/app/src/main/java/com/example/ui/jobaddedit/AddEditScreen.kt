@@ -171,29 +171,55 @@ fun AddEditScreen(
     val resumeLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { resumeState = ScreenAttachment(uri = it) }
+        uri?.let {
+            val size = AttachmentHelper.getFileSize(context, it)
+            if (size > AttachmentHelper.MAX_ATTACHMENT_SIZE_BYTES) {
+                Toast.makeText(context, "File exceeds 10MB limit. Please choose a smaller PDF.", Toast.LENGTH_LONG).show()
+            } else {
+                resumeState = ScreenAttachment(uri = it)
+            }
+        }
     }
 
     val coverLetterLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { coverLetterState = ScreenAttachment(uri = it) }
+        uri?.let {
+            val size = AttachmentHelper.getFileSize(context, it)
+            if (size > AttachmentHelper.MAX_ATTACHMENT_SIZE_BYTES) {
+                Toast.makeText(context, "File exceeds 10MB limit. Please choose a smaller PDF.", Toast.LENGTH_LONG).show()
+            } else {
+                coverLetterState = ScreenAttachment(uri = it)
+            }
+        }
     }
 
     val additionalDocLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { additionalDocumentState = ScreenAttachment(uri = it) }
+        uri?.let {
+            val size = AttachmentHelper.getFileSize(context, it)
+            if (size > AttachmentHelper.MAX_ATTACHMENT_SIZE_BYTES) {
+                Toast.makeText(context, "File exceeds 10MB limit. Please choose a smaller PDF.", Toast.LENGTH_LONG).show()
+            } else {
+                additionalDocumentState = ScreenAttachment(uri = it)
+            }
+        }
     }
 
     val screenshotsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            if (screenshotsList.size < 3) {
-                screenshotsList = screenshotsList + ScreenAttachment(uri = it)
-            } else {
+            if (screenshotsList.size >= 3) {
                 Toast.makeText(context, "Maximum 3 screenshots allowed", Toast.LENGTH_SHORT).show()
+                return@let
+            }
+            val size = AttachmentHelper.getFileSize(context, it)
+            if (size > AttachmentHelper.MAX_ATTACHMENT_SIZE_BYTES) {
+                Toast.makeText(context, "Image exceeds 10MB limit. Please choose a smaller image.", Toast.LENGTH_LONG).show()
+            } else {
+                screenshotsList = screenshotsList + ScreenAttachment(uri = it)
             }
         }
     }

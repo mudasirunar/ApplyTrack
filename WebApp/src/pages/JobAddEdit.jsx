@@ -260,17 +260,27 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
     reader.readAsDataURL(file);
   };
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
   const handleFileUpload = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`File size exceeds the 10MB limit (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please upload a file smaller than 10MB.`);
+      e.target.value = '';
+      return;
+    }
+
     if (type === 'screenshot') {
       if (!file.type.startsWith('image/')) {
         alert('Please upload an image file only.');
+        e.target.value = '';
         return;
       }
       if (screenshots.length >= 3) {
         alert('You can upload a maximum of 3 screenshots/images.');
+        e.target.value = '';
         return;
       }
       compressImage(file, (compressedDataUrl) => {
@@ -281,9 +291,11 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
         };
         setScreenshots(prev => [...prev, attachment]);
       });
+      e.target.value = '';
     } else {
       if (file.type !== 'application/pdf') {
         alert('Please upload a PDF document only.');
+        e.target.value = '';
         return;
       }
       const reader = new FileReader();
@@ -299,6 +311,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
         if (type === 'additionalDocument') setAdditionalDocument(attachment);
       };
       reader.readAsDataURL(file);
+      e.target.value = '';
     }
   };
 
@@ -516,7 +529,9 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
 
           {/* Card 4: Documents & Attachments */}
           <div className="card-base form-card">
-            <h3 className="form-card-title">Documents & Attachments</h3>
+            <h3 className="form-card-title">
+              Documents & Attachments <span style={{ fontWeight: 500, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>(Max: 10MB each)</span>
+            </h3>
             <div className="file-upload-slots" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
               {/* Resume slot */}
@@ -651,7 +666,7 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
               {/* Screenshots list in Android-style grid */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Screenshots / Additional Images
+                  Screenshots / Additional Images <span style={{ fontWeight: 500, fontSize: '0.72rem' }}>(Max: 10MB each)</span>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   {screenshots.map((shot, index) => (
