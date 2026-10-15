@@ -8,7 +8,7 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://apply-track-web.vercel.app/og-preview.png</image:loc>
+      <image:loc>https://apply-track-web.vercel.app/og-preview.webp</image:loc>
       <image:title>ApplyTrack - Modern Job Application &amp; Resume Tracker</image:title>
       <image:caption>Preview of ApplyTrack cross-platform job application and resume analytics dashboard</image:caption>
     </image:image>
