@@ -234,18 +234,22 @@ export default function LaunchVideoPlayer() {
     if (!('mediaSession' in navigator)) return;
 
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const baseUrl = typeof window !== 'undefined' && window.location.protocol === 'https:'
+        ? window.location.origin
+        : 'https://apply-track-web.vercel.app';
+
       navigator.mediaSession.metadata = new MediaMetadata({
         title: 'Introducing ApplyTrack',
         artist: 'ApplyTrack Product Tour',
         album: 'Modern Career & Pipeline Suite',
         artwork: [
-          { src: `${origin}/app_icon-96.png`, sizes: '96x96', type: 'image/png' },
-          { src: `${origin}/app_icon-128.png`, sizes: '128x128', type: 'image/png' },
-          { src: `${origin}/app_icon-192.png`, sizes: '192x192', type: 'image/png' },
-          { src: `${origin}/app_icon-256.png`, sizes: '256x256', type: 'image/png' },
-          { src: `${origin}/app_icon-384.png`, sizes: '384x384', type: 'image/png' },
-          { src: `${origin}/app_icon.png`, sizes: '512x512', type: 'image/png' }
+          { src: `${baseUrl}/app_icon-96.png`, sizes: '96x96', type: 'image/png' },
+          { src: `${baseUrl}/app_icon-128.png`, sizes: '128x128', type: 'image/png' },
+          { src: `${baseUrl}/app_icon-192.png`, sizes: '192x192', type: 'image/png' },
+          { src: `${baseUrl}/app_icon-256.png`, sizes: '256x256', type: 'image/png' },
+          { src: `${baseUrl}/app_icon-384.png`, sizes: '384x384', type: 'image/png' },
+          { src: `${baseUrl}/app_icon.png`, sizes: '512x512', type: 'image/png' },
+          { src: 'https://apply-track-web.vercel.app/app_icon.png', sizes: '512x512', type: 'image/png' }
         ]
       });
 
