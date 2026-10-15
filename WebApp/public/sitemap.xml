@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://apply-track-web.vercel.app/</loc>
     <lastmod>2026-10-15</lastmod>
@@ -11,6 +12,27 @@
       <image:title>ApplyTrack - Modern Job Application &amp; Resume Tracker</image:title>
       <image:caption>Preview of ApplyTrack cross-platform job application and resume analytics dashboard</image:caption>
     </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://apply-track-web.vercel.app/videos/applytrack-poster.jpg</video:thumbnail_loc>
+      <video:title>Introducing ApplyTrack - Modern Job Application &amp; Resume Tracker</video:title>
+      <video:description>Explore ApplyTrack: the modern job application tracker and career pipeline manager. Learn how to organize applications across 5 stages, measure resume callback rates, manage CV attachments with Supabase cloud storage, and sync seamlessly between Android and Web.</video:description>
+      <video:content_loc>https://apply-track-web.vercel.app/videos/applytrack-launch.mp4</video:content_loc>
+      <video:player_loc>https://apply-track-web.vercel.app/#video-tour</video:player_loc>
+      <video:duration>18</video:duration>
+      <video:publication_date>2026-10-15T00:00:00Z</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+      <video:category>Technology &amp; Careers</video:category>
+      <video:tag>job tracker</video:tag>
+      <video:tag>job application tracker</video:tag>
+      <video:tag>resume tracker</video:tag>
+      <video:tag>career pipeline</video:tag>
+      <video:tag>resume callback analytics</video:tag>
+      <video:tag>job search organizer</video:tag>
+      <video:tag>android job tracking app</video:tag>
+      <video:tag>applytrack</video:tag>
+      <video:uploader info="https://mudasir.tech/">Mudasir Ali</video:uploader>
+      <video:live>no</video:live>
+    </video:video>
   </url>
   <url>
     <loc>https://apply-track-web.vercel.app/login</loc>

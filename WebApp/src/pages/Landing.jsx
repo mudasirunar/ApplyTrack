@@ -122,7 +122,24 @@ export default function Landing({ setActiveTab, user }) {
     return () => window.removeEventListener('applytrack_theme_change', handleThemeChange);
   }, []);
 
-  // Close mobile drawer on Escape key or window resize to desktop
+  // Auto-scroll to section on initial direct hash load (e.g. /#video-tour) and on hash changes
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setTimeout(() => {
+          const el = document.getElementById(hash);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 120);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') setIsMobileMenuOpen(false);
