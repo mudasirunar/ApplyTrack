@@ -41,6 +41,10 @@ export default defineConfig({
       }
     }
   ],
+  build: {
+    target: 'esnext',
+    cssTarget: ['chrome90', 'safari15', 'firefox90', 'edge90']
+  },
   server: {
     host: true,
     allowedHosts: 'all'
