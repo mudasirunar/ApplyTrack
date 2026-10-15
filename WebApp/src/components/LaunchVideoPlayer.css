@@ -6,6 +6,10 @@
   aspect-ratio: 16 / 9;
   background-color: #000000;
   overflow: hidden;
+  isolation: isolate;
+  contain: paint layout;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;

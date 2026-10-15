@@ -15,6 +15,11 @@ export default function LaunchVideoPlayer() {
   const controlsTimeoutRef = useRef(null);
   const userPausedRef = useRef(false);
   const wasPlayingBeforeScrollRef = useRef(true);
+  const wasPlayingBeforeTabHideRef = useRef(false);
+  const isIntersectingRef = useRef(false);
+  const isExitingIOSFullscreenRef = useRef(false);
+  const clickTimerRef = useRef(null);
+  const lastPlayingTimestampRef = useRef(0);
 
   // Format seconds to mm:ss
   const formatTime = (secs) => {
@@ -32,9 +37,10 @@ export default function LaunchVideoPlayer() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
+          isIntersectingRef.current = entry.isIntersecting;
           if (entry.isIntersecting) {
-            // Only auto-play if user did NOT explicitly pause the video
-            if (!userPausedRef.current) {
+            // Only auto-play if user did NOT explicitly pause the video and it was active
+            if (!userPausedRef.current && wasPlayingBeforeScrollRef.current) {
               video.play().then(() => setIsPlaying(true)).catch(() => {});
             }
           } else {
@@ -59,25 +65,74 @@ export default function LaunchVideoPlayer() {
     };
   }, []);
 
-  // Sync fullscreen state if user exits via Escape key or browser UI
+  // Sync fullscreen state across desktop, Android, and native iOS AVPlayer
   useEffect(() => {
+    const video = videoRef.current;
+
     const handleFullscreenChange = () => {
       const isNative = !!(document.fullscreenElement || document.webkitFullscreenElement);
       setIsFullscreen(isNative);
       if (!isNative) {
         document.body.style.overflow = '';
+        if (video && !userPausedRef.current && video.paused) {
+          video.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
       }
     };
+
+    const handleIOSBeginFullscreen = () => {
+      setIsFullscreen(true);
+      isExitingIOSFullscreenRef.current = false;
+      if (video && !video.paused) {
+        lastPlayingTimestampRef.current = Date.now();
+      }
+    };
+
+    const handleIOSEndFullscreen = () => {
+      setIsFullscreen(false);
+      document.body.style.overflow = '';
+      if (!video) return;
+
+      // Check if video was actively playing inside native player right before dismissal
+      const wasActivelyPlaying = !userPausedRef.current && (Date.now() - lastPlayingTimestampRef.current < 450);
+
+      if (wasActivelyPlaying) {
+        // Video was playing inside fullscreen: continue playback inline
+        isExitingIOSFullscreenRef.current = true;
+        video.play().catch(() => {});
+        setTimeout(() => {
+          if (video && video.paused && !userPausedRef.current) {
+            video.play().catch(() => {});
+          }
+          isExitingIOSFullscreenRef.current = false;
+        }, 350);
+      } else {
+        // Video was paused inside fullscreen: preserve paused state
+        isExitingIOSFullscreenRef.current = false;
+        userPausedRef.current = true;
+        setIsPlaying(false);
+      }
+    };
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    if (video) {
+      video.addEventListener('webkitbeginfullscreen', handleIOSBeginFullscreen);
+      video.addEventListener('webkitendfullscreen', handleIOSEndFullscreen);
+    }
+
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      if (video) {
+        video.removeEventListener('webkitbeginfullscreen', handleIOSBeginFullscreen);
+        video.removeEventListener('webkitendfullscreen', handleIOSEndFullscreen);
+      }
       document.body.style.overflow = '';
     };
   }, []);
 
-  // Listen for Escape key to exit pseudo-fullscreen on iOS / PWA / keyboards
+  // Listen for Escape key to exit fullscreen on desktop keyboards
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isFullscreen) {
@@ -94,14 +149,27 @@ export default function LaunchVideoPlayer() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
 
-  // Auto-pause when phone is locked or screen/tab is hidden
+  // Smart tab switch & phone screen lock handler:
+  // Auto-pause when leaving tab, auto-resume when reopening if it was playing and user didn't manually pause
   useEffect(() => {
     const handleVisibilityChange = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
       if (document.hidden) {
-        const video = videoRef.current;
-        if (video && !video.paused) {
+        // Tab hidden or phone locked: pause and remember if it was playing
+        if (!video.paused) {
+          wasPlayingBeforeTabHideRef.current = true;
           video.pause();
           setIsPlaying(false);
+        } else {
+          wasPlayingBeforeTabHideRef.current = false;
+        }
+      } else {
+        // Tab reopened or phone unlocked: auto-resume ONLY if it was playing before and user didn't explicitly pause
+        if (wasPlayingBeforeTabHideRef.current && !userPausedRef.current && isIntersectingRef.current) {
+          wasPlayingBeforeTabHideRef.current = false;
+          video.play().then(() => setIsPlaying(true)).catch(() => {});
         }
       }
     };
@@ -182,27 +250,59 @@ export default function LaunchVideoPlayer() {
     }
   }, [isPlaying]);
 
-  // Update progress bar & timecode
+  // Helper to sync MediaSession position state on discrete events per W3C spec
+  const updateMediaPositionState = useCallback(() => {
+    const video = videoRef.current;
+    if (video && video.duration && 'mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: video.duration,
+          playbackRate: video.playbackRate || 1,
+          position: video.currentTime
+        });
+      } catch {}
+    }
+  }, []);
+
+  // Update progress bar & timecode without hammering IPC on every tick
   const handleTimeUpdate = () => {
     const video = videoRef.current;
     if (video) {
+      if (!video.paused) {
+        lastPlayingTimestampRef.current = Date.now();
+      }
       setCurrentTime(video.currentTime);
       if (video.duration) {
         setDuration(video.duration);
         setProgress((video.currentTime / video.duration) * 100);
-
-        if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
-          try {
-            navigator.mediaSession.setPositionState({
-              duration: video.duration,
-              playbackRate: video.playbackRate || 1,
-              position: video.currentTime
-            });
-          } catch {}
-        }
       }
     }
   };
+
+  // Native video event handlers to guarantee React UI state ALWAYS matches reality
+  const handleVideoPlay = useCallback(() => {
+    isExitingIOSFullscreenRef.current = false;
+    userPausedRef.current = false;
+    lastPlayingTimestampRef.current = Date.now();
+    setIsPlaying(true);
+    setIsBuffering(false);
+    updateMediaPositionState();
+  }, [updateMediaPositionState]);
+
+  const handleVideoPause = useCallback(() => {
+    // If WebKit auto-paused because of iOS native player dismissal and user didn't explicitly pause, resume immediately
+    if (isExitingIOSFullscreenRef.current && !userPausedRef.current) {
+      const video = videoRef.current;
+      if (video) {
+        video.play().catch(() => {});
+        return;
+      }
+    }
+    // Record explicit pause (whether on landing page or inside native iOS controls)
+    userPausedRef.current = true;
+    setIsPlaying(false);
+    updateMediaPositionState();
+  }, [updateMediaPositionState]);
 
   // Toggle play/pause (User explicit interaction)
   const togglePlay = useCallback(() => {
@@ -213,13 +313,14 @@ export default function LaunchVideoPlayer() {
       // User explicitly resumed playback
       userPausedRef.current = false;
       wasPlayingBeforeScrollRef.current = true;
-      video.play().then(() => setIsPlaying(true)).catch(() => {});
+      wasPlayingBeforeTabHideRef.current = false;
+      video.play().catch(() => {});
     } else {
-      // User explicitly paused playback: remember choice so it won't auto-play on scroll
+      // User explicitly paused playback: remember choice so it won't auto-play on scroll or tab switch
       userPausedRef.current = true;
       wasPlayingBeforeScrollRef.current = false;
+      wasPlayingBeforeTabHideRef.current = false;
       video.pause();
-      setIsPlaying(false);
     }
   }, []);
 
@@ -233,12 +334,29 @@ export default function LaunchVideoPlayer() {
     setIsMuted(video.muted);
   }, []);
 
-  // Toggle Fullscreen (Universal Mobile, iOS Safari/Chrome, PWA & Desktop)
+  // Toggle Fullscreen (Native iOS AVPlayer on iPhone/iPad, HTML5 Fullscreen on Desktop/Android)
   const toggleFullscreen = useCallback((e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
+    const video = videoRef.current;
     const container = containerRef.current;
-    if (!container) return;
+    if (!video || !container) return;
 
+    // 1. iOS / iPhone Native Fullscreen: Trigger native AVPlayerViewController
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isIOS && typeof video.webkitEnterFullscreen === 'function') {
+      if (video.webkitDisplayingFullscreen) {
+        if (typeof video.webkitExitFullscreen === 'function') {
+          video.webkitExitFullscreen();
+        }
+      } else {
+        video.webkitEnterFullscreen();
+      }
+      return;
+    }
+
+    // 2. Standard HTML5 Fullscreen API (Desktop, Android Chrome, etc.)
     const isNativeFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
 
     if (isFullscreen || isNativeFullscreen) {
@@ -250,30 +368,21 @@ export default function LaunchVideoPlayer() {
       setIsFullscreen(false);
       document.body.style.overflow = '';
     } else {
-      let nativeRequested = false;
-      try {
-        if (container.requestFullscreen) {
-          container.requestFullscreen().then(() => {
-            setIsFullscreen(true);
-          }).catch(() => {
-            // iOS Chrome / PWA or permission denial fallback
-            setIsFullscreen(true);
-            document.body.style.overflow = 'hidden';
-          });
-          nativeRequested = true;
-        } else if (container.webkitRequestFullscreen) {
-          container.webkitRequestFullscreen();
+      if (container.requestFullscreen) {
+        container.requestFullscreen().then(() => {
           setIsFullscreen(true);
-          nativeRequested = true;
-        }
-      } catch {
-        nativeRequested = false;
-      }
-
-      if (!nativeRequested) {
-        // iOS WebKit & iOS PWA where container.requestFullscreen is unsupported on <div>
+        }).catch(() => {
+          if (typeof video.webkitEnterFullscreen === 'function') {
+            video.webkitEnterFullscreen();
+          } else if (video.requestFullscreen) {
+            video.requestFullscreen().catch(() => {});
+          }
+        });
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
         setIsFullscreen(true);
-        document.body.style.overflow = 'hidden';
+      } else if (typeof video.webkitEnterFullscreen === 'function') {
+        video.webkitEnterFullscreen();
       }
     }
   }, [isFullscreen]);
@@ -322,18 +431,66 @@ export default function LaunchVideoPlayer() {
   useEffect(() => {
     return () => {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     };
   }, []);
 
+  // Handle click / tap on the video stage:
+  // - Mobile: Instant (0ms delay) single tap to reveal controls or play/pause
+  // - Desktop: Debounce single click by 220ms so double-clicking immediately toggles fullscreen without play/pause stutter
+  const handleWrapperInteraction = useCallback((e) => {
+    // If the click came from inside the control bar, ignore
+    if (e && e.target && e.target.closest && e.target.closest('.launch-video-controls')) {
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Desktop check: fine pointer (mouse / trackpad)
+    const isDesktop = typeof window !== 'undefined' && 
+      window.matchMedia && 
+      window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    // Mobile: Instant zero-delay response
+    if (!isDesktop) {
+      if (!video.paused && !showControls) {
+        resetControlsTimer();
+        return;
+      }
+      togglePlay();
+      return;
+    }
+
+    // Desktop: Double-click detection (2nd click within 220ms cancels single click)
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+      toggleFullscreen(e);
+      return;
+    }
+
+    // First click on desktop: schedule single click action
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      if (!video.paused && !showControls) {
+        resetControlsTimer();
+        return;
+      }
+      togglePlay();
+    }, 220);
+  }, [showControls, resetControlsTimer, togglePlay, toggleFullscreen]);
+
+  const isDOMFullscreen = isFullscreen && !!(document.fullscreenElement || document.webkitFullscreenElement);
+
   return (
     <div 
-      className={`launch-video-wrapper ${!showControls && isPlaying ? 'controls-hidden' : ''} ${isFullscreen ? 'is-fullscreen-mode' : ''}`} 
+      className={`launch-video-wrapper ${!showControls && isPlaying ? 'controls-hidden' : ''} ${isDOMFullscreen ? 'is-fullscreen-mode' : ''}`} 
       ref={containerRef}
       onMouseMove={resetControlsTimer}
       onMouseEnter={resetControlsTimer}
       onMouseLeave={handleMouseLeave}
-      onTouchStart={resetControlsTimer}
-      onClick={togglePlay}
+      onClick={handleWrapperInteraction}
     >
       <video
         ref={videoRef}
@@ -345,13 +502,21 @@ export default function LaunchVideoPlayer() {
         preload="metadata"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={(e) => {
-          if (e.currentTarget.duration) setDuration(e.currentTarget.duration);
+          if (e.currentTarget.duration) {
+            setDuration(e.currentTarget.duration);
+            updateMediaPositionState();
+          }
         }}
         onWaiting={() => setIsBuffering(true)}
-        onPlaying={() => setIsBuffering(false)}
+        onPlay={handleVideoPlay}
+        onPlaying={handleVideoPlay}
+        onPause={handleVideoPause}
         onCanPlay={() => setIsBuffering(false)}
         onSeeking={() => setIsBuffering(true)}
-        onSeeked={() => setIsBuffering(false)}
+        onSeeked={() => {
+          setIsBuffering(false);
+          updateMediaPositionState();
+        }}
         aria-label="ApplyTrack Product Tour Video"
       >
         <source src="/videos/applytrack-launch.webm" type="video/webm" />
