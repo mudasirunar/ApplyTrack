@@ -161,12 +161,17 @@ video.launch-video-element:-webkit-full-screen {
 }
 
 .launch-video-controls > * {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .launch-video-controls.controls-visible {
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
+}
+
+.launch-video-controls.controls-visible > * {
+  pointer-events: auto;
 }
 
 .launch-video-wrapper.controls-hidden {

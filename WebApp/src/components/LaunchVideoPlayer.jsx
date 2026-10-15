@@ -13,6 +13,7 @@ export default function LaunchVideoPlayer() {
   const [duration, setDuration] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
   const controlsTimeoutRef = useRef(null);
+  const showControlsRef = useRef(true);
   const userPausedRef = useRef(false);
   const wasPlayingBeforeScrollRef = useRef(true);
   const wasPlayingBeforeTabHideRef = useRef(false);
@@ -29,6 +30,49 @@ export default function LaunchVideoPlayer() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // Fade out controls after 2.5s of inactivity, or on mouse leave
+  const resetControlsTimer = useCallback(() => {
+    setShowControls(true);
+    showControlsRef.current = true;
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      const video = videoRef.current;
+      if (video && !video.paused) {
+        setShowControls(false);
+        showControlsRef.current = false;
+      }
+    }, 2500);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    const video = videoRef.current;
+    if (video && !video.paused) {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+      setShowControls(false);
+      showControlsRef.current = false;
+    }
+  }, []);
+
+  const handleMouseMove = useCallback(() => {
+    const isTouchDevice = typeof window !== 'undefined' && (
+      ('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0) ||
+      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+    );
+    if (isTouchDevice) return;
+    resetControlsTimer();
+  }, [resetControlsTimer]);
+
+  const handleMouseEnter = useCallback(() => {
+    const isTouchDevice = typeof window !== 'undefined' && (
+      ('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0) ||
+      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+    );
+    if (isTouchDevice) return;
+    resetControlsTimer();
+  }, [resetControlsTimer]);
+
   // IntersectionObserver: Auto-play when scrolled in, auto-pause when out of view
   useEffect(() => {
     const video = videoRef.current;
@@ -41,7 +85,11 @@ export default function LaunchVideoPlayer() {
           if (entry.isIntersecting) {
             // Only auto-play if user did NOT explicitly pause the video and it was active
             if (!userPausedRef.current && wasPlayingBeforeScrollRef.current) {
-              video.play().then(() => setIsPlaying(true)).catch(() => {});
+              video.play().then(() => {
+                setIsPlaying(true);
+                // When reached for first time or resumed: UI controls visible, start 2.5s timeout
+                resetControlsTimer();
+              }).catch(() => {});
             }
           } else {
             // When leaving view, pause playback and track whether it was active
@@ -63,7 +111,7 @@ export default function LaunchVideoPlayer() {
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [resetControlsTimer]);
 
   // Sync fullscreen state across desktop, Android, and native iOS AVPlayer
   useEffect(() => {
@@ -182,14 +230,18 @@ export default function LaunchVideoPlayer() {
     if (!('mediaSession' in navigator)) return;
 
     try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
       navigator.mediaSession.metadata = new MediaMetadata({
         title: 'Introducing ApplyTrack',
         artist: 'ApplyTrack Product Tour',
         album: 'Modern Career & Pipeline Suite',
         artwork: [
-          { src: '/app_icon.png', sizes: '192x192', type: 'image/png' },
-          { src: '/og-preview.png', sizes: '1200x630', type: 'image/png' },
-          { src: '/videos/applytrack-poster.jpg', sizes: '1280x720', type: 'image/jpeg' }
+          { src: `${origin}/app_icon-96.png`, sizes: '96x96', type: 'image/png' },
+          { src: `${origin}/app_icon-128.png`, sizes: '128x128', type: 'image/png' },
+          { src: `${origin}/app_icon-192.png`, sizes: '192x192', type: 'image/png' },
+          { src: `${origin}/app_icon-256.png`, sizes: '256x256', type: 'image/png' },
+          { src: `${origin}/app_icon-384.png`, sizes: '384x384', type: 'image/png' },
+          { src: `${origin}/app_icon.png`, sizes: '512x512', type: 'image/png' }
         ]
       });
 
@@ -287,7 +339,8 @@ export default function LaunchVideoPlayer() {
     setIsPlaying(true);
     setIsBuffering(false);
     updateMediaPositionState();
-  }, [updateMediaPositionState]);
+    resetControlsTimer();
+  }, [updateMediaPositionState, resetControlsTimer]);
 
   const handleVideoPause = useCallback(() => {
     // If WebKit auto-paused because of iOS native player dismissal and user didn't explicitly pause, resume immediately
@@ -298,8 +351,10 @@ export default function LaunchVideoPlayer() {
         return;
       }
     }
-    // Record explicit pause (whether on landing page or inside native iOS controls)
-    userPausedRef.current = true;
+    // Only record userPaused if the user explicitly tapped Pause while inside native iOS fullscreen
+    if (videoRef.current && videoRef.current.webkitDisplayingFullscreen && !isExitingIOSFullscreenRef.current) {
+      userPausedRef.current = true;
+    }
     setIsPlaying(false);
     updateMediaPositionState();
   }, [updateMediaPositionState]);
@@ -398,35 +453,14 @@ export default function LaunchVideoPlayer() {
     video.currentTime = pos * video.duration;
   };
 
-  // Fade out controls after 2.2s of inactivity (even if hovering stationary), or on mouse leave
-  const resetControlsTimer = useCallback(() => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = setTimeout(() => {
-      const video = videoRef.current;
-      if (video && !video.paused) {
-        setShowControls(false);
-      }
-    }, 2200);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    const video = videoRef.current;
-    if (video && !video.paused) {
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-      setShowControls(false);
-    }
-  }, []);
-
   // When paused, always ensure controls are visible
   useEffect(() => {
     if (!isPlaying) {
       setShowControls(true);
+      showControlsRef.current = true;
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    } else {
-      resetControlsTimer();
     }
-  }, [isPlaying, resetControlsTimer]);
+  }, [isPlaying]);
 
   useEffect(() => {
     return () => {
@@ -447,17 +481,22 @@ export default function LaunchVideoPlayer() {
     const video = videoRef.current;
     if (!video) return;
 
-    // Desktop check: fine pointer (mouse / trackpad)
-    const isDesktop = typeof window !== 'undefined' && 
-      window.matchMedia && 
-      window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    // Detect mobile/touch devices reliably
+    const isTouchDevice = typeof window !== 'undefined' && (
+      ('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0) ||
+      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+      (window.matchMedia && !window.matchMedia('(hover: hover)').matches)
+    );
 
-    // Mobile: Instant zero-delay response
-    if (!isDesktop) {
-      if (!video.paused && !showControls) {
+    // Mobile / Phone: Instant zero-delay response
+    if (isTouchDevice) {
+      if (!video.paused && !showControlsRef.current) {
+        // Controls were hidden: single tap ONLY reveals controls, DOES NOT toggle play/pause!
         resetControlsTimer();
         return;
       }
+      // Controls were visible: tap behaves as command (toggles play/pause)!
       togglePlay();
       return;
     }
@@ -473,13 +512,13 @@ export default function LaunchVideoPlayer() {
     // First click on desktop: schedule single click action
     clickTimerRef.current = setTimeout(() => {
       clickTimerRef.current = null;
-      if (!video.paused && !showControls) {
+      if (!video.paused && !showControlsRef.current) {
         resetControlsTimer();
         return;
       }
       togglePlay();
     }, 220);
-  }, [showControls, resetControlsTimer, togglePlay, toggleFullscreen]);
+  }, [resetControlsTimer, togglePlay, toggleFullscreen]);
 
   const isDOMFullscreen = isFullscreen && !!(document.fullscreenElement || document.webkitFullscreenElement);
 
@@ -487,8 +526,8 @@ export default function LaunchVideoPlayer() {
     <div 
       className={`launch-video-wrapper ${!showControls && isPlaying ? 'controls-hidden' : ''} ${isDOMFullscreen ? 'is-fullscreen-mode' : ''}`} 
       ref={containerRef}
-      onMouseMove={resetControlsTimer}
-      onMouseEnter={resetControlsTimer}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleWrapperInteraction}
     >
