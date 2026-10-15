@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppIcon } from '../components/Icons';
 import { db } from '../utils/db';
 import packageJson from '../../package.json';
+import LaunchVideoPlayer from '../components/LaunchVideoPlayer';
 import './Landing.css';
 
 // SVG Icons matching the real app components
@@ -171,7 +172,6 @@ export default function Landing({ setActiveTab, user }) {
       dateText: 'Interview on Oct 2, 2026',
       platform: 'LinkedIn',
       resumeName: 'Resume_Staff_Frontend.pdf',
-      salary: '$185,000 / yr',
       notes: 'System design with engineering manager completed. Next: Team technical discussion.'
     },
     {
@@ -183,7 +183,6 @@ export default function Landing({ setActiveTab, user }) {
       dateText: 'Offer received Sep 20, 2026',
       platform: 'Company Careers',
       resumeName: 'Resume_Android_Kotlin.pdf',
-      salary: '$195,000 / yr',
       notes: 'Official offer package received. Evaluating stock grants and benefits.'
     },
     {
@@ -195,7 +194,6 @@ export default function Landing({ setActiveTab, user }) {
       dateText: 'Applied on Sep 22, 2026',
       platform: 'Google Careers',
       resumeName: 'Resume_FullStack.pdf',
-      salary: '$170,000 / yr',
       notes: 'Referred by senior software engineer. Waiting for recruiter screening reach-out.'
     }
   ];
@@ -418,13 +416,14 @@ export default function Landing({ setActiveTab, user }) {
                 </svg>
               </a>
 
+
               <a 
                 href="#how-it-works" 
                 onClick={(e) => { e.preventDefault(); scrollToSection('how-it-works'); }} 
                 className="btn-secondary hero-secondary-btn"
                 style={{ textDecoration: 'none' }}
               >
-                <span>See How It Works</span>
+                <span>How It Works</span>
               </a>
             </div>
 
@@ -449,8 +448,8 @@ export default function Landing({ setActiveTab, user }) {
             </div>
           </div>
 
-          {/* REAL APP UI SHOWCASE (Authentic Dashboard + Card view) */}
-          <div className="real-app-showcase-container">
+          {/* REAL APP UI SHOWCASE (Interactive Mockup) */}
+          <div id="product-showcase" className="real-app-showcase-container">
             <div className="real-app-window card-base">
               {/* Browser Window Header */}
               <div className="real-window-header">
@@ -459,16 +458,9 @@ export default function Landing({ setActiveTab, user }) {
                   <span className="w-dot w-dot-min" />
                   <span className="w-dot w-dot-max" />
                 </div>
-                <div className="window-address-bar">
-                  <span className="window-url">applytrack.app/dashboard</span>
-                </div>
-                <div className="window-sync-status">
-                  <span className="sync-pulse-dot" />
-                  <span>Synced</span>
-                </div>
               </div>
 
-              {/* Realistic Dashboard Top Row */}
+              {/* Interactive Mockup Body */}
               <div className="showcase-dashboard-body">
                 <div className="showcase-metrics-bar">
                   <div className="showcase-stat-box card-base">
@@ -541,10 +533,6 @@ export default function Landing({ setActiveTab, user }) {
                                 <CalendarIcon />
                                 <span>{sample.dateText}</span>
                               </div>
-                              <div className="job-card-detail-item">
-                                <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>Salary:</span>
-                                <span>{sample.salary}</span>
-                              </div>
                             </div>
                           </div>
 
@@ -571,6 +559,70 @@ export default function Landing({ setActiveTab, user }) {
                       </div>
                     );
                   })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DEDICATED PRODUCT VIDEO TOUR SECTION */}
+      <section id="video-tour" className="landing-section landing-video-section">
+        <div className="landing-container">
+          <div className="section-title-center">
+            <span className="section-tag">Platform Overview</span>
+            <h2 className="section-title-text">Introducing ApplyTrack</h2>
+            <p className="section-title-sub">
+              A concise overview showcasing structured pipeline tracking, cross-device synchronization, and integrated document management.
+            </p>
+          </div>
+
+          <div className="video-tour-container">
+            <div className="video-tour-stage">
+              <div className="video-tour-screen">
+                <LaunchVideoPlayer />
+              </div>
+            </div>
+
+            {/* Video Feature Highlights */}
+            <div className="video-tour-highlights">
+              <div className="video-highlight-item">
+                <div className="highlight-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                    <line x1="12" y1="18" x2="12.01" y2="18" />
+                  </svg>
+                </div>
+                <div>
+                  <strong>Native Android Offline Mode</strong>
+                  <span>Record and review job entries on Android with local Room database storage, even without internet access.</span>
+                </div>
+              </div>
+
+              <div className="video-highlight-item">
+                <div className="highlight-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                  </svg>
+                </div>
+                <div>
+                  <strong>Cloud Sync &amp; Backup</strong>
+                  <span>Automatic background sync keeps your desktop web dashboard and Android app aligned.</span>
+                </div>
+              </div>
+
+              <div className="video-highlight-item">
+                <div className="highlight-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                </div>
+                <div>
+                  <strong>Resume &amp; Document Vault</strong>
+                  <span>Attach and preview PDFs, cover letters, and notes directly per application.</span>
                 </div>
               </div>
             </div>
