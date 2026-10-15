@@ -62,15 +62,125 @@ export default function LaunchVideoPlayer() {
   // Sync fullscreen state if user exits via Escape key or browser UI
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!(document.fullscreenElement || document.webkitFullscreenElement));
+      const isNative = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      setIsFullscreen(isNative);
+      if (!isNative) {
+        document.body.style.overflow = '';
+      }
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.body.style.overflow = '';
     };
   }, []);
+
+  // Listen for Escape key to exit pseudo-fullscreen on iOS / PWA / keyboards
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+        setIsFullscreen(false);
+        document.body.style.overflow = '';
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
+  // Auto-pause when phone is locked or screen/tab is hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        const video = videoRef.current;
+        if (video && !video.paused) {
+          video.pause();
+          setIsPlaying(false);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Web Media Session API for Dynamic Island, Lock Screen & Notification Center Controls
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Introducing ApplyTrack',
+        artist: 'ApplyTrack Product Tour',
+        album: 'Modern Career & Pipeline Suite',
+        artwork: [
+          { src: '/app_icon.png', sizes: '192x192', type: 'image/png' },
+          { src: '/og-preview.png', sizes: '1200x630', type: 'image/png' },
+          { src: '/videos/applytrack-poster.jpg', sizes: '1280x720', type: 'image/jpeg' }
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        const video = videoRef.current;
+        if (video) {
+          userPausedRef.current = false;
+          video.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        const video = videoRef.current;
+        if (video) {
+          userPausedRef.current = true;
+          video.pause();
+          setIsPlaying(false);
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        const video = videoRef.current;
+        if (video && details.seekTime !== undefined) {
+          video.currentTime = details.seekTime;
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const video = videoRef.current;
+        if (video) {
+          const skip = details.seekOffset || 5;
+          video.currentTime = Math.max(video.currentTime - skip, 0);
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const video = videoRef.current;
+        if (video) {
+          const skip = details.seekOffset || 5;
+          video.currentTime = Math.min(video.currentTime + skip, video.duration || 0);
+        }
+      });
+    } catch {}
+
+    return () => {
+      if ('mediaSession' in navigator) {
+        try {
+          navigator.mediaSession.metadata = null;
+        } catch {}
+      }
+    };
+  }, []);
+
+  // Sync MediaSession playbackState with player state
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
 
   // Update progress bar & timecode
   const handleTimeUpdate = () => {
@@ -80,6 +190,16 @@ export default function LaunchVideoPlayer() {
       if (video.duration) {
         setDuration(video.duration);
         setProgress((video.currentTime / video.duration) * 100);
+
+        if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: video.duration,
+              playbackRate: video.playbackRate || 1,
+              position: video.currentTime
+            });
+          } catch {}
+        }
       }
     }
   };
@@ -113,26 +233,50 @@ export default function LaunchVideoPlayer() {
     setIsMuted(video.muted);
   }, []);
 
-  // Toggle Fullscreen
+  // Toggle Fullscreen (Universal Mobile, iOS Safari/Chrome, PWA & Desktop)
   const toggleFullscreen = useCallback((e) => {
     e.stopPropagation();
     const container = containerRef.current;
     if (!container) return;
 
-    if (!document.fullscreenElement) {
-      if (container.requestFullscreen) {
-        container.requestFullscreen();
-      } else if (container.webkitRequestFullscreen) {
-        container.webkitRequestFullscreen();
-      }
-      setIsFullscreen(true);
-    } else {
+    const isNativeFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+    if (isFullscreen || isNativeFullscreen) {
       if (document.exitFullscreen) {
-        document.exitFullscreen();
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
       }
       setIsFullscreen(false);
+      document.body.style.overflow = '';
+    } else {
+      let nativeRequested = false;
+      try {
+        if (container.requestFullscreen) {
+          container.requestFullscreen().then(() => {
+            setIsFullscreen(true);
+          }).catch(() => {
+            // iOS Chrome / PWA or permission denial fallback
+            setIsFullscreen(true);
+            document.body.style.overflow = 'hidden';
+          });
+          nativeRequested = true;
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+          setIsFullscreen(true);
+          nativeRequested = true;
+        }
+      } catch {
+        nativeRequested = false;
+      }
+
+      if (!nativeRequested) {
+        // iOS WebKit & iOS PWA where container.requestFullscreen is unsupported on <div>
+        setIsFullscreen(true);
+        document.body.style.overflow = 'hidden';
+      }
     }
-  }, []);
+  }, [isFullscreen]);
 
   // Handle seeking by clicking on the progress bar
   const handleProgressClick = (e) => {
@@ -183,7 +327,7 @@ export default function LaunchVideoPlayer() {
 
   return (
     <div 
-      className={`launch-video-wrapper ${!showControls && isPlaying ? 'controls-hidden' : ''}`} 
+      className={`launch-video-wrapper ${!showControls && isPlaying ? 'controls-hidden' : ''} ${isFullscreen ? 'is-fullscreen-mode' : ''}`} 
       ref={containerRef}
       onMouseMove={resetControlsTimer}
       onMouseEnter={resetControlsTimer}

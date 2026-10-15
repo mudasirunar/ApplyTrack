@@ -11,19 +11,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
 
-  <!-- Synchronous Anti-Clickjacking & Theme Initializer -->
+  <!-- Synchronous Theme Initializer -->
   <script>
     (function() {
-      // Anti-Clickjacking: Disarm any attempt to embed ApplyTrack in a third-party iframe
-      try {
-        if (window.top !== window.self) {
-          window.top.location = window.self.location;
-        }
-      } catch {
-        // If an attacker sandbox blocks top navigation, hide the UI to prevent interaction
-        document.documentElement.style.display = 'none';
-      }
-
       const savedTheme = localStorage.getItem('applytrack_theme') || 'system';
       let themeToSet = savedTheme;
       if (savedTheme === 'system') {
