@@ -111,6 +111,7 @@ video.launch-video-element:-webkit-full-screen {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  -webkit-transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 15;
   width: 68px;
@@ -124,7 +125,20 @@ video.launch-video-element:-webkit-full-screen {
   align-items: center;
   justify-content: center;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  animation: fadeIn 0.15s ease-out;
+  animation: spinnerPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes spinnerPopIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.88);
+    -webkit-transform: translate(-50%, -50%) scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    -webkit-transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .video-spinner-ring {

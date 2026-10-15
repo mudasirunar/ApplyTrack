@@ -21,6 +21,7 @@ export default function LaunchVideoPlayer() {
   const isExitingIOSFullscreenRef = useRef(false);
   const clickTimerRef = useRef(null);
   const lastPlayingTimestampRef = useRef(0);
+  const hasShownInitialControlsRef = useRef(false);
 
   // Format seconds to mm:ss
   const formatTime = (secs) => {
@@ -87,8 +88,11 @@ export default function LaunchVideoPlayer() {
             if (!userPausedRef.current && wasPlayingBeforeScrollRef.current) {
               video.play().then(() => {
                 setIsPlaying(true);
-                // When reached for first time or resumed: UI controls visible, start 2.5s timeout
-                resetControlsTimer();
+                // Only show controls on first reach after page load/refresh
+                if (!hasShownInitialControlsRef.current) {
+                  hasShownInitialControlsRef.current = true;
+                  resetControlsTimer();
+                }
               }).catch(() => {});
             }
           } else {
@@ -322,14 +326,38 @@ export default function LaunchVideoPlayer() {
     if (video) {
       if (!video.paused) {
         lastPlayingTimestampRef.current = Date.now();
+        // Clear buffering flag immediately when frames are advancing
+        setIsBuffering((prev) => (prev ? false : prev));
       }
       setCurrentTime(video.currentTime);
       if (video.duration) {
         setDuration(video.duration);
         setProgress((video.currentTime / video.duration) * 100);
+
+        // Fail-safe auto-replay loop for iOS Safari & PWA standalone webviews:
+        // Some iOS WebKit versions stall right before EOF instead of native seamless wrap
+        if (video.currentTime >= video.duration - 0.12 && !userPausedRef.current) {
+          video.currentTime = 0;
+          if (video.paused) {
+            video.play().catch(() => {});
+          }
+        }
       }
     }
   };
+
+  // Guarantee loop replay if native loop event drops on iOS/PWA
+  const handleEnded = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    if (!userPausedRef.current) {
+      video.play().then(() => {
+        setIsPlaying(true);
+        setIsBuffering(false);
+      }).catch(() => {});
+    }
+  }, []);
 
   // Native video event handlers to guarantee React UI state ALWAYS matches reality
   const handleVideoPlay = useCallback(() => {
@@ -339,7 +367,12 @@ export default function LaunchVideoPlayer() {
     setIsPlaying(true);
     setIsBuffering(false);
     updateMediaPositionState();
-    resetControlsTimer();
+
+    // Only auto-show controls on initial page load / first reach, NEVER on loop replays
+    if (!hasShownInitialControlsRef.current) {
+      hasShownInitialControlsRef.current = true;
+      resetControlsTimer();
+    }
   }, [updateMediaPositionState, resetControlsTimer]);
 
   const handleVideoPause = useCallback(() => {
@@ -370,6 +403,7 @@ export default function LaunchVideoPlayer() {
       wasPlayingBeforeScrollRef.current = true;
       wasPlayingBeforeTabHideRef.current = false;
       video.play().catch(() => {});
+      resetControlsTimer();
     } else {
       // User explicitly paused playback: remember choice so it won't auto-play on scroll or tab switch
       userPausedRef.current = true;
@@ -377,7 +411,7 @@ export default function LaunchVideoPlayer() {
       wasPlayingBeforeTabHideRef.current = false;
       video.pause();
     }
-  }, []);
+  }, [resetControlsTimer]);
 
   // Toggle audio
   const toggleMute = useCallback((e) => {
@@ -387,7 +421,8 @@ export default function LaunchVideoPlayer() {
 
     video.muted = !video.muted;
     setIsMuted(video.muted);
-  }, []);
+    resetControlsTimer();
+  }, [resetControlsTimer]);
 
   // Toggle Fullscreen (Native iOS AVPlayer on iPhone/iPad, HTML5 Fullscreen on Desktop/Android)
   const toggleFullscreen = useCallback((e) => {
@@ -451,6 +486,7 @@ export default function LaunchVideoPlayer() {
     const rect = e.currentTarget.getBoundingClientRect();
     const pos = (e.clientX - rect.left) / rect.width;
     video.currentTime = pos * video.duration;
+    resetControlsTimer();
   };
 
   // When paused, always ensure controls are visible
@@ -548,18 +584,29 @@ export default function LaunchVideoPlayer() {
         }}
         onWaiting={() => setIsBuffering(true)}
         onPlay={handleVideoPlay}
-        onPlaying={handleVideoPlay}
+        onPlaying={() => {
+          handleVideoPlay();
+          setIsBuffering(false);
+        }}
         onPause={handleVideoPause}
         onCanPlay={() => setIsBuffering(false)}
-        onSeeking={() => setIsBuffering(true)}
+        onCanPlayThrough={() => setIsBuffering(false)}
+        onSeeking={() => {
+          const video = videoRef.current;
+          // Only show buffering indicator on user scrubs, never on zero-point loop restarts
+          if (video && video.currentTime > 0.25 && video.duration && video.currentTime < video.duration - 0.25) {
+            setIsBuffering(true);
+          }
+        }}
         onSeeked={() => {
           setIsBuffering(false);
           updateMediaPositionState();
         }}
+        onEnded={handleEnded}
         aria-label="ApplyTrack Product Tour Video"
       >
-        <source src="/videos/applytrack-launch.webm" type="video/webm" />
         <source src="/videos/applytrack-launch.mp4" type="video/mp4" />
+        <source src="/videos/applytrack-launch.webm" type="video/webm" />
         Your browser does not support HTML5 video.
       </video>
 
