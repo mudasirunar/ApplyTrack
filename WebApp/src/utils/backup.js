@@ -1,5 +1,5 @@
 import { zip, unzip, strToU8, strFromU8 } from 'fflate';
-import { db } from './db';
+import { db, generateUuid } from './db';
 import { auth, firestore } from './firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -311,9 +311,10 @@ export async function importBackup(importedApps, unzipped, overwrite, onProgress
       // 2. Prepare cleaned Firestore metadata object
       const cleanAttachment = (att) => att ? { fileName: att.fileName, originalName: att.originalName } : null;
 
+      const targetUuid = match ? match.uuid : (importedApp.uuid || generateUuid());
       const serializedApp = {
-        id: match ? match.id : (existingApps.length > 0 ? Math.max(...existingApps.map(a => a.id)) + 1 : 1),
-        uuid: importedApp.uuid,
+        id: targetUuid,
+        uuid: targetUuid,
         companyName: importedApp.companyName || null,
         role: importedApp.role || null,
         platform: importedApp.platform || 'Direct',

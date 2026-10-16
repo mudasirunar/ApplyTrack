@@ -1,0 +1,165 @@
+/* 404 NOT FOUND STYLES */
+.not-found-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.not-found-header {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--brand-outline);
+  padding: 14px 24px;
+}
+
+.not-found-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.not-found-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.not-found-brand-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.not-found-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.not-found-card {
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--brand-outline);
+  border-radius: var(--border-radius-lg, 16px);
+  padding: 48px 32px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.not-found-badge {
+  font-size: 5rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, var(--brand-primary), #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 16px;
+  user-select: none;
+}
+
+.not-found-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+  letter-spacing: -0.02em;
+}
+
+.not-found-description {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0 0 32px 0;
+  max-width: 380px;
+}
+
+.not-found-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.not-found-btn {
+  padding: 12px 24px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: var(--border-radius-sm, 8px);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--transition-fast, 0.15s ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 150px;
+}
+
+.not-found-btn-primary {
+  background-color: var(--brand-primary);
+  color: var(--text-on-primary, #ffffff);
+  border: none;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+}
+
+.not-found-btn-primary:hover {
+  background-color: var(--brand-primary-hover);
+  transform: translateY(-1px);
+}
+
+.not-found-btn-secondary {
+  background-color: var(--bg-surface-variant);
+  color: var(--text-primary);
+  border: 1px solid var(--brand-outline);
+}
+
+.not-found-btn-secondary:hover {
+  background-color: var(--brand-outline-light);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+  .not-found-card {
+    padding: 36px 20px;
+  }
+
+  .not-found-badge {
+    font-size: 4rem;
+  }
+
+  .not-found-title {
+    font-size: 1.35rem;
+  }
+
+  .not-found-description {
+    font-size: 0.88rem;
+  }
+
+  .not-found-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .not-found-btn {
+    width: 100%;
+  }
+}

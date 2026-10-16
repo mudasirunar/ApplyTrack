@@ -1,6 +1,7 @@
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, firestore } from './firebase';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch, getDocs, getDoc } from 'firebase/firestore';
+import { stageOfflineAttachments, getStagedOfflineAttachments, clearStagedOfflineAttachments } from './offlineQueueDb';
 
 const KEYS = {
   USER: 'applytrack_user',
@@ -11,13 +12,46 @@ const KEYS = {
 
 let unsubscribeFirestore = null;
 let isInitialLoad = true;
-let currentUserId = null;
+let currentUserId = (() => {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(KEYS.USER) : null;
+    return raw ? JSON.parse(raw).uid : null;
+  } catch {
+    return null;
+  }
+})();
 let isAuthInitialized = false;
 let lastLocalWriteTime = 0;
 let currentSyncState = 'IDLE';
 
+function getEffectiveUserId() {
+  if (currentUserId) return currentUserId;
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(KEYS.USER) : null;
+    const uid = raw ? JSON.parse(raw).uid : null;
+    if (uid) currentUserId = uid;
+    return uid;
+  } catch {
+    return null;
+  }
+}
+
 function markLocalWrite() {
   lastLocalWriteTime = Date.now();
+}
+
+/**
+ * Generates a standard RFC4122 v4 UUID (identical to java.util.UUID.randomUUID() on Android)
+ */
+export function generateUuid() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 // Helper to trigger sync status custom events
@@ -207,6 +241,115 @@ async function wipeAllUserSupabaseStorage(userId) {
   }
 }
 
+/**
+ * Merges local offline edits with remote data using field-level resolution:
+ * 1. Array/Timeline fields (statusHistory): Merged and sorted chronologically without losing milestones.
+ * 2. Attachments (resume, coverLetter, additionalDocument): Preserved if updated on either device.
+ * 3. Screenshots: Deduplicated union by fileName.
+ * 4. Colliding scalar fields (changed on both devices): Timestamp-based Last-Write-Wins (LWW).
+ * 5. Non-colliding fields: Kept from whichever device modified them.
+ */
+export function mergeApplicationFields(localApp, remoteData) {
+  if (!remoteData) return { ...localApp };
+  if (!localApp) return { ...remoteData };
+
+  const localUpdated = Number(localApp.updatedAt) || 0;
+  const remoteUpdated = Number(remoteData.updatedAt) || 0;
+  const localIsNewer = localUpdated >= remoteUpdated;
+
+  // Start with remote data as the base
+  const merged = { ...remoteData };
+
+  // Scalar and basic fields in ApplyTrack
+  const scalarFields = [
+    'companyName', 'role', 'platform', 'status', 'jobDescription', 'notes', 'url', 'email'
+  ];
+
+  for (const field of scalarFields) {
+    const localVal = localApp[field];
+    const remoteVal = remoteData[field];
+
+    if (localVal === undefined && remoteVal === undefined) continue;
+
+    if (localVal !== undefined && remoteVal === undefined) {
+      merged[field] = localVal;
+    } else if (localVal === undefined && remoteVal !== undefined) {
+      merged[field] = remoteVal;
+    } else if (localVal === remoteVal) {
+      merged[field] = localVal;
+    } else {
+      // Both sides modified the same field:
+      // Timestamp-based Last-Write-Wins (LWW)
+      merged[field] = localIsNewer ? localVal : remoteVal;
+    }
+  }
+
+  // 1. Status History: Union merge & chronological sort (never lose milestones)
+  const localHistory = Array.isArray(localApp.statusHistory) ? localApp.statusHistory : [];
+  const remoteHistory = Array.isArray(remoteData.statusHistory) ? remoteData.statusHistory : [];
+  const historyMap = new Map();
+
+  for (const item of [...remoteHistory, ...localHistory]) {
+    if (!item || !item.status) continue;
+    const key = `${item.status}_${Math.floor((item.timestamp || 0) / 1000)}`;
+    if (!historyMap.has(key)) {
+      historyMap.set(key, item);
+    }
+  }
+  merged.statusHistory = Array.from(historyMap.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  // If status was decided by LWW above, ensure the latest statusHistory reflects the final status
+  if (merged.status && merged.statusHistory.length > 0) {
+    const lastHistory = merged.statusHistory[merged.statusHistory.length - 1];
+    if (lastHistory.status !== merged.status) {
+      merged.statusHistory.push({
+        status: merged.status,
+        timestamp: Math.max(localUpdated, remoteUpdated, Date.now())
+      });
+    }
+  }
+
+  // 2. Attachments: preserve if added on either device; if both updated, LWW
+  for (const attKey of ['resume', 'coverLetter', 'additionalDocument']) {
+    const localAtt = localApp[attKey];
+    const remoteAtt = remoteData[attKey];
+    if (localAtt && !remoteAtt) {
+      merged[attKey] = localAtt;
+    } else if (!localAtt && remoteAtt) {
+      merged[attKey] = remoteAtt;
+    } else if (localAtt && remoteAtt) {
+      merged[attKey] = localIsNewer ? localAtt : remoteAtt;
+    }
+  }
+
+  // 3. Screenshots: Union by fileName
+  const localScreenshots = Array.isArray(localApp.screenshots) ? localApp.screenshots : [];
+  const remoteScreenshots = Array.isArray(remoteData.screenshots) ? remoteData.screenshots : [];
+  const screenshotMap = new Map();
+  for (const scr of [...remoteScreenshots, ...localScreenshots]) {
+    if (scr && scr.fileName && !screenshotMap.has(scr.fileName)) {
+      screenshotMap.set(scr.fileName, scr);
+    }
+  }
+  merged.screenshots = Array.from(screenshotMap.values());
+
+  // 4. Update timestamps and identifiers
+  merged.id = localApp.id || remoteData.id;
+  merged.uuid = localApp.uuid || remoteData.uuid;
+  merged.createdAt = remoteData.createdAt || localApp.createdAt;
+  merged.updatedAt = Math.max(localUpdated, remoteUpdated, Date.now());
+
+  // Preserve local flags if present
+  if (localApp.isPendingSync !== undefined) {
+    merged.isPendingSync = localApp.isPendingSync;
+  }
+  if (localApp.isPendingDelete !== undefined) {
+    merged.isPendingDelete = localApp.isPendingDelete;
+  }
+
+  return merged;
+}
+
 function startFirestoreListener(userId) {
   if (unsubscribeFirestore) unsubscribeFirestore();
   
@@ -218,12 +361,20 @@ function startFirestoreListener(userId) {
   }
   
   unsubscribeFirestore = onSnapshot(colRef, (snapshot) => {
+    // If the snapshot comes from local cache / offline, do NOT overwrite localStorage!
+    // localStorage is the persistent source of truth while offline.
+    if (snapshot.metadata.fromCache) {
+      return;
+    }
+
     const apps = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
+      const appUuid = data.uuid || doc.id;
       apps.push({
         ...data,
-        id: data.id || doc.id,
+        id: appUuid,
+        uuid: appUuid,
         resume: resolveRemoteAttachment(data.resume, userId, 'resumes'),
         coverLetter: resolveRemoteAttachment(data.coverLetter, userId, 'cover_letters'),
         additionalDocument: resolveRemoteAttachment(data.additionalDocument, userId, 'additional_documents'),
@@ -231,11 +382,32 @@ function startFirestoreListener(userId) {
       });
     });
     
-    // Sort applications by ID sequence
-    apps.sort((a, b) => (a.id || 0) - (b.id || 0));
-    
+    // Preserve any locally pending apps that haven't synced yet
+    const existingRaw = localStorage.getItem(KEYS.APPLICATIONS);
+    let existingApps = [];
+    try {
+      existingApps = existingRaw ? JSON.parse(existingRaw) : [];
+    } catch {
+      existingApps = [];
+    }
+    const pendingLocally = existingApps.filter(a => a.isPendingSync);
+
+    const mergedMap = new Map();
+    apps.forEach(a => mergedMap.set(a.uuid, a));
+    pendingLocally.forEach(a => {
+      if (!mergedMap.has(a.uuid)) {
+        mergedMap.set(a.uuid, a);
+      } else {
+        // Merge offline pending edit with remote data so local un-synced edits are not clobbered
+        const remoteApp = mergedMap.get(a.uuid);
+        mergedMap.set(a.uuid, mergeApplicationFields(a, remoteApp));
+      }
+    });
+    const finalApps = Array.from(mergedMap.values());
+    finalApps.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
     // Update local cache
-    localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(apps));
+    localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(finalApps));
     
     // Dispatch data change
     window.dispatchEvent(new Event('applytrack_data_change'));
@@ -258,6 +430,155 @@ function startFirestoreListener(userId) {
   }, (error) => {
     console.error('Firestore listener error:', error);
     triggerSyncState('ERROR', error.message || 'Sync failed');
+  });
+
+  // Drain any pending items when listener starts
+  processPendingSyncQueue();
+}
+
+let isDrainingQueue = false;
+export async function processPendingSyncQueue() {
+  if (isDrainingQueue || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+  const userId = getEffectiveUserId();
+  if (!userId) return;
+
+  const raw = localStorage.getItem(KEYS.APPLICATIONS);
+  let apps = [];
+  try {
+    apps = raw ? JSON.parse(raw) : [];
+  } catch {
+    return;
+  }
+
+  const pendingDeletes = apps.filter(a => a.isPendingDelete);
+  const pendingApps = apps.filter(a => a.isPendingSync && !a.isPendingDelete);
+  if (pendingDeletes.length === 0 && pendingApps.length === 0) return;
+
+  isDrainingQueue = true;
+  triggerSyncState('SYNCING');
+
+  try {
+    // 1. Process Pending Deletions
+    for (const app of pendingDeletes) {
+      try {
+        const userDocRef = doc(firestore, 'users', userId, 'job_applications', app.uuid);
+        await deleteDoc(userDocRef);
+        await deleteApplicationAttachments(userId, app);
+        await clearStagedOfflineAttachments(app.uuid);
+      } catch (delErr) {
+        console.warn('[Offline Sync] Failed to delete remote app during queue drain:', delErr);
+      }
+
+      // Remove from localStorage
+      const currentRaw = localStorage.getItem(KEYS.APPLICATIONS);
+      const currentApps = currentRaw ? JSON.parse(currentRaw) : [];
+      const updated = currentApps.filter(a => a.uuid !== app.uuid);
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updated));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+    }
+
+    // 2. Process Pending Add/Edits
+    for (const app of pendingApps) {
+      // 1. Upload any staged offline attachments
+      const staged = await getStagedOfflineAttachments(app.uuid);
+      if (staged) {
+        const uploadTasks = [];
+        if (staged.resume?.dataUrl) {
+          uploadTasks.push(uploadFileToSupabase(userId, 'resumes', staged.resume.fileName, staged.resume.dataUrl));
+        }
+        if (staged.coverLetter?.dataUrl) {
+          uploadTasks.push(uploadFileToSupabase(userId, 'cover_letters', staged.coverLetter.fileName, staged.coverLetter.dataUrl));
+        }
+        if (staged.additionalDocument?.dataUrl) {
+          uploadTasks.push(uploadFileToSupabase(userId, 'additional_documents', staged.additionalDocument.fileName, staged.additionalDocument.dataUrl));
+        }
+        if (staged.screenshots && Array.isArray(staged.screenshots)) {
+          for (const scr of staged.screenshots) {
+            if (scr.dataUrl) {
+              uploadTasks.push(uploadFileToSupabase(userId, 'screenshots', scr.fileName, scr.dataUrl));
+            }
+          }
+        }
+        if (uploadTasks.length > 0) {
+          await Promise.all(uploadTasks);
+        }
+        await clearStagedOfflineAttachments(app.uuid);
+      }
+
+      // 2. Check if this document was deleted remotely while offline (DELETE WINS)
+      const userDocRef = doc(firestore, 'users', userId, 'job_applications', app.uuid);
+      let remoteData = null;
+      if (!app.isNewOfflineApp) {
+        try {
+          const docSnap = await getDoc(userDocRef);
+          if (!docSnap.exists()) {
+            // Document was deleted on the server while offline: Delete Wins!
+            console.warn(`[Offline Sync] Discarding offline update for '${app.uuid}' because it was deleted remotely.`);
+            await clearStagedOfflineAttachments(app.uuid);
+
+            const currentRaw = localStorage.getItem(KEYS.APPLICATIONS);
+            const currentApps = currentRaw ? JSON.parse(currentRaw) : [];
+            const updated = currentApps.filter(a => a.uuid !== app.uuid);
+            localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updated));
+            window.dispatchEvent(new Event('applytrack_data_change'));
+            continue;
+          } else {
+            remoteData = docSnap.data();
+          }
+        } catch (checkErr) {
+          console.warn('[Offline Sync] Remote doc check failed, proceeding with sync:', checkErr);
+        }
+      }
+
+      // 3. Field-Level Merge with remote document if available
+      let mergedApp = { ...app };
+      if (remoteData) {
+        mergedApp = mergeApplicationFields(app, remoteData);
+      }
+
+      const appToSync = { ...mergedApp };
+      delete appToSync.isPendingSync;
+      delete appToSync.isNewOfflineApp;
+      delete appToSync.isPendingDelete;
+      if (appToSync.resume?.url) delete appToSync.resume.url;
+      if (appToSync.coverLetter?.url) delete appToSync.coverLetter.url;
+      if (appToSync.additionalDocument?.url) delete appToSync.additionalDocument.url;
+      if (appToSync.screenshots) {
+        appToSync.screenshots = appToSync.screenshots.map(s => {
+          const c = { ...s };
+          delete c.url;
+          return c;
+        });
+      }
+
+      await setDoc(userDocRef, appToSync);
+
+      // 4. Update local storage with the merged application and clear isPendingSync
+      const currentRaw = localStorage.getItem(KEYS.APPLICATIONS);
+      const currentApps = currentRaw ? JSON.parse(currentRaw) : [];
+      const updated = currentApps.map(a => a.uuid === app.uuid ? { ...mergedApp, isPendingSync: false } : a);
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updated));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+    }
+
+    triggerSyncState('SUCCESS');
+    window.dispatchEvent(new CustomEvent('applytrack_toast', {
+      detail: {
+        message: 'Synced offline changes with cloud',
+        type: 'success'
+      }
+    }));
+  } catch (err) {
+    console.error('[Offline Sync] Failed to drain pending sync queue:', err);
+    triggerSyncState('ERROR', 'Offline sync will retry when connected');
+  } finally {
+    isDrainingQueue = false;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    processPendingSyncQueue();
   });
 }
 
@@ -299,13 +620,20 @@ onAuthStateChanged(auth, (firebaseUser) => {
     startFirestoreListener(firebaseUser.uid);
     window.dispatchEvent(new Event('applytrack_auth_change'));
   } else {
+    // When firebaseUser is null:
+    // If we have a cached user in localStorage, KEEP IT! The user did not log out.
+    // They are either offline, or Firebase Auth hasn't finished handshake yet.
+    const cachedUser = typeof localStorage !== 'undefined' ? localStorage.getItem(KEYS.USER) : null;
+    if (cachedUser) {
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('applytrack_auth_change'));
+      return;
+    }
+
+    // Only if there is NO cached user at all:
     stopFirestoreListener();
-    localStorage.removeItem(KEYS.USER);
-    localStorage.removeItem(KEYS.APPLICATIONS);
     currentUserId = null;
     isInitialLoad = true;
-    
-    window.dispatchEvent(new Event('applytrack_auth_change'));
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('applytrack_auth_change'));
   }
 });
 
@@ -314,6 +642,10 @@ export const db = {
     return currentSyncState;
   },
   isAuthReady() {
+    if (isAuthInitialized) return true;
+    if (typeof navigator !== 'undefined' && !navigator.onLine && this.getCurrentUser()) {
+      return true;
+    }
     return isAuthInitialized;
   },
 
@@ -333,6 +665,12 @@ export const db = {
   },
 
   logout() {
+    stopFirestoreListener();
+    localStorage.removeItem(KEYS.USER);
+    localStorage.removeItem(KEYS.APPLICATIONS);
+    currentUserId = null;
+    isInitialLoad = true;
+    window.dispatchEvent(new Event('applytrack_auth_change'));
     signOut(auth).catch((err) => {
       console.error('Logout error:', err);
     });
@@ -351,22 +689,72 @@ export const db = {
   },
 
   getApplicationById(id) {
+    if (!id) return null;
     const apps = this.getApplications();
+    const strId = String(id).toLowerCase();
     return apps.find(a => 
       String(a.id) === String(id) || 
-      a.uuid === String(id)
+      String(a.uuid) === String(id) ||
+      String(a.id).toLowerCase() === strId ||
+      String(a.uuid).toLowerCase() === strId
     ) || null;
   },
 
   async addApplication(appData) {
-    const userId = currentUserId;
+    const userId = getEffectiveUserId();
     if (!userId) throw new Error('User is not authenticated');
 
     markLocalWrite();
-    try {
-      const uuid = crypto.randomUUID ? crypto.randomUUID() : 'uuid-' + Math.random().toString(36).substring(2, 11);
+
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (isOffline) {
+      const uuid = appData.uuid || generateUuid();
       const apps = this.getApplications();
-      const nextId = apps.length > 0 ? Math.max(...apps.map(a => a.id)) + 1 : 1;
+
+      // Stage offline file binaries in IndexedDB
+      const filesToStage = {};
+      if (appData.resume?.dataUrl) filesToStage.resume = appData.resume;
+      if (appData.coverLetter?.dataUrl) filesToStage.coverLetter = appData.coverLetter;
+      if (appData.additionalDocument?.dataUrl) filesToStage.additionalDocument = appData.additionalDocument;
+      if (appData.screenshots && appData.screenshots.some(s => s.dataUrl)) filesToStage.screenshots = appData.screenshots;
+      if (Object.keys(filesToStage).length > 0) {
+        await stageOfflineAttachments(uuid, filesToStage);
+      }
+
+      const cleanAttachment = (att) => att ? { fileName: att.fileName, originalName: att.originalName } : null;
+      const serializedApp = {
+        id: uuid,
+        uuid: uuid,
+        companyName: appData.companyName || null,
+        role: appData.role || null,
+        platform: appData.platform || 'Direct',
+        status: appData.status || 'Applied',
+        jobDescription: appData.jobDescription || '',
+        notes: appData.notes || '',
+        url: appData.url || '',
+        email: appData.email || '',
+        createdAt: appData.createdAt || Date.now(),
+        updatedAt: Date.now(),
+        statusHistory: appData.statusHistory || [
+          { status: appData.status || 'Applied', timestamp: appData.createdAt || Date.now() }
+        ],
+        resume: cleanAttachment(appData.resume),
+        coverLetter: cleanAttachment(appData.coverLetter),
+        additionalDocument: cleanAttachment(appData.additionalDocument),
+        screenshots: (appData.screenshots || []).map(cleanAttachment),
+        isPendingSync: true,
+        isNewOfflineApp: true
+      };
+
+      const updatedApps = [...apps, serializedApp];
+      updatedApps.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updatedApps));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+      return serializedApp;
+    }
+
+    try {
+      const uuid = appData.uuid || generateUuid();
 
       // 1. Upload files to Supabase Storage concurrently in parallel if they contain new binary contents (dataUrl)
       const uploadTasks = [];
@@ -395,7 +783,7 @@ export const db = {
       const cleanAttachment = (att) => att ? { fileName: att.fileName, originalName: att.originalName } : null;
 
       const serializedApp = {
-        id: nextId,
+        id: uuid,
         uuid: uuid,
         companyName: appData.companyName || null,
         role: appData.role || null,
@@ -429,10 +817,74 @@ export const db = {
   },
 
   async updateApplication(id, updatedData) {
-    const userId = currentUserId;
+    const userId = getEffectiveUserId();
     if (!userId) throw new Error('User is not authenticated');
 
     markLocalWrite();
+
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (isOffline) {
+      const originalApp = this.getApplicationById(id);
+      if (!originalApp) throw new Error('Application not found');
+
+      // Stage any new offline file binaries in IndexedDB
+      const filesToStage = {};
+      if (updatedData.resume?.dataUrl && (!originalApp.resume || originalApp.resume.fileName !== updatedData.resume.fileName)) {
+        filesToStage.resume = updatedData.resume;
+      }
+      if (updatedData.coverLetter?.dataUrl && (!originalApp.coverLetter || originalApp.coverLetter.fileName !== updatedData.coverLetter.fileName)) {
+        filesToStage.coverLetter = updatedData.coverLetter;
+      }
+      if (updatedData.additionalDocument?.dataUrl && (!originalApp.additionalDocument || originalApp.additionalDocument.fileName !== updatedData.additionalDocument.fileName)) {
+        filesToStage.additionalDocument = updatedData.additionalDocument;
+      }
+      if (updatedData.screenshots && updatedData.screenshots.length > 0) {
+        const newScreenshots = updatedData.screenshots.filter(s => s.dataUrl);
+        if (newScreenshots.length > 0) {
+          filesToStage.screenshots = newScreenshots;
+        }
+      }
+      if (Object.keys(filesToStage).length > 0) {
+        await stageOfflineAttachments(originalApp.uuid, filesToStage);
+      }
+
+      // Compute status history changes
+      let oldHistory = originalApp.statusHistory || [];
+      let newHistory = [];
+      const timeApplied = updatedData.createdAt || Date.now();
+
+      if (originalApp.status !== updatedData.status) {
+        newHistory = [...oldHistory, { status: updatedData.status, timestamp: timeApplied }];
+      } else {
+        if (oldHistory.length > 0) {
+          const updatedLast = { ...oldHistory[oldHistory.length - 1], timestamp: timeApplied };
+          newHistory = [...oldHistory.slice(0, -1), updatedLast];
+        } else {
+          newHistory = [{ status: updatedData.status, timestamp: timeApplied }];
+        }
+      }
+
+      const cleanAttachment = (att) => att ? { fileName: att.fileName, originalName: att.originalName } : null;
+      const updatedApp = {
+        ...originalApp,
+        ...updatedData,
+        id: originalApp.id,
+        uuid: originalApp.uuid,
+        updatedAt: Date.now(),
+        statusHistory: newHistory,
+        resume: cleanAttachment(updatedData.resume) || originalApp.resume,
+        coverLetter: cleanAttachment(updatedData.coverLetter) || originalApp.coverLetter,
+        additionalDocument: cleanAttachment(updatedData.additionalDocument) || originalApp.additionalDocument,
+        screenshots: updatedData.screenshots ? updatedData.screenshots.map(cleanAttachment) : originalApp.screenshots,
+        isPendingSync: true
+      };
+
+      const apps = this.getApplications();
+      const updatedApps = apps.map(a => a.id === originalApp.id ? updatedApp : a);
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updatedApps));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+      return updatedApp;
+    }
     try {
       const originalApp = this.getApplicationById(id);
       if (!originalApp) throw new Error('Application not found');
@@ -541,17 +993,36 @@ export const db = {
   },
 
   async deleteApplication(id) {
-    const userId = currentUserId;
+    const userId = getEffectiveUserId();
     if (!userId) throw new Error('User is not authenticated');
 
     markLocalWrite();
+    const app = this.getApplicationById(id);
+    if (!app) throw new Error('Application not found');
+
+    // Save to local cache temporary deleted list for undo
+    localStorage.setItem(KEYS.DELETED_TEMP, JSON.stringify([app]));
+
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (isOffline) {
+      const apps = this.getApplications();
+      // If the app was ONLY created offline and never synced to cloud, delete it immediately
+      if (app.isPendingSync && !app.updatedAtCloud) {
+        await clearStagedOfflineAttachments(app.uuid);
+        const updated = apps.filter(a => a.id !== app.id && a.uuid !== app.uuid);
+        localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updated));
+        window.dispatchEvent(new Event('applytrack_data_change'));
+        return { success: true, pendingDelete: false };
+      }
+
+      // If it exists in the cloud, tag it as pending deletion so it can sync deletion when online
+      const updated = apps.map(a => (a.id === app.id || a.uuid === app.uuid) ? { ...a, isPendingDelete: true } : a);
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updated));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+      return { success: true, pendingDelete: true };
+    }
+
     try {
-      const app = this.getApplicationById(id);
-      if (!app) throw new Error('Application not found');
-
-      // Save to local cache temporary deleted list for undo
-      localStorage.setItem(KEYS.DELETED_TEMP, JSON.stringify([app]));
-
       // Delete the Firestore record
       const userDocRef = doc(firestore, 'users', userId, 'job_applications', app.uuid);
       await deleteDoc(userDocRef);
@@ -559,31 +1030,58 @@ export const db = {
       // Delete attachments from Supabase Storage
       await deleteApplicationAttachments(userId, app);
 
-      return true;
+      // Remove from localStorage
+      const apps = this.getApplications();
+      const updated = apps.filter(a => a.id !== app.id && a.uuid !== app.uuid);
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updated));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+
+      return { success: true, pendingDelete: false };
     } catch (e) {
-      console.error('Delete application failed:', e);
-      triggerSyncState('ERROR', e.message || 'Failed to delete application');
-      throw e;
+      console.error('Delete application failed, marking pending delete:', e);
+      const apps = this.getApplications();
+      const updated = apps.map(a => (a.id === app.id || a.uuid === app.uuid) ? { ...a, isPendingDelete: true } : a);
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updated));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+      return { success: true, pendingDelete: true };
     }
   },
 
   async deleteMultipleApplications(ids) {
-    const userId = currentUserId;
+    const userId = getEffectiveUserId();
     if (!userId) throw new Error('User is not authenticated');
 
     markLocalWrite();
+    const apps = this.getApplications();
+    const idStrings = ids.map(String);
+    const appsToDelete = apps.filter(a => 
+      idStrings.includes(String(a.id)) || 
+      idStrings.includes(String(a.uuid))
+    );
+    if (appsToDelete.length === 0) return { success: false, pendingDelete: false };
+
+    // Save metadata to temp cache for undo
+    localStorage.setItem(KEYS.DELETED_TEMP, JSON.stringify(appsToDelete));
+
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (isOffline) {
+      let updatedApps = [...apps];
+      let hasPendingDelete = false;
+      for (const app of appsToDelete) {
+        if (app.isPendingSync && !app.updatedAtCloud) {
+          await clearStagedOfflineAttachments(app.uuid);
+          updatedApps = updatedApps.filter(a => a.id !== app.id && a.uuid !== app.uuid);
+        } else {
+          hasPendingDelete = true;
+          updatedApps = updatedApps.map(a => (a.id === app.id || a.uuid === app.uuid) ? { ...a, isPendingDelete: true } : a);
+        }
+      }
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updatedApps));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+      return { success: true, pendingDelete: hasPendingDelete };
+    }
+
     try {
-      const apps = this.getApplications();
-      const idStrings = ids.map(String);
-      const appsToDelete = apps.filter(a => 
-        idStrings.includes(String(a.id)) || 
-        idStrings.includes(String(a.uuid))
-      );
-      if (appsToDelete.length === 0) return false;
-
-      // Save metadata to temp cache for undo
-      localStorage.setItem(KEYS.DELETED_TEMP, JSON.stringify(appsToDelete));
-
       // Batch delete from Firestore
       const batch = writeBatch(firestore);
       appsToDelete.forEach(app => {
@@ -595,16 +1093,26 @@ export const db = {
       // Delete attachments from Supabase Storage for all deleted apps
       await Promise.all(appsToDelete.map(app => deleteApplicationAttachments(userId, app)));
 
-      return true;
+      // Remove from localStorage
+      const updated = apps.filter(a => !appsToDelete.some(d => d.id === a.id || d.uuid === a.uuid));
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updated));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+
+      return { success: true, pendingDelete: false };
     } catch (e) {
-      console.error('Multiple delete failed:', e);
-      triggerSyncState('ERROR', e.message || 'Failed to delete applications');
-      throw e;
+      console.error('Multiple delete failed, marking pending delete:', e);
+      let updatedApps = [...apps];
+      for (const app of appsToDelete) {
+        updatedApps = updatedApps.map(a => (a.id === app.id || a.uuid === app.uuid) ? { ...a, isPendingDelete: true } : a);
+      }
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(updatedApps));
+      window.dispatchEvent(new Event('applytrack_data_change'));
+      return { success: true, pendingDelete: true };
     }
   },
 
   async undoDelete() {
-    const userId = currentUserId;
+    const userId = getEffectiveUserId();
     if (!userId) throw new Error('User is not authenticated');
 
     markLocalWrite();
@@ -613,12 +1121,28 @@ export const db = {
       if (!temp) return false;
 
       const appsToRestore = JSON.parse(temp);
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      if (isOffline) {
+        const apps = this.getApplications();
+        const mergedMap = new Map();
+        apps.forEach(a => mergedMap.set(a.uuid, a));
+        appsToRestore.forEach(a => {
+          const restored = { ...a };
+          delete restored.isPendingDelete;
+          mergedMap.set(a.uuid, restored);
+        });
+        const finalApps = Array.from(mergedMap.values());
+        finalApps.sort((a, b) => (a.id || 0) - (b.id || 0));
+        localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(finalApps));
+        localStorage.removeItem(KEYS.DELETED_TEMP);
+        window.dispatchEvent(new Event('applytrack_data_change'));
+        return true;
+      }
       
       const batch = writeBatch(firestore);
       appsToRestore.forEach(app => {
-        // Strip URLs to match pure Firestore format
         const cleanAttachment = (att) => att ? { fileName: att.fileName, originalName: att.originalName } : null;
-        
         const serialized = {
           ...app,
           resume: cleanAttachment(app.resume),
@@ -626,13 +1150,26 @@ export const db = {
           additionalDocument: cleanAttachment(app.additionalDocument),
           screenshots: (app.screenshots || []).map(cleanAttachment)
         };
-        
+        delete serialized.isPendingDelete;
         const docRef = doc(firestore, 'users', userId, 'job_applications', app.uuid);
         batch.set(docRef, serialized);
       });
       await batch.commit();
 
+      const apps = this.getApplications();
+      const mergedMap = new Map();
+      apps.forEach(a => mergedMap.set(a.uuid, a));
+      appsToRestore.forEach(a => {
+        const restored = { ...a };
+        delete restored.isPendingDelete;
+        mergedMap.set(a.uuid, restored);
+      });
+      const finalApps = Array.from(mergedMap.values());
+      finalApps.sort((a, b) => (a.id || 0) - (b.id || 0));
+      localStorage.setItem(KEYS.APPLICATIONS, JSON.stringify(finalApps));
+
       localStorage.removeItem(KEYS.DELETED_TEMP);
+      window.dispatchEvent(new Event('applytrack_data_change'));
       return true;
     } catch (e) {
       console.error('Undo delete failed:', e);
@@ -642,7 +1179,7 @@ export const db = {
   },
 
   async clearUndoCache() {
-    const userId = currentUserId;
+    const userId = getEffectiveUserId();
     if (!userId) return;
 
     const temp = localStorage.getItem(KEYS.DELETED_TEMP);
@@ -689,7 +1226,7 @@ export const db = {
 
   // --- DATA MANAGEMENT ---
   async resetDatabase() {
-    const userId = currentUserId;
+    const userId = getEffectiveUserId();
     if (!userId) return;
 
     markLocalWrite();
@@ -712,9 +1249,12 @@ export const db = {
       batch.delete(doc(firestore, 'users', userId));
       await batch.commit();
 
-      // 3. Clear all local application caches
+      // 3. Clear all local application caches and staged offline files
       localStorage.removeItem(KEYS.APPLICATIONS);
       localStorage.removeItem(KEYS.DELETED_TEMP);
+      for (const app of apps) {
+        await clearStagedOfflineAttachments(app.uuid);
+      }
       
       // Dispatch data change to update UI
       window.dispatchEvent(new Event('applytrack_data_change'));
@@ -887,5 +1427,13 @@ export const db = {
       resumeStats,
       monthlyActivity
     };
-  }
+  },
+
+  isOnline() {
+    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  },
+
+  generateUuid,
+  mergeApplicationFields,
+  processPendingSyncQueue
 };

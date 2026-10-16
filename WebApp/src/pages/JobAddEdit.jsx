@@ -8,7 +8,7 @@ import {
   ymdToDmy, 
   dmyToYmd 
 } from '../utils/dateUtils';
-import { ChevronIcon, FileIcon, DeleteIcon } from '../components/Icons';
+import { ChevronIcon, FileIcon, DeleteIcon, AppIcon } from '../components/Icons';
 import PDFViewer from '../components/PDFViewer';
 import ImageViewer from '../components/ImageViewer';
 import './JobAddEdit.css';
@@ -151,34 +151,65 @@ function DatePickerField({ value, onChange, placeholder = "dd/mm/yyyy", classNam
 
 export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, editSource }) {
   const isEditMode = !!jobId;
-  const [isSaving, setIsSaving] = useState(false);
+  const initialApp = React.useMemo(() => (isEditMode ? db.getApplicationById(jobId) : null), [jobId, isEditMode]);
+  const hasLoadedOnce = React.useRef(!!initialApp);
 
-  // Form Fields State
-  const [companyName, setCompanyName] = useState('');
-  const [role, setRole] = useState('');
-  const [platformSelect, setPlatformSelect] = useState('LinkedIn');
-  const [customPlatformName, setCustomPlatformName] = useState('');
-  const [status, setStatus] = useState('Applied');
-  const [createdAt, setCreatedAt] = useState(getLocalDateString());
-  const [jobDescription, setJobDescription] = useState('');
-  const [notes, setNotes] = useState('');
-  const [url, setUrl] = useState('');
-  const [email, setEmail] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Form Fields State (initialized synchronously from cached application data)
+  const [companyName, setCompanyName] = useState(() => initialApp?.companyName || '');
+  const [role, setRole] = useState(() => initialApp?.role || '');
+  const [platformSelect, setPlatformSelect] = useState(() => {
+    if (!initialApp?.platform) return 'LinkedIn';
+    const plat = String(initialApp.platform).trim();
+    const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
+    const matched = standardPlatforms.find(sp => sp.toLowerCase() === plat.toLowerCase());
+    return matched || 'Other';
+  });
+  const [customPlatformName, setCustomPlatformName] = useState(() => {
+    if (!initialApp?.platform) return '';
+    const plat = String(initialApp.platform).trim();
+    const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
+    const matched = standardPlatforms.find(sp => sp.toLowerCase() === plat.toLowerCase());
+    return matched ? '' : (plat || 'Direct');
+  });
+  const [status, setStatus] = useState(() => initialApp?.status || 'Applied');
+  const [createdAt, setCreatedAt] = useState(() => {
+    if (!initialApp) return getLocalDateString();
+    const lastStatusTimestamp = (Array.isArray(initialApp.statusHistory) && initialApp.statusHistory.length > 0)
+      ? initialApp.statusHistory[initialApp.statusHistory.length - 1]?.timestamp || initialApp.createdAt
+      : initialApp.createdAt;
+    return getLocalDateString(lastStatusTimestamp);
+  });
+  const [jobDescription, setJobDescription] = useState(() => initialApp?.jobDescription || '');
+  const [notes, setNotes] = useState(() => initialApp?.notes || '');
+  const [url, setUrl] = useState(() => initialApp?.url || '');
+  const [email, setEmail] = useState(() => initialApp?.email || '');
   
   // Attachments State
-  const [resume, setResume] = useState(null);
-  const [coverLetter, setCoverLetter] = useState(null);
-  const [additionalDocument, setAdditionalDocument] = useState(null);
-  const [screenshots, setScreenshots] = useState([]); // Array of attachment objects
+  const [resume, setResume] = useState(() => initialApp?.resume || null);
+  const [coverLetter, setCoverLetter] = useState(() => initialApp?.coverLetter || null);
+  const [additionalDocument, setAdditionalDocument] = useState(() => initialApp?.additionalDocument || null);
+  const [screenshots, setScreenshots] = useState(() => (Array.isArray(initialApp?.screenshots) ? initialApp.screenshots : []));
   const [showRemoteDeleteModal, setShowRemoteDeleteModal] = useState(false);
   const [activePdfFile, setActivePdfFile] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(null);
 
-
-
-  const hasLoadedOnce = React.useRef(false);
-
-  // Load existing data if in edit mode
+  // Sync state if application updates or is deleted remotely
   useEffect(() => {
     const loadData = () => {
       if (isEditMode) {
@@ -188,9 +219,9 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           setCompanyName(app.companyName || '');
           setRole(app.role || '');
           
-          const plat = app.platform || '';
+          const plat = app.platform ? String(app.platform).trim() : '';
           const standardPlatforms = ['LinkedIn', 'Indeed', 'Email', 'Website'];
-          const matched = standardPlatforms.find(sp => sp.toLowerCase() === plat.trim().toLowerCase());
+          const matched = standardPlatforms.find(sp => sp.toLowerCase() === plat.toLowerCase());
           if (matched) {
             setPlatformSelect(matched);
             setCustomPlatformName('');
@@ -200,18 +231,18 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
           }
 
           setStatus(app.status || 'Applied');
-          const lastStatusTimestamp = (app.statusHistory && app.statusHistory.length > 0)
-            ? app.statusHistory[app.statusHistory.length - 1].timestamp
+          const lastStatusTimestamp = (Array.isArray(app.statusHistory) && app.statusHistory.length > 0)
+            ? app.statusHistory[app.statusHistory.length - 1]?.timestamp || app.createdAt
             : app.createdAt;
           setCreatedAt(getLocalDateString(lastStatusTimestamp));
           setJobDescription(app.jobDescription || '');
           setNotes(app.notes || '');
           setUrl(app.url || '');
           setEmail(app.email || '');
-          setResume(app.resume);
-          setCoverLetter(app.coverLetter);
+          setResume(app.resume || null);
+          setCoverLetter(app.coverLetter || null);
           setAdditionalDocument(app.additionalDocument || null);
-          setScreenshots(app.screenshots || []);
+          setScreenshots(Array.isArray(app.screenshots) ? app.screenshots : []);
         } else if (hasLoadedOnce.current) {
           // If we successfully loaded the job data but now it's gone, it was deleted!
           setShowRemoteDeleteModal(true);
@@ -219,7 +250,6 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       }
     };
 
-    loadData();
     window.addEventListener('applytrack_data_change', loadData);
     return () => window.removeEventListener('applytrack_data_change', loadData);
   }, [jobId, isEditMode]);
@@ -380,6 +410,80 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
       setActiveTab('applications');
     }
   };
+
+  if (isEditMode && !initialApp && !hasLoadedOnce.current) {
+    return (
+      <div className="not-found-page animate-fade-in">
+        <header className="not-found-header">
+          <div 
+            className="not-found-brand" 
+            onClick={() => {
+              if (setSelectedJobId) setSelectedJobId(null);
+              if (setActiveTab) setActiveTab('dashboard');
+              else window.location.href = '/dashboard';
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <AppIcon className="not-found-logo" />
+            <span className="not-found-brand-name">ApplyTrack</span>
+          </div>
+        </header>
+
+        <main className="not-found-main">
+          <div className="not-found-card">
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: 'var(--error-red, #ef4444)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <line x1="9" y1="15" x2="15" y2="15"></line>
+              </svg>
+            </div>
+            <h1 className="not-found-title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
+              Application Not Found
+            </h1>
+            <p className="not-found-description" style={{ marginBottom: '28px' }}>
+              This job application may have been permanently removed or the link is invalid.
+            </p>
+
+            <div className="not-found-actions">
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (setSelectedJobId) setSelectedJobId(null);
+                  if (setActiveTab) setActiveTab('applications');
+                  else window.location.href = '/applications';
+                }}
+                className="not-found-btn not-found-btn-primary"
+              >
+                Go to Applications
+              </button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (setSelectedJobId) setSelectedJobId(null);
+                  if (setActiveTab) setActiveTab('dashboard');
+                  else window.location.href = '/dashboard';
+                }}
+                className="not-found-btn not-found-btn-secondary"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="content-container animate-fade-in">
@@ -777,9 +881,29 @@ export default function JobAddEdit({ jobId, setActiveTab, setSelectedJobId, edit
                   <span>{isEditMode ? 'Updating...' : 'Saving...'}</span>
                 </>
               ) : (
-                <span>{isEditMode ? 'Update Application' : 'Save Application'}</span>
+                <>
+                  {!isOnline && (
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" opacity="0.3" />
+                      <circle cx="12" cy="12" r="7" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  )}
+                  <span>{isEditMode ? 'Update Application' : 'Save Application'}</span>
+                </>
               )}
             </button>
+            {!isOnline && (
+              <div className="offline-save-hint">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--amber-warning, #f59e0b)' }}>
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span className="offline-hint-desktop">Saved locally. Will sync to cloud once reconnected</span>
+                <span className="offline-hint-mobile">Saved locally. Syncs when online.</span>
+              </div>
+            )}
           </div>
         </div>,
         document.body

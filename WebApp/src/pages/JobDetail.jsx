@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { 
+  AppIcon,
   ChevronIcon, 
   EditIcon,
   DeleteIcon,
@@ -14,6 +15,7 @@ import {
 import ImageViewer from '../components/ImageViewer';
 import PDFViewer from '../components/PDFViewer';
 import './JobDetail.css';
+import './NotFound.css';
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel, hideCancel = false }) {
   useBodyScrollLock(true);
@@ -135,7 +137,7 @@ function ThumbnailImage({ src, alt }) {
 }
 
 export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
-  const [app, setApp] = useState(null);
+  const [app, setApp] = useState(() => jobId ? db.getApplicationById(jobId) : null);
   
   // Description collapse state
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -196,11 +198,74 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
 
   if (!app) {
     return (
-      <div className="content-container animate-fade-in text-center" style={{ padding: '48px' }}>
-        <p>Application details not found.</p>
-        <button onClick={() => setActiveTab('applications')} className="btn-primary" style={{ marginTop: '12px' }}>
-          Back to Applications
-        </button>
+      <div className="not-found-page animate-fade-in">
+        <header className="not-found-header">
+          <div 
+            className="not-found-brand" 
+            onClick={() => {
+              if (setSelectedJobId) setSelectedJobId(null);
+              if (setActiveTab) setActiveTab('dashboard');
+              else window.location.href = '/dashboard';
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <AppIcon className="not-found-logo" />
+            <span className="not-found-brand-name">ApplyTrack</span>
+          </div>
+        </header>
+
+        <main className="not-found-main">
+          <div className="not-found-card">
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: 'var(--error-red, #ef4444)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <line x1="9" y1="15" x2="15" y2="15"></line>
+              </svg>
+            </div>
+            <h1 className="not-found-title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
+              Application Not Found
+            </h1>
+            <p className="not-found-description" style={{ marginBottom: '28px' }}>
+              This job application may have been permanently removed or the link is invalid.
+            </p>
+
+            <div className="not-found-actions">
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (setSelectedJobId) setSelectedJobId(null);
+                  if (setActiveTab) setActiveTab('applications');
+                  else window.location.href = '/applications';
+                }}
+                className="not-found-btn not-found-btn-primary"
+              >
+                Back to Applications
+              </button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (setSelectedJobId) setSelectedJobId(null);
+                  if (setActiveTab) setActiveTab('dashboard');
+                  else window.location.href = '/dashboard';
+                }}
+                className="not-found-btn not-found-btn-secondary"
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -222,10 +287,15 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
       ? `${app.companyName} - ${app.role || 'Position unassigned'}` 
       : (app.role || 'Application');
 
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const message = isOffline
+      ? `'${jobName}' marked for deletion. Will sync when online.`
+      : `'${jobName}' deleted`;
+
     // Trigger undo toast
     window.dispatchEvent(new CustomEvent('applytrack_toast', {
       detail: {
-        message: `'${jobName}' deleted`,
+        message,
         action: 'Undo',
         onAction: () => {
           db.undoDelete();
@@ -301,6 +371,28 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
             </button>
           </div>
         </div>
+
+        {app.isPendingDelete && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+            color: 'var(--error-red, #ef4444)',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            marginBottom: '16px'
+          }}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            <span>This application is marked for deletion and will be removed once reconnected to the internet.</span>
+          </div>
+        )}
 
         {/* Card 1: Detail Header Card */}
         <div className="card-base detail-header-card">

@@ -11,3 +11,14 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Register Service Worker so visited pages can be reloaded and opened while offline
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('ApplyTrack Service Worker registration failed:', err);
+    });
+  });
+}
+
+

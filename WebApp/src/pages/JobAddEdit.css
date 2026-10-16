@@ -150,7 +150,38 @@
   width: 100%;
   max-width: 720px;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.offline-save-hint {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.offline-hint-desktop {
+  display: inline;
+}
+
+.offline-hint-mobile {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .offline-hint-desktop {
+    display: none;
+  }
+  .offline-hint-mobile {
+    display: inline;
+  }
 }
 
 .form-submit-btn {

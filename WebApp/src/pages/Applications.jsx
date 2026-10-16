@@ -399,6 +399,20 @@ export default function Applications({
   const [appToDelete, setAppToDelete] = useState(null);
   const [appsToDeleteList, setAppsToDeleteList] = useState([]);
   const [deletingIds, setDeletingIds] = useState([]);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleOpenDateModal = () => {
     setDateDraft({
@@ -739,20 +753,52 @@ export default function Applications({
     setAppToDelete(app);
   };
 
-  const handleConfirmDeleteSingle = (app) => {
+  const handleConfirmDeleteSingle = async (app) => {
     const targetId = app.id;
-    setDeletingIds(prev => [...prev, targetId]);
+    const isCurrentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine) || !db.isOnline();
     setAppToDelete(null);
     
     const jobName = app.companyName 
       ? `${app.companyName} - ${app.role || 'Position unassigned'}` 
       : (app.role || 'Application');
 
-    setTimeout(() => {
-      db.deleteApplication(targetId);
-      setDeletingIds(prev => prev.filter(id => id !== targetId));
+    if (isCurrentlyOffline) {
+      // Offline mode: Directly mark pending delete with zero exit animation
+      await db.deleteApplication(targetId);
 
-      // Trigger toast with undo
+      // Trigger offline toast with undo
+      window.dispatchEvent(new CustomEvent('applytrack_toast', {
+        detail: {
+          message: `'${jobName}' marked for deletion. Will sync when online.`,
+          action: 'Undo',
+          onAction: () => {
+            db.undoDelete();
+          }
+        }
+      }));
+      return;
+    }
+
+    // Online mode: attempt deletion and check whether it was actually removed or marked pending
+    const result = await db.deleteApplication(targetId);
+    if (result && result.pendingDelete) {
+      // Marked pending delete (network disconnected): NO exit animation
+      window.dispatchEvent(new CustomEvent('applytrack_toast', {
+        detail: {
+          message: `'${jobName}' marked for deletion. Will sync when online.`,
+          action: 'Undo',
+          onAction: () => {
+            db.undoDelete();
+          }
+        }
+      }));
+    } else {
+      // Online deletion succeeded: trigger exit animation and deleted toast
+      setDeletingIds(prev => [...prev, targetId]);
+      setTimeout(() => {
+        setDeletingIds(prev => prev.filter(id => id !== targetId));
+      }, 250);
+
       window.dispatchEvent(new CustomEvent('applytrack_toast', {
         detail: {
           message: `'${jobName}' deleted`,
@@ -762,7 +808,7 @@ export default function Applications({
           }
         }
       }));
-    }, 250);
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -771,19 +817,48 @@ export default function Applications({
     setAppsToDeleteList(appsList);
   };
 
-  const handleConfirmDeleteList = (appsList) => {
+  const handleConfirmDeleteList = async (appsList) => {
     const ids = appsList.map(a => a.id);
     const count = ids.length;
-    
-    setDeletingIds(prev => [...prev, ...ids]);
+    const isCurrentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine) || !db.isOnline();
     setAppsToDeleteList([]);
+    handleExitSelectionMode();
 
-    setTimeout(() => {
-      db.deleteMultipleApplications(ids);
-      setDeletingIds(prev => prev.filter(id => !ids.includes(id)));
-      handleExitSelectionMode();
+    if (isCurrentlyOffline) {
+      // Offline mode: No exit animation
+      await db.deleteMultipleApplications(ids);
 
-      // Trigger toast with undo
+      // Trigger offline toast with undo
+      window.dispatchEvent(new CustomEvent('applytrack_toast', {
+        detail: {
+          message: `${count} applications marked for deletion. Will sync when online.`,
+          action: 'Undo',
+          onAction: () => {
+            db.undoDelete();
+          }
+        }
+      }));
+      return;
+    }
+
+    // Online mode: attempt deletion
+    const result = await db.deleteMultipleApplications(ids);
+    if (result && result.pendingDelete) {
+      window.dispatchEvent(new CustomEvent('applytrack_toast', {
+        detail: {
+          message: `${count} applications marked for deletion. Will sync when online.`,
+          action: 'Undo',
+          onAction: () => {
+            db.undoDelete();
+          }
+        }
+      }));
+    } else {
+      setDeletingIds(prev => [...prev, ...ids]);
+      setTimeout(() => {
+        setDeletingIds(prev => prev.filter(id => !ids.includes(id)));
+      }, 250);
+
       window.dispatchEvent(new CustomEvent('applytrack_toast', {
         detail: {
           message: `${count} applications deleted`,
@@ -793,21 +868,21 @@ export default function Applications({
           }
         }
       }));
-    }, 250);
+    }
   };
 
   const handleJobCardClick = (app) => {
     if (isSelectionMode) {
       handleToggleSelect(app.id);
     } else {
-      setSelectedJobId(app.id);
+      setSelectedJobId(app.uuid || app.id);
       setActiveTab('job-detail');
     }
   };
 
   const handleEditClick = (e, app) => {
     e.stopPropagation();
-    setSelectedJobId(app.id);
+    setSelectedJobId(app.uuid || app.id);
     setActiveTab('edit-job');
   };
 
@@ -1088,12 +1163,62 @@ export default function Applications({
                       <h4 className="job-card-role">{app.role || 'Position unassigned'}</h4>
                       <span className="job-card-company">{app.companyName || 'Unknown Company'}</span>
                     </div>
-                    <span 
-                      className="status-badge"
-                      style={{ color: styles.color, backgroundColor: styles.bg }}
-                    >
-                      {app.status}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      {app.isPendingDelete ? (
+                        <span 
+                          className="pending-delete-badge" 
+                          title="Marked for deletion. Will be removed from cloud once reconnected"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                            color: 'var(--error-red, #ef4444)',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            gap: '4px',
+                            border: '1px solid rgba(239, 68, 68, 0.25)'
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                          <span>Pending Deletion</span>
+                        </span>
+                      ) : app.isPendingSync ? (
+                        <span 
+                          className="pending-sync-badge" 
+                          title="Saved locally. Pending cloud sync"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '3px 6px',
+                            borderRadius: '12px',
+                            backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                            color: 'var(--amber-warning, #f59e0b)',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            gap: '4px'
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                          </svg>
+                          <span>Pending</span>
+                        </span>
+                      ) : null}
+                      <span 
+                        className="status-badge"
+                        style={{ color: styles.color, backgroundColor: styles.bg }}
+                      >
+                        {app.status}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="job-card-footer">

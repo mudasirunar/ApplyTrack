@@ -16,6 +16,7 @@ const Applications = React.lazy(() => import('./pages/Applications'));
 const JobAddEdit = React.lazy(() => import('./pages/JobAddEdit'));
 const JobDetail = React.lazy(() => import('./pages/JobDetail'));
 const Settings = React.lazy(() => import('./pages/Settings'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 // Idle prefetch helper so internal tabs open with zero delay
 const prefetchCoreRoutes = () => {
@@ -71,12 +72,12 @@ const parsePath = (path) => {
     return { tab: 'settings', jobId: null };
   }
   
-  const editMatch = p.match(/^\/applications\/([^/]+)\/edit$/);
+  const editMatch = clean.match(/^\/applications\/([^/]+)\/edit$/i);
   if (editMatch) {
     return { tab: 'edit-job', jobId: editMatch[1] };
   }
   
-  const detailMatch = p.match(/^\/applications\/([^/]+)$/);
+  const detailMatch = clean.match(/^\/applications\/([^/]+)$/i);
   if (detailMatch) {
     return { tab: 'job-detail', jobId: detailMatch[1] };
   }
@@ -469,29 +470,9 @@ export default function App() {
 
     if (activeTab === 'not-found') {
       return (
-        <div style={{
-          minHeight: '70vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          padding: '40px 20px'
-        }}>
-          <h1 style={{ fontSize: '4.5rem', fontWeight: 900, color: 'var(--brand-primary)', margin: 0, letterSpacing: '-0.04em' }}>404</h1>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '12px 0 8px 0' }}>Page Not Found</h2>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', marginBottom: '24px', lineHeight: 1.5 }}>
-            The page you are looking for doesn't exist or has been moved.
-          </p>
-          <a
-            href="/"
-            onClick={(e) => { e.preventDefault(); setActiveTab('landing'); }}
-            className="btn-primary"
-            style={{ textDecoration: 'none', padding: '10px 22px' }}
-          >
-            Back to Home
-          </a>
-        </div>
+        <React.Suspense fallback={renderFullScreenSpinner()}>
+          <NotFound setActiveTab={setActiveTab} user={user} />
+        </React.Suspense>
       );
     }
 
@@ -568,6 +549,11 @@ export default function App() {
     return renderFullScreenSpinner();
   }
 
+  const isMissingJob = (activeTab === 'job-detail' || activeTab === 'edit-job') && selectedJobId && !db.getApplicationById(selectedJobId);
+  const layoutTab = isMissingJob
+    ? 'not-found'
+    : (user ? activeTab : (activeTab === 'landing' || activeTab === 'privacy' || activeTab === 'not-found' ? activeTab : 'login'));
+
   return (
     <>
       <PWAPullToRefresh />
@@ -581,9 +567,9 @@ export default function App() {
           }}
         />
       )}
-      {user && activeTab !== 'login' && activeTab !== 'landing' && activeTab !== 'privacy' && activeTab !== 'not-found' && <SyncToast />}
+      {user && !isMissingJob && activeTab !== 'login' && activeTab !== 'landing' && activeTab !== 'privacy' && activeTab !== 'not-found' && <SyncToast />}
       <MainLayout 
-        activeTab={user ? activeTab : (activeTab === 'landing' || activeTab === 'privacy' || activeTab === 'not-found' ? activeTab : 'login')} 
+        activeTab={layoutTab} 
         setActiveTab={setActiveTab}
         isSelectionMode={isSelectionMode}
       >

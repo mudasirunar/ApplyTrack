@@ -395,7 +395,9 @@ class SyncManagerImpl(
                                         shouldDownloadFiles = true
                                         actualChangesCount++
                                     } else if (remoteUpdatedAt > localJob.updatedAt) {
-                                        val updatedJob = localJob.copy(
+                                        val remoteJob = JobApplication(
+                                            id = localJob.id,
+                                            uuid = uuid,
                                             companyName = companyName,
                                             role = role,
                                             platform = platform,
@@ -413,6 +415,7 @@ class SyncManagerImpl(
                                             updatedAt = remoteUpdatedAt,
                                             lastSyncedAt = remoteUpdatedAt
                                         )
+                                        val updatedJob = com.mudasir.applytrack.utils.JobMerger.merge(localJob, remoteJob)
                                         dao.insertApplication(updatedJob)
                                         shouldDownloadFiles = true
                                         actualChangesCount++

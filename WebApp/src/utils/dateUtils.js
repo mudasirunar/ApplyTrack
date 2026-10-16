@@ -46,7 +46,7 @@ export const parseLocalDate = (dateStr) => {
 };
 
 export const ymdToDmy = (ymd) => {
-  if (!ymd) return '';
+  if (!ymd || typeof ymd !== 'string') return '';
   const parts = ymd.split('-');
   if (parts.length !== 3) return ymd;
   const [year, month, day] = parts;
@@ -54,7 +54,7 @@ export const ymdToDmy = (ymd) => {
 };
 
 export const dmyToYmd = (dmy) => {
-  if (!dmy) return '';
+  if (!dmy || typeof dmy !== 'string') return '';
   const parts = dmy.split('/');
   if (parts.length !== 3) return '';
   const [day, month, year] = parts;
@@ -65,10 +65,11 @@ export const dmyToYmd = (dmy) => {
 };
 
 export const getFormattedStatusDate = (app) => {
-  const history = app.statusHistory || [];
-  const statusTimestamp = history.length > 0 ? history[history.length - 1].timestamp : app.createdAt;
-  const dateStr = new Date(statusTimestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  return `${app.status} on ${dateStr}`;
+  if (!app) return '';
+  const history = Array.isArray(app.statusHistory) ? app.statusHistory : [];
+  const statusTimestamp = history.length > 0 ? (history[history.length - 1]?.timestamp || app.createdAt) : app.createdAt;
+  const dateStr = new Date(statusTimestamp || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${app.status || 'Applied'} on ${dateStr}`;
 };
 
 export const getActivityDates = (applications = []) => {
