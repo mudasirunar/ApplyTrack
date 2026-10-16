@@ -3,6 +3,7 @@ import { db } from './utils/db';
 import MainLayout from './components/MainLayout';
 import SyncToast from './components/SyncToast';
 import PWAPullToRefresh from './components/PWAPullToRefresh';
+import ErrorBoundary from './components/ErrorBoundary';
 import { logEvent } from 'firebase/analytics';
 import { analytics } from './utils/firebase';
 import { Analytics } from '@vercel/analytics/react';
@@ -587,7 +588,9 @@ export default function App() {
         isSelectionMode={isSelectionMode}
       >
         <div key={user ? user.email : 'guest'} style={{ display: 'contents' }}>
-          {renderContent()}
+          <ErrorBoundary key={activeTab} scope="content">
+            {renderContent()}
+          </ErrorBoundary>
         </div>
       </MainLayout>
       <Analytics />
