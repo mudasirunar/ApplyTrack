@@ -23,17 +23,21 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun DashboardHeader(totalCount: Int) {
+fun DashboardHeader(totalCount: Int, isSyncing: Boolean = false) {
     var message by remember(totalCount) {
         mutableStateOf(DashboardMessageProvider.getDashboardMessage(totalCount))
     }
 
-    LaunchedEffect(totalCount) {
-        while (true) {
-            delay(10000L)
-            message = DashboardMessageProvider.getDashboardMessage(totalCount)
+    LaunchedEffect(totalCount, isSyncing) {
+        if (!isSyncing) {
+            while (true) {
+                delay(10000L)
+                message = DashboardMessageProvider.getDashboardMessage(totalCount)
+            }
         }
     }
+
+    val currentDisplayMessage = if (isSyncing) "Syncing your applications..." else message
 
     Column(
         modifier = Modifier
@@ -48,7 +52,7 @@ fun DashboardHeader(totalCount: Int) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Crossfade(
-            targetState = message,
+            targetState = currentDisplayMessage,
             animationSpec = androidx.compose.animation.core.tween(500),
             label = "messageAnimation"
         ) { currentMessage ->

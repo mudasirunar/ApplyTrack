@@ -23,4 +23,6 @@ yarn-error.log*
 # Video generator outputs and local agent skills
 brag-output/
 .agents/
+AGENT.md
+agent.md
 

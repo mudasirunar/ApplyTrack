@@ -165,6 +165,13 @@ class MainActivity : ComponentActivity() {
                           if (syncState != SyncState.IDLE && authState != AuthState.GUEST) {
                               toastState = syncState
                               showToast = true
+                              if (syncState == SyncState.SYNCING) {
+                                  delay(3500)
+                                  showToast = false
+                              } else if (syncState == SyncState.SUCCESS || syncState == SyncState.ERROR) {
+                                  delay(2000)
+                                  showToast = false
+                              }
                           } else {
                               showToast = false
                           }

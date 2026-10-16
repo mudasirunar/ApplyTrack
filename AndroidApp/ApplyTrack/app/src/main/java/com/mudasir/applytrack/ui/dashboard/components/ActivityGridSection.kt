@@ -146,7 +146,8 @@ private val MONTH_LABEL_HEIGHT: Dp = 16.dp
 fun ActivityGridSection(
     counts: Map<Int, Int>,
     onDayClick: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false
 ) {
     var selection by rememberSaveable { mutableStateOf<Int?>(null) } // null = last year
     val years = remember(counts) { counts.keys.map { it / 10000 }.distinct().sortedDescending() }
@@ -195,7 +196,7 @@ fun ActivityGridSection(
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                YearDropdown(selected = active, years = years, onSelect = { selection = it })
+                YearDropdown(selected = active, years = years, enabled = !isLoading, onSelect = { selection = it })
             }
 
             Row(Modifier.fillMaxWidth().padding(top = 16.dp)) {
@@ -224,7 +225,7 @@ fun ActivityGridSection(
 
                 // Scrollable grid
                 Box(Modifier.weight(1f).horizontalScroll(scrollState)) {
-                    ActivityCanvas(data = data, palette = palette, onDayClick = onDayClick)
+                    ActivityCanvas(data = data, palette = palette, isLoading = isLoading, onDayClick = onDayClick)
                 }
             }
 
@@ -234,8 +235,9 @@ fun ActivityGridSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${data.total} application${if (data.total == 1) "" else "s"} " +
-                            if (active == null) "in the last year" else "in $active",
+                    text = if (isLoading) "Syncing activity..."
+                           else "${data.total} application${if (data.total == 1) "" else "s"} " +
+                                if (active == null) "in the last year" else "in $active",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -254,6 +256,7 @@ fun ActivityGridSection(
 private fun ActivityCanvas(
     data: ActivityGridData,
     palette: List<Color>,
+    isLoading: Boolean = false,
     onDayClick: (Long) -> Unit
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -264,11 +267,14 @@ private fun ActivityCanvas(
     )
     val weekCount = data.weeks.size
 
+    val skeletonColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+
     Canvas(
         modifier = Modifier
             .width((CELL + GAP) * weekCount)
             .height(MONTH_LABEL_HEIGHT + (CELL + GAP) * 7)
-            .pointerInput(data) {
+            .pointerInput(data, isLoading) {
+                if (isLoading) return@pointerInput
                 val stepPx = (CELL + GAP).toPx()
                 val labelPx = MONTH_LABEL_HEIGHT.toPx()
                 detectTapGestures { offset ->
@@ -286,14 +292,18 @@ private fun ActivityCanvas(
         val radius = CornerRadius(2.dp.toPx())
 
         data.monthLabels.forEach { l ->
-            drawText(textMeasurer, l.text, topLeft = Offset(l.week * stepPx, 0f), style = labelStyle)
+            drawText(textMeasurer, if (isLoading) "" else l.text, topLeft = Offset(l.week * stepPx, 0f), style = labelStyle)
         }
 
         data.weeks.forEachIndexed { w, days ->
             days.forEachIndexed { d, cell ->
                 if (!cell.inRange) return@forEachIndexed
-                val base = palette[levelFor(cell.count, data.max)]
-                val color = if (cell.future) base.copy(alpha = base.alpha * 0.5f) else base
+                val color = if (isLoading) {
+                    skeletonColor
+                } else {
+                    val base = palette[levelFor(cell.count, data.max)]
+                    if (cell.future) base.copy(alpha = base.alpha * 0.5f) else base
+                }
                 drawRoundRect(
                     color = color,
                     topLeft = Offset(w * stepPx, labelPx + d * stepPx),
@@ -306,7 +316,12 @@ private fun ActivityCanvas(
 }
 
 @Composable
-private fun YearDropdown(selected: Int?, years: List<Int>, onSelect: (Int?) -> Unit) {
+private fun YearDropdown(
+    selected: Int?,
+    years: List<Int>,
+    enabled: Boolean = true,
+    onSelect: (Int?) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(8.dp)
     Box {
@@ -315,7 +330,7 @@ private fun YearDropdown(selected: Int?, years: List<Int>, onSelect: (Int?) -> U
                 .clip(shape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
-                .clickable { expanded = true }
+                .clickable(enabled = enabled) { expanded = true }
                 .padding(start = 12.dp, top = 6.dp, bottom = 6.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

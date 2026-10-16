@@ -25,14 +25,18 @@ import com.mudasir.applytrack.ui.StatusSlice
 @Composable
 fun StatusDistributionSection(
     slices: List<StatusSlice>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSyncing: Boolean = false
 ) {
     SectionCard(
         title = "Status Distribution",
         modifier = modifier
     ) {
         if (slices.isEmpty()) {
-            EmptyStateText("Add applications to see your status distribution chart.")
+            EmptyStateText(
+                if (isSyncing) "Syncing applications to build your status distribution chart..."
+                else "Add applications to see your status distribution chart."
+            )
         } else {
             Column(
                 modifier = Modifier.fillMaxWidth(),

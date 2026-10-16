@@ -36,6 +36,9 @@ fun DashboardScreen(
     val dashboardYear by viewModel.dashboardYear.collectAsStateWithLifecycle()
     val activityCounts by viewModel.activityCounts.collectAsStateWithLifecycle()
 
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val isSyncing = syncState == com.mudasir.applytrack.ui.SyncState.SYNCING && analytics.total == 0
+
     val scrollState = rememberScrollState()
     val scrollToTopEvent by viewModel.dashboardScrollToTop.collectAsStateWithLifecycle()
     var lastScrollTrigger by remember { mutableStateOf(scrollToTopEvent) }
@@ -60,10 +63,11 @@ fun DashboardScreen(
                     .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                DashboardHeader(totalCount = analytics.total)
+                DashboardHeader(totalCount = analytics.total, isSyncing = isSyncing)
 
                 OverviewStatsRow(
                     analytics = analytics,
+                    isSyncing = isSyncing,
                     onNavigateToAdd = onNavigateToAdd,
                     onTotalApplicationsClick = {
                         viewModel.statusFilter.value = "All"
@@ -74,6 +78,7 @@ fun DashboardScreen(
 
                 StatusCardsGrid(
                     analytics = analytics,
+                    isSyncing = isSyncing,
                     onStatusClick = { status ->
                         viewModel.statusFilter.value = status
                         viewModel.shouldScrollToFilter.value = true
@@ -83,6 +88,7 @@ fun DashboardScreen(
 
                 ActivityGridSection(
                     counts = activityCounts,
+                    isLoading = isSyncing,
                     onDayClick = { dayMillis ->
                         viewModel.statusFilter.value = "Date"
                         viewModel.updateDateFilter {
@@ -97,9 +103,9 @@ fun DashboardScreen(
                     }
                 )
 
-                ConversionFunnelRow(analytics = analytics)
+                ConversionFunnelRow(analytics = analytics, isSyncing = isSyncing)
 
-                StatusDistributionSection(slices = analytics.statusDistribution)
+                StatusDistributionSection(slices = analytics.statusDistribution, isSyncing = isSyncing)
 
                 MonthlyActivitySection(
                     analytics = analytics,

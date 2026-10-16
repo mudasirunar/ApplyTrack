@@ -30,7 +30,8 @@ import com.mudasir.applytrack.ui.theme.SavedGray
 fun StatusCardsGrid(
     analytics: DashboardAnalytics,
     onStatusClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSyncing: Boolean = false
 ) {
     Column(
         modifier = modifier,
@@ -42,7 +43,7 @@ fun StatusCardsGrid(
         ) {
             StatusStatCard(
                 title = "Applied",
-                count = analytics.applied.toString(),
+                count = if (isSyncing) "—" else analytics.applied.toString(),
                 textColor = WarningAmber,
                 tint = WarningAmber.copy(alpha = 0.1f),
                 modifier = Modifier.weight(1f),
@@ -50,7 +51,7 @@ fun StatusCardsGrid(
             )
             StatusStatCard(
                 title = "Saved",
-                count = analytics.saved.toString(),
+                count = if (isSyncing) "—" else analytics.saved.toString(),
                 textColor = SavedGray,
                 tint = SavedGray.copy(alpha = 0.1f),
                 modifier = Modifier.weight(1f),
@@ -58,7 +59,7 @@ fun StatusCardsGrid(
             )
             StatusStatCard(
                 title = "Interview",
-                count = analytics.interviews.toString(),
+                count = if (isSyncing) "—" else analytics.interviews.toString(),
                 textColor = AccentGreen,
                 tint = AccentGreen.copy(alpha = 0.1f),
                 modifier = Modifier.weight(1f),
@@ -71,7 +72,7 @@ fun StatusCardsGrid(
         ) {
             StatusStatCard(
                 title = "Offers",
-                count = analytics.offers.toString(),
+                count = if (isSyncing) "—" else analytics.offers.toString(),
                 textColor = LinkBlue,
                 tint = LinkBlue.copy(alpha = 0.1f),
                 modifier = Modifier.weight(1f),
@@ -79,7 +80,7 @@ fun StatusCardsGrid(
             )
             StatusStatCard(
                 title = "Rejected",
-                count = analytics.rejected.toString(),
+                count = if (isSyncing) "—" else analytics.rejected.toString(),
                 textColor = ErrorRed,
                 tint = ErrorRed.copy(alpha = 0.1f),
                 modifier = Modifier.weight(1f),
@@ -87,7 +88,7 @@ fun StatusCardsGrid(
             )
             StatusStatCard(
                 title = "Response",
-                count = analytics.responses.toString(),
+                count = if (isSyncing) "—" else analytics.responses.toString(),
                 textColor = MaterialTheme.colorScheme.primary,
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
                 modifier = Modifier.weight(1f),

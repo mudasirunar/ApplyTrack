@@ -33,7 +33,8 @@ fun OverviewStatsRow(
     analytics: DashboardAnalytics,
     onNavigateToAdd: () -> Unit,
     onTotalApplicationsClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSyncing: Boolean = false
 ) {
     Card(
         onClick = onTotalApplicationsClick,
@@ -69,9 +70,9 @@ fun OverviewStatsRow(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = analytics.total.toString(),
+                        text = if (isSyncing) "•••" else analytics.total.toString(),
                         style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (isSyncing) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -82,8 +83,8 @@ fun OverviewStatsRow(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    ActivityBadge(label = "This Week", count = analytics.applicationsThisWeek)
-                    ActivityBadge(label = "This Month", count = analytics.applicationsThisMonth)
+                    ActivityBadge(label = "This Week", countText = if (isSyncing) "—" else analytics.applicationsThisWeek.toString())
+                    ActivityBadge(label = "This Month", countText = if (isSyncing) "—" else analytics.applicationsThisMonth.toString())
                 }
             }
 
@@ -97,11 +98,12 @@ fun OverviewStatsRow(
                 ) {
                     Button(
                         onClick = onNavigateToAdd,
+                        enabled = !isSyncing,
                         shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = "Add Your First Application",
+                            text = if (isSyncing) "Syncing Applications..." else "Add Your First Application",
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -112,7 +114,7 @@ fun OverviewStatsRow(
 }
 
 @Composable
-private fun ActivityBadge(label: String, count: Int) {
+private fun ActivityBadge(label: String, countText: String) {
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
@@ -135,7 +137,7 @@ private fun ActivityBadge(label: String, count: Int) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = count.toString(),
+                        text = countText,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary

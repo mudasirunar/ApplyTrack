@@ -21,14 +21,18 @@ import com.mudasir.applytrack.ui.theme.LinkBlue
 @Composable
 fun ConversionFunnelRow(
     analytics: DashboardAnalytics,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSyncing: Boolean = false
 ) {
     SectionCard(
         title = "Conversion Rates",
         modifier = modifier
     ) {
         if (analytics.total == 0) {
-            EmptyStateText("No conversion rates available. Add applications with different statuses to calculate your success and interview rates.")
+            EmptyStateText(
+                if (isSyncing) "Syncing applications to calculate your conversion rates..."
+                else "No conversion rates available. Add applications with different statuses to calculate your success and interview rates."
+            )
         } else {
             Row(
                 modifier = Modifier.fillMaxWidth(),
