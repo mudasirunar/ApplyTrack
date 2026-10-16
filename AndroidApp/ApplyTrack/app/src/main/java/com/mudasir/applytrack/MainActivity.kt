@@ -1,90 +1,47 @@
 package com.mudasir.applytrack
 
 import android.os.Bundle
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import android.annotation.SuppressLint
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import androidx.compose.ui.unit.dp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mudasir.applytrack.auth.AuthManager
-import com.mudasir.applytrack.data.sync.SyncManager
-import com.mudasir.applytrack.data.sync.SyncManagerImpl
 import com.mudasir.applytrack.auth.AuthState
-import com.mudasir.applytrack.ui.login.LoginScreen
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.ui.unit.sp
 import com.mudasir.applytrack.data.local.AppDatabase
 import com.mudasir.applytrack.data.repository.JobRepositoryImpl
+import com.mudasir.applytrack.data.sync.SyncManagerImpl
 import com.mudasir.applytrack.ui.JobViewModel
 import com.mudasir.applytrack.ui.JobViewModelFactory
-import com.mudasir.applytrack.ui.dashboard.DashboardScreen
-import com.mudasir.applytrack.ui.applications.ApplicationsScreen
-import com.mudasir.applytrack.ui.jobaddedit.AddEditScreen
-import com.mudasir.applytrack.ui.jobdetail.DetailScreen
-import com.mudasir.applytrack.ui.theme.*
-import com.mudasir.applytrack.utils.PreferencesHelper
+import com.mudasir.applytrack.ui.login.LoginScreen
+import com.mudasir.applytrack.ui.navigation.MainAppShell
+import com.mudasir.applytrack.ui.theme.MyApplicationTheme
 import com.mudasir.applytrack.utils.AppTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.getValue
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.compose.ui.platform.testTag
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.mudasir.applytrack.ui.settings.SettingsScreen
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.ui.Alignment
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.size
+import com.mudasir.applytrack.utils.PreferencesHelper
 
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.statusBarsPadding
-import com.mudasir.applytrack.ui.SyncState
-import com.mudasir.applytrack.ui.components.JobSnackbarHost
-import com.mudasir.applytrack.ui.components.SyncToast
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import kotlinx.coroutines.delay
-
+/**
+ * Main Activity entrypoint for ApplyTrack.
+ * Responsibilities:
+ * - Bootstraps core application dependencies and lifecycle observers.
+ * - Handles top-level AuthState routing (Loading, Login, or MainAppShell).
+ * - Delegates UI navigation and screen composition to the modular navigation layer.
+ */
 class MainActivity : ComponentActivity() {
 
-    // Manual clean dependency injection container setup following recommended guidelines
+    // Clean dependency container setup
     private val database by lazy { AppDatabase.getDatabase(this) }
     private val repository by lazy { JobRepositoryImpl(applicationContext, database.jobApplicationDao(), authManager) }
     private val preferencesHelper by lazy { PreferencesHelper(applicationContext) }
@@ -98,25 +55,24 @@ class MainActivity : ComponentActivity() {
             authManager = authManager
         )
     }
-    
+
     private val viewModel: JobViewModel by viewModels {
         JobViewModelFactory(repository, preferencesHelper, syncManager, authManager)
     }
 
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
         // Start live sync manager
         syncManager.startSync()
-        
+
         // Setup guest data upgrade callback
         authManager.onUserUpgradeCallback = {
             syncManager.migrateLocalDataToCloud()
         }
-        
+
         setContent {
             val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
             val isDarkTheme = when (appTheme) {
@@ -124,6 +80,7 @@ class MainActivity : ComponentActivity() {
                 AppTheme.DARK -> true
                 AppTheme.SYSTEM -> isSystemInDarkTheme()
             }
+
             MyApplicationTheme(darkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -152,403 +109,11 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         AuthState.GUEST, AuthState.AUTHENTICATED -> {
-                            val navController = rememberNavController()
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentRoute = navBackStackEntry?.destination?.route
-                    val isSearchFocused by viewModel.isSearchFocused.collectAsStateWithLifecycle()
-                     val snackbarHostState = remember { SnackbarHostState() }
-                     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
-                     var showToast by remember { mutableStateOf(false) }
-                     var toastState by remember { mutableStateOf(SyncState.IDLE) }
-
-                      LaunchedEffect(syncState, authState) {
-                          if (syncState != SyncState.IDLE && authState != AuthState.GUEST) {
-                              toastState = syncState
-                              showToast = true
-                              if (syncState == SyncState.SYNCING) {
-                                  delay(3500)
-                                  showToast = false
-                              } else if (syncState == SyncState.SUCCESS || syncState == SyncState.ERROR) {
-                                  delay(2000)
-                                  showToast = false
-                              }
-                          } else {
-                              showToast = false
-                          }
-                      }
-                    val isSelectionModeActive by viewModel.isSelectionModeActive.collectAsStateWithLifecycle()
-                    val isFabVisible by viewModel.isFabVisible.collectAsStateWithLifecycle()
-                    val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
-                    val isFabVisibleOnScreen = currentRoute == "applications" && isFabVisible && !isSearchFocused && !isInitialLoading && !isSelectionModeActive
-                    val isBottomBarVisible = (currentRoute == "dashboard" || currentRoute == "applications" || currentRoute == "settings") && !isSearchFocused && !isSelectionModeActive
-                    
-                    val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                    val snackbarSpacing = 2.dp
-                    val fabSpacing = 8.dp
-                    val fabHeight = 56.dp
-                    val bottomBarHeight = 80.dp
-                    
-                    val snackbarBottomPadding = when {
-                        isFabVisibleOnScreen -> navigationBarsPadding + bottomBarHeight + fabSpacing + fabHeight + snackbarSpacing
-                        isBottomBarVisible -> navigationBarsPadding + bottomBarHeight + snackbarSpacing
-                        else -> navigationBarsPadding + snackbarSpacing
-                    }
-                    val animatedPadding by animateDpAsState(
-                        targetValue = snackbarBottomPadding,
-                        animationSpec = tween(durationMillis = 300),
-                        label = "SnackbarPaddingAnimation"
-                    )
-                    
-                    val pendingDeleteJobs by viewModel.pendingDeleteJobs.collectAsStateWithLifecycle()
-                    val lifecycleOwner = LocalLifecycleOwner.current
-
-                    // Observe pending delete for Snackbar
-                    LaunchedEffect(pendingDeleteJobs) {
-                        if (pendingDeleteJobs.isNotEmpty()) {
-                            val snackbarMessage = if (pendingDeleteJobs.size == 1) {
-                                val roleName = pendingDeleteJobs.first().role.takeUnless { it.isNullOrBlank() } ?: "Application"
-                                "'$roleName' deleted"
-                            } else {
-                                "${pendingDeleteJobs.size} applications deleted"
-                            }
-                            val result = snackbarHostState.showSnackbar(
-                                message = snackbarMessage,
-                                actionLabel = "Undo",
-                                duration = SnackbarDuration.Short
-                            )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                viewModel.undoDelete()
-                            } else if (result == SnackbarResult.Dismissed) {
-                                viewModel.commitPendingDelete()
-                            }
-                        }
-                    }
-
-                    // Commit delete if navigating to edit or detail screens
-                    LaunchedEffect(currentRoute) {
-                        if (currentRoute?.startsWith("add_edit") == true || currentRoute?.startsWith("detail") == true) {
-                            viewModel.commitPendingDelete()
-                            snackbarHostState.currentSnackbarData?.dismiss()
-                        }
-                    }
-
-                    // Commit delete if app goes to background
-                    DisposableEffect(lifecycleOwner) {
-                        val observer = LifecycleEventObserver { _, event ->
-                            if (event == Lifecycle.Event.ON_STOP) {
-                                viewModel.commitPendingDeleteBlocking()
-                            }
-                        }
-                        lifecycleOwner.lifecycle.addObserver(observer)
-                        onDispose {
-                            lifecycleOwner.lifecycle.removeObserver(observer)
-                        }
-                    }
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Scaffold(
-                            bottomBar = {
-                                AnimatedVisibility(
-                                    visible = isBottomBarVisible,
-                                enter = slideInVertically(
-                                    initialOffsetY = { it },
-                                    animationSpec = tween(120)
-                                ) + fadeIn(animationSpec = tween(120)),
-                                exit = slideOutVertically(
-                                    targetOffsetY = { it },
-                                    animationSpec = tween(120)
-                                ) + fadeOut(animationSpec = tween(120))
-                            ) {
-                                val isDark = isDarkTheme
-                                val navContainer = if (isDark) DarkNavContainer else LightNavContainer
-                                val navSelectedIcon = if (isDark) DarkNavSelectedIcon else LightNavSelectedIcon
-                                val navSelectedText = if (isDark) DarkNavSelectedText else LightNavSelectedText
-                                val navSelectedIndicator = if (isDark) DarkNavSelectedIndicator else LightNavSelectedIndicator
-                                val navUnselected = if (isDark) DarkNavUnselected else LightNavUnselected
-
-                                NavigationBar(
-                                    containerColor = navContainer,
-                                    tonalElevation = 0.dp
-                                ) {
-                                    NavigationBarItem(
-                                        icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
-                                        label = { Text("Dashboard") },
-                                        selected = currentRoute == "dashboard",
-                                        onClick = {
-                                            if (currentRoute != "dashboard") {
-                                                navController.navigate("dashboard") {
-                                                    popUpTo(navController.graph.startDestinationId) {
-                                                        saveState = true
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = true
-                                                }
-                                            } else {
-                                                viewModel.triggerScrollToTop("dashboard")
-                                            }
-                                        },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = navSelectedIcon,
-                                            selectedTextColor = navSelectedText,
-                                            unselectedIconColor = navUnselected,
-                                            unselectedTextColor = navUnselected,
-                                            indicatorColor = navSelectedIndicator
-                                        ),
-                                        modifier = Modifier.testTag("nav_home")
-                                    )
-                                    NavigationBarItem(
-                                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Applications") },
-                                        label = { Text("Applications") },
-                                        selected = currentRoute == "applications",
-                                        onClick = {
-                                            if (currentRoute != "applications") {
-                                                navController.navigate("applications") {
-                                                    popUpTo(navController.graph.startDestinationId) {
-                                                        saveState = true
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = true
-                                                }
-                                            } else {
-                                                viewModel.triggerScrollToTop("applications")
-                                            }
-                                        },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = navSelectedIcon,
-                                            selectedTextColor = navSelectedText,
-                                            unselectedIconColor = navUnselected,
-                                            unselectedTextColor = navUnselected,
-                                            indicatorColor = navSelectedIndicator
-                                        ),
-                                        modifier = Modifier.testTag("nav_applications")
-                                    )
-                                    NavigationBarItem(
-                                        icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                                        label = { Text("Settings") },
-                                        selected = currentRoute == "settings",
-                                        onClick = {
-                                            if (currentRoute != "settings") {
-                                                navController.navigate("settings") {
-                                                    popUpTo(navController.graph.startDestinationId) {
-                                                        saveState = true
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = true
-                                                }
-                                            } else {
-                                                viewModel.triggerScrollToTop("settings")
-                                            }
-                                        },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = navSelectedIcon,
-                                            selectedTextColor = navSelectedText,
-                                            unselectedIconColor = navUnselected,
-                                            unselectedTextColor = navUnselected,
-                                            indicatorColor = navSelectedIndicator
-                                        ),
-                                        modifier = Modifier.testTag("nav_settings")
-                                    )
-                                }
-                            }
-                        }
-                    ) { innerPadding ->
-                        NavHost(
-                            navController = navController,
-                            startDestination = "dashboard",
-                            enterTransition = { fadeIn(animationSpec = tween(100)) },
-                            exitTransition = { fadeOut(animationSpec = tween(100)) },
-                            popEnterTransition = { fadeIn(animationSpec = tween(100)) },
-                            popExitTransition = { fadeOut(animationSpec = tween(100)) }
-                        ) {
-                        // 1. Dashboard Landing screen
-                        composable("dashboard") {
-                            DashboardScreen(
+                            MainAppShell(
                                 viewModel = viewModel,
-                                onNavigateToAdd = {
-                                    navController.navigate("add_edit")
-                                },
-                                onNavigateToApplications = {
-                                    navController.navigate("applications") {
-                                        popUpTo(navController.graph.startDestinationId) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
+                                authManager = authManager,
+                                isDarkTheme = isDarkTheme
                             )
-                        }
-
-                        // Applications List Screen
-                        composable("applications") {
-                            ApplicationsScreen(
-                                viewModel = viewModel,
-                                onNavigateToAddEdit = { id ->
-                                    val route = if (id != null) "add_edit?jobId=$id" else "add_edit"
-                                    navController.navigate(route)
-                                },
-                                onNavigateToDetail = { id ->
-                                    navController.navigate("detail/$id")
-                                }
-                            )
-                        }
-
-                        // 2. Add/Edit Job details form screen (with optional argument jobId)
-                        composable(
-                            route = "add_edit?jobId={jobId}",
-                            arguments = listOf(
-                                navArgument("jobId") {
-                                    type = NavType.StringType
-                                    nullable = true
-                                    defaultValue = null
-                                }
-                            )
-                        ) { backStackEntry ->
-                            val jobIdString = backStackEntry.arguments?.getString("jobId")
-                            val jobId = jobIdString?.toLongOrNull()
-
-                            AddEditScreen(
-                                viewModel = viewModel,
-                                jobId = jobId,
-                                onNavigateBack = {
-                                    navController.popBackStack()
-                                },
-                                onNavigateToApplications = {
-                                    navController.navigate("applications") {
-                                        popUpTo("dashboard") { inclusive = false }
-                                        launchSingleTop = true
-                                    }
-                                },
-                                onNavigateToPdfViewer = { fileName, originalName, fileUri ->
-                                    val encFileName = java.net.URLEncoder.encode(fileName ?: "", "UTF-8")
-                                    val encOriginalName = java.net.URLEncoder.encode(originalName ?: "", "UTF-8")
-                                    val encFileUri = java.net.URLEncoder.encode(fileUri ?: "", "UTF-8")
-                                    navController.navigate("pdf_viewer?fileName=$encFileName&originalName=$encOriginalName&fileUri=$encFileUri")
-                                }
-                            )
-                        }
-
-                        // 3. Job Detail full inspection screen
-                        composable(
-                            route = "detail/{jobId}",
-                            arguments = listOf(
-                                navArgument("jobId") {
-                                    type = NavType.LongType
-                                }
-                            )
-                        ) { backStackEntry ->
-                            val jobId = backStackEntry.arguments?.getLong("jobId") ?: 0L
-
-                            DetailScreen(
-                                viewModel = viewModel,
-                                jobId = jobId,
-                                onNavigateToEdit = { id ->
-                                    navController.navigate("add_edit?jobId=$id")
-                                },
-                                onNavigateToPdfViewer = { fileName, originalName ->
-                                    val encFileName = java.net.URLEncoder.encode(fileName ?: "", "UTF-8")
-                                    val encOriginalName = java.net.URLEncoder.encode(originalName ?: "", "UTF-8")
-                                    navController.navigate("pdf_viewer?fileName=$encFileName&originalName=$encOriginalName")
-                                },
-                                onNavigateToImageViewer = { id, index ->
-                                    navController.navigate("image_viewer?jobId=$id&initialIndex=$index")
-                                },
-                                onNavigateBack = {
-                                    navController.popBackStack()
-                                },
-                                onNavigateToApplications = {
-                                    navController.navigate("applications") {
-                                        popUpTo("dashboard") { inclusive = false }
-                                        launchSingleTop = true
-                                    }
-                                }
-                            )
-                        }
-
-                        // 4. PDF Viewer fullscreen screen
-                        composable(
-                            route = "pdf_viewer?fileName={fileName}&originalName={originalName}&fileUri={fileUri}",
-                            arguments = listOf(
-                                navArgument("fileName") {
-                                    type = NavType.StringType
-                                    defaultValue = ""
-                                },
-                                navArgument("originalName") {
-                                    type = NavType.StringType
-                                    defaultValue = ""
-                                },
-                                navArgument("fileUri") {
-                                    type = NavType.StringType
-                                    defaultValue = ""
-                                }
-                            )
-                        ) { backStackEntry ->
-                            val rawFileName = backStackEntry.arguments?.getString("fileName") ?: ""
-                            val rawOriginalName = backStackEntry.arguments?.getString("originalName") ?: ""
-                            val rawFileUri = backStackEntry.arguments?.getString("fileUri") ?: ""
-
-                            val fileName = java.net.URLDecoder.decode(rawFileName, "UTF-8")
-                            val originalName = java.net.URLDecoder.decode(rawOriginalName, "UTF-8")
-                            val fileUri = java.net.URLDecoder.decode(rawFileUri, "UTF-8").takeIf { it.isNotBlank() }
-
-                            com.mudasir.applytrack.ui.viewer.PdfViewerScreen(
-                                fileName = fileName,
-                                originalName = originalName,
-                                fileUri = fileUri,
-                                onNavigateBack = {
-                                    navController.popBackStack()
-                                }
-                            )
-                        }
-
-                        // 5. Image Viewer fullscreen pager screen
-                        composable(
-                            route = "image_viewer?jobId={jobId}&initialIndex={initialIndex}",
-                            arguments = listOf(
-                                navArgument("jobId") {
-                                    type = NavType.LongType
-                                },
-                                navArgument("initialIndex") {
-                                    type = NavType.IntType
-                                }
-                            )
-                        ) { backStackEntry ->
-                            val jobId = backStackEntry.arguments?.getLong("jobId") ?: 0L
-                            val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
-                            com.mudasir.applytrack.ui.viewer.ImageViewerScreen(
-                                viewModel = viewModel,
-                                jobId = jobId,
-                                initialIndex = initialIndex,
-                                onNavigateBack = {
-                                    navController.popBackStack()
-                                }
-                            )
-                        }
-
-                        // 6. Settings Screen
-                        composable("settings") {
-                            SettingsScreen(
-                                viewModel = viewModel,
-                                authManager = authManager
-                            )
-                        }
-                    }
-                }
-
-                JobSnackbarHost(
-                    hostState = snackbarHostState,
-                    bottomPadding = animatedPadding,
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
-
-                SyncToast(
-                    visible = showToast,
-                    toastState = toastState,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .statusBarsPadding()
-                        .padding(top = 16.dp)
-                )
-                            }
                         }
                     }
                 }

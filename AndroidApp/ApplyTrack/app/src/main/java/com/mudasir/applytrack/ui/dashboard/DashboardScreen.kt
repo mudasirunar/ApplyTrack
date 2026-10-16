@@ -23,6 +23,7 @@ import com.mudasir.applytrack.ui.JobViewModel
 import com.mudasir.applytrack.ui.applications.DateFilterMode
 import com.mudasir.applytrack.ui.applications.DateBasis
 import com.mudasir.applytrack.ui.dashboard.components.ActivityGridSection
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +38,22 @@ fun DashboardScreen(
     val activityCounts by viewModel.activityCounts.collectAsStateWithLifecycle()
 
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
-    val isSyncing = syncState == com.mudasir.applytrack.ui.SyncState.SYNCING && analytics.total == 0
+    var isSyncing by remember { mutableStateOf(syncState == com.mudasir.applytrack.ui.SyncState.SYNCING && analytics.total == 0) }
+
+    LaunchedEffect(syncState, analytics.total) {
+        if (syncState == com.mudasir.applytrack.ui.SyncState.SYNCING && analytics.total == 0) {
+            isSyncing = true
+        } else if (analytics.total > 0 || syncState != com.mudasir.applytrack.ui.SyncState.SYNCING) {
+            isSyncing = false
+        }
+    }
+
+    LaunchedEffect(isSyncing) {
+        if (isSyncing) {
+            delay(4000)
+            isSyncing = false
+        }
+    }
 
     val scrollState = rememberScrollState()
     val scrollToTopEvent by viewModel.dashboardScrollToTop.collectAsStateWithLifecycle()

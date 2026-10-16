@@ -60,9 +60,23 @@ class SyncManagerImpl(
     private var activeUserAnonymous: Boolean? = null
     private var uploadJob: Job? = null
     private var toastSuccessJob: Job? = null
+    private var syncingTimeoutJob: Job? = null
     private var wasAuthenticatedAtStartup = false
     private var isFirstSync = true
     private var isInitialListenerSnapshot = true
+
+    private fun setSyncState(newState: SyncState) {
+        syncingTimeoutJob?.cancel()
+        _syncState.value = newState
+        if (newState == SyncState.SYNCING) {
+            syncingTimeoutJob = scope.launch {
+                delay(3500)
+                if (_syncState.value == SyncState.SYNCING) {
+                    _syncState.value = SyncState.IDLE
+                }
+            }
+        }
+    }
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
@@ -91,11 +105,12 @@ class SyncManagerImpl(
                     activeUserAnonymous = isAnonymous
                     
                     if (newUid != null && !isAnonymous && repository.isFirebaseConfigured()) {
+                        setSyncState(SyncState.SYNCING)
                         startJobApplicationsListener(newUid)
                         runFullSync()
                         enqueueBackgroundSync()
                     } else {
-                        _syncState.value = SyncState.IDLE
+                        setSyncState(SyncState.IDLE)
                     }
                 }
             }
@@ -167,13 +182,7 @@ class SyncManagerImpl(
     }
 
     override suspend fun runFullSync(): Result<Unit> {
-        val shouldShow = if (isFirstSync) {
-            isFirstSync = false
-            !wasAuthenticatedAtStartup
-        } else {
-            true
-        }
-        return runFullSyncInternal(shouldShow)
+        return runFullSyncInternal(showToast = true)
     }
 
     private suspend fun runFullSyncInternal(showToast: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
@@ -185,6 +194,9 @@ class SyncManagerImpl(
         }
         
         _syncErrorMessage.value = null
+        if (showToast && activeUserAnonymous != true) {
+            setSyncState(SyncState.SYNCING)
+        }
         
         try {
             val uploadResult = repository.uploadLocalChanges()
@@ -214,10 +226,10 @@ class SyncManagerImpl(
                 toastSuccessJob?.cancel()
                 _syncState.value = SyncState.SUCCESS
                 toastSuccessJob = scope.launch {
-                    delay(2500)
+                    delay(2000)
                     _syncState.value = SyncState.IDLE
                 }
-            } else {
+            } else if (_syncState.value == SyncState.SYNCING) {
                 _syncState.value = SyncState.IDLE
             }
             Result.success(Unit)
@@ -298,6 +310,9 @@ class SyncManagerImpl(
     }
 
     private fun startJobApplicationsListener(userId: String) {
+        if (activeUserAnonymous != true) {
+            setSyncState(SyncState.SYNCING)
+        }
         val firestore = FirebaseFirestore.getInstance()
         val collectionRef = firestore.collection("users")
             .document(userId)
@@ -313,6 +328,9 @@ class SyncManagerImpl(
             
             scope.launch(Dispatchers.IO) {
                 try {
+                    val isFirstSnapshot = isInitialListenerSnapshot
+                    isInitialListenerSnapshot = false
+                    val docsCount = snapshots.size()
                     var actualChangesCount = 0
                     val db = com.mudasir.applytrack.data.local.AppDatabase.getDatabase(context)
                     db.withTransaction {
@@ -464,20 +482,31 @@ class SyncManagerImpl(
                             }
                         }
                     }
-                    // Trigger toast if actual downloaded remote changes exist and initial snapshot has loaded
-                    if (actualChangesCount > 0 && !isInitialListenerSnapshot && activeUserAnonymous != true) {
-                        toastSuccessJob?.cancel()
-                        _syncState.value = SyncState.SUCCESS
-                        toastSuccessJob = scope.launch {
-                            delay(2500)
+                    // Trigger toast and update syncState based on remote data
+                    if (isFirstSnapshot) {
+                        if (docsCount > 0 && activeUserAnonymous != true) {
+                            toastSuccessJob?.cancel()
+                            _syncState.value = SyncState.SUCCESS
+                            toastSuccessJob = scope.launch {
+                                delay(2000)
+                                _syncState.value = SyncState.IDLE
+                            }
+                        } else {
                             _syncState.value = SyncState.IDLE
                         }
                     } else {
-                        if (_syncState.value != SyncState.SYNCING) {
+                        // For subsequent snapshots, only show SUCCESS if actual downloaded remote changes exist
+                        if (actualChangesCount > 0 && activeUserAnonymous != true) {
+                            toastSuccessJob?.cancel()
+                            _syncState.value = SyncState.SUCCESS
+                            toastSuccessJob = scope.launch {
+                                delay(2000)
+                                _syncState.value = SyncState.IDLE
+                            }
+                        } else if (_syncState.value == SyncState.SYNCING) {
                             _syncState.value = SyncState.IDLE
                         }
                     }
-                    isInitialListenerSnapshot = false
                 } catch (e: Exception) {
                     e.printStackTrace()
                     triggerError(e.localizedMessage ?: "Sync listener failed")
@@ -586,10 +615,11 @@ class SyncManagerImpl(
 
     private fun triggerError(message: String) {
         if (activeUserAnonymous == true) return
+        syncingTimeoutJob?.cancel()
         _syncState.value = SyncState.ERROR
         _syncErrorMessage.value = message
         scope.launch {
-            delay(3500)
+            delay(2500)
             if (_syncState.value == SyncState.ERROR) {
                 _syncState.value = SyncState.IDLE
             }
