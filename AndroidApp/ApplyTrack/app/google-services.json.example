@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000001",
         "android_client_info": {
-          "package_name": "com.applytrack"
+          "package_name": "com.mudasir.applytrack"
         }
       },
       "oauth_client": [
