@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from './utils/db';
 import MainLayout from './components/MainLayout';
-import Login from './pages/Login';
 import SyncToast from './components/SyncToast';
 import PWAPullToRefresh from './components/PWAPullToRefresh';
 import { logEvent } from 'firebase/analytics';
@@ -9,12 +8,25 @@ import { analytics } from './utils/firebase';
 import { Analytics } from '@vercel/analytics/react';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
+const Login = React.lazy(() => import('./pages/Login'));
 const Privacy = React.lazy(() => import('./pages/Privacy'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Applications = React.lazy(() => import('./pages/Applications'));
 const JobAddEdit = React.lazy(() => import('./pages/JobAddEdit'));
 const JobDetail = React.lazy(() => import('./pages/JobDetail'));
 const Settings = React.lazy(() => import('./pages/Settings'));
+
+// Idle prefetch helper so internal tabs open with zero delay
+const prefetchCoreRoutes = () => {
+  if (typeof window !== 'undefined') {
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1000));
+    idle(() => {
+      import('./pages/Applications');
+      import('./pages/Settings');
+      import('./pages/JobAddEdit');
+    });
+  }
+};
 
 const getLocalDateString = (timestampOrDate = new Date()) => {
   const date = new Date(timestampOrDate);
@@ -370,6 +382,13 @@ export default function App() {
     };
   }, []);
 
+  // Idle prefetch: quietly cache other application chunks while user is idle on Dashboard
+  useEffect(() => {
+    if (user && activeTab === 'dashboard') {
+      prefetchCoreRoutes();
+    }
+  }, [user, activeTab]);
+
   // Log page view to Firebase Analytics on activeTab change
   useEffect(() => {
     if (analytics) {
@@ -476,7 +495,11 @@ export default function App() {
     }
 
     if (!user) {
-      return <Login setActiveTab={setActiveTab} />;
+      return (
+        <React.Suspense fallback={renderFullScreenSpinner()}>
+          <Login setActiveTab={setActiveTab} />
+        </React.Suspense>
+      );
     }
 
     return (

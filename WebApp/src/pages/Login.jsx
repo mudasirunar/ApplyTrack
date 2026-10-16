@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { signInWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { AppIcon, GoogleIcon } from '../components/Icons';
