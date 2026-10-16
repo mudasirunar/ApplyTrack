@@ -17,8 +17,8 @@ export const AppIcon = ({ size, className = '', style, ...props }) => {
       className={className} 
       style={{ 
         display: 'inline-block', 
-        width: size ? `${size}px` : undefined, 
-        height: size ? `${size}px` : undefined, 
+        width: size ? `${size}px` : (style?.width || `${finalSize}px`), 
+        height: size ? `${size}px` : (style?.height || `${finalSize}px`), 
         flexShrink: 0, 
         ...style 
       }}

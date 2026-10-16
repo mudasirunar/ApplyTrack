@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { db } from '../utils/db';
 import { useBodyScrollLock } from '../utils/useBodyScrollLock';
 import { 
-  AppIcon,
   ChevronIcon, 
   EditIcon,
   DeleteIcon,
@@ -14,8 +13,8 @@ import {
 } from '../components/Icons';
 import ImageViewer from '../components/ImageViewer';
 import PDFViewer from '../components/PDFViewer';
+import NotFound from './NotFound';
 import './JobDetail.css';
-import './NotFound.css';
 
 function ConfirmationModal({ title, message, confirmLabel, isDestructive, onConfirm, onCancel, hideCancel = false }) {
   useBodyScrollLock(true);
@@ -198,75 +197,14 @@ export default function JobDetail({ jobId, setActiveTab, setSelectedJobId }) {
 
   if (!app) {
     return (
-      <div className="not-found-page animate-fade-in">
-        <header className="not-found-header">
-          <div 
-            className="not-found-brand" 
-            onClick={() => {
-              if (setSelectedJobId) setSelectedJobId(null);
-              if (setActiveTab) setActiveTab('dashboard');
-              else window.location.href = '/dashboard';
-            }}
-            role="button"
-            tabIndex={0}
-          >
-            <AppIcon className="not-found-logo" />
-            <span className="not-found-brand-name">ApplyTrack</span>
-          </div>
-        </header>
-
-        <main className="not-found-main">
-          <div className="not-found-card">
-            <div style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              color: 'var(--error-red, #ef4444)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '16px'
-            }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <line x1="9" y1="15" x2="15" y2="15"></line>
-              </svg>
-            </div>
-            <h1 className="not-found-title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-              Application Not Found
-            </h1>
-            <p className="not-found-description" style={{ marginBottom: '28px' }}>
-              This job application may have been permanently removed or the link is invalid.
-            </p>
-
-            <div className="not-found-actions">
-              <button 
-                type="button" 
-                onClick={() => {
-                  if (setSelectedJobId) setSelectedJobId(null);
-                  if (setActiveTab) setActiveTab('applications');
-                  else window.location.href = '/applications';
-                }}
-                className="not-found-btn not-found-btn-primary"
-              >
-                Back to Applications
-              </button>
-              <button 
-                type="button" 
-                onClick={() => {
-                  if (setSelectedJobId) setSelectedJobId(null);
-                  if (setActiveTab) setActiveTab('dashboard');
-                  else window.location.href = '/dashboard';
-                }}
-                className="not-found-btn not-found-btn-secondary"
-              >
-                Go to Dashboard
-              </button>
-            </div>
-          </div>
-        </main>
-      </div>
+      <NotFound 
+        setActiveTab={setActiveTab} 
+        setSelectedJobId={setSelectedJobId}
+        user={db.getCurrentUser()}
+        title="Application Not Found"
+        description="This job application may have been permanently removed or the link is invalid."
+        isMissingJob={true}
+      />
     );
   }
 

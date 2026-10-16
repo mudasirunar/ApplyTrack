@@ -21,4 +21,23 @@ describe('NotFound Component', () => {
     expect(html).toContain('Back to Home');
     expect(html).toContain('Sign In');
   });
+
+  it('renders correctly for missing or deleted application', () => {
+    const setActiveTab = vi.fn();
+    const html = renderToString(
+      <NotFound 
+        setActiveTab={setActiveTab} 
+        user={{ email: 'test@example.com' }}
+        title="Application Not Found"
+        description="This job application may have been permanently removed or the link is invalid."
+        isMissingJob={true}
+      />
+    );
+    expect(html).not.toContain('not-found-badge');
+    expect(html).toContain('not-found-missing-icon-badge');
+    expect(html).toContain('Application Not Found');
+    expect(html).toContain('This job application may have been permanently removed or the link is invalid.');
+    expect(html).toContain('Go to Applications');
+    expect(html).toContain('Back to Dashboard');
+  });
 });

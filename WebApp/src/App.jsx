@@ -268,6 +268,10 @@ export default function App() {
     window.scrollTo(0, 0);
     setIsSelectionMode(false);
     setSelectedIds([]);
+    if (tab !== 'job-detail' && tab !== 'edit-job') {
+      selectedJobIdRef.current = null;
+      setSelectedJobIdState(null);
+    }
     setActiveTabState(tab);
   };
 
@@ -450,6 +454,11 @@ export default function App() {
     }
   }, [activeTab]);
 
+  const isMissingJob = (activeTab === 'job-detail' || activeTab === 'edit-job') && selectedJobId && !db.getApplicationById(selectedJobId);
+  const layoutTab = isMissingJob
+    ? 'not-found'
+    : (user ? activeTab : (activeTab === 'landing' || activeTab === 'privacy' || activeTab === 'not-found' ? activeTab : 'login'));
+
   // Render correct page content
   const renderContent = () => {
     if (activeTab === 'landing') {
@@ -468,10 +477,17 @@ export default function App() {
       );
     }
 
-    if (activeTab === 'not-found') {
+    if (activeTab === 'not-found' || isMissingJob) {
       return (
         <React.Suspense fallback={renderFullScreenSpinner()}>
-          <NotFound setActiveTab={setActiveTab} user={user} />
+          <NotFound 
+            setActiveTab={setActiveTab} 
+            setSelectedJobId={setSelectedJobId}
+            user={user} 
+            title={isMissingJob ? "Application Not Found" : "Page Not Found"}
+            description={isMissingJob ? "This job application may have been permanently removed or the link is invalid." : undefined}
+            isMissingJob={isMissingJob}
+          />
         </React.Suspense>
       );
     }
@@ -548,11 +564,6 @@ export default function App() {
   if (!isAuthReady) {
     return renderFullScreenSpinner();
   }
-
-  const isMissingJob = (activeTab === 'job-detail' || activeTab === 'edit-job') && selectedJobId && !db.getApplicationById(selectedJobId);
-  const layoutTab = isMissingJob
-    ? 'not-found'
-    : (user ? activeTab : (activeTab === 'landing' || activeTab === 'privacy' || activeTab === 'not-found' ? activeTab : 'login'));
 
   return (
     <>
