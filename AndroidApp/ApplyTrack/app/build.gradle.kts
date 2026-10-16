@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
+  namespace = "com.mudasir.applytrack"
   compileSdk = 36
 
   defaultConfig {
-    applicationId = "com.applytrack"
+    applicationId = "com.mudasir.applytrack"
     minSdk = 24
     targetSdk = 36
     versionCode = 10

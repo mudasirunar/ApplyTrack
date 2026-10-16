@@ -19,4 +19,4 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 # Preserve model classes for database and firestore serialization
--keep class com.example.model.** { *; }
+-keep class com.mudasir.applytrack.model.** { *; }
